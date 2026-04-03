@@ -1,4 +1,4 @@
-export default function InputField({ label, type, placeholder }) {
+export default function InputField({label, type, placeholder }: {label: string; type: string; placeholder: string }) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700">{label}</label>
