@@ -5,6 +5,18 @@ type ApiFetchOptions = RequestInit & {
   accessToken?: string;
 };
 
+export class ApiClientError extends Error {
+  status: number;
+  body: string;
+
+  constructor(status: number, message: string, body: string) {
+    super(message);
+    this.name = "ApiClientError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {}
@@ -23,9 +35,23 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(
-      `API request failed: ${response.status} ${response.statusText} ${errorBody}`
-    );
+    let message = `API request failed: ${response.status} ${response.statusText}`;
+
+    if (errorBody) {
+      try {
+        const parsed = JSON.parse(errorBody) as { message?: string | string[] };
+
+        if (Array.isArray(parsed.message)) {
+          message = parsed.message.join(" ");
+        } else if (typeof parsed.message === "string") {
+          message = parsed.message;
+        }
+      } catch {
+        message = `${message} ${errorBody}`;
+      }
+    }
+
+    throw new ApiClientError(response.status, message, errorBody);
   }
 
   return response.json() as Promise<T>;
