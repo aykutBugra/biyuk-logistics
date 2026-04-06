@@ -1,7 +1,10 @@
 {
-  "compilerOptions": {
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  }
+  "files": [
+    "./workspace.d.ts"
+  ],
+  "exclude": [
+    "apps/**/*",
+    "node_modules",
+    ".next"
+  ]
 }
