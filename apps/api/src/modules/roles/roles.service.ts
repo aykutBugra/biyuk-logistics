@@ -18,6 +18,18 @@ export class RolesService {
     };
   }
 
+  async requireRoleId(roleName: RoleName): Promise<number> {
+    const role = await this.rolesRepository.findByRoleName(roleName);
+
+    if (!role) {
+      throw new InternalServerErrorException(
+        `Registration role is not configured: ${roleName}.`
+      );
+    }
+
+    return role.id;
+  }
+
   normalizeRoleNames(roleNames: string[]): RoleName[] {
     const normalized = roleNames.map((roleName) => roleName.trim().toUpperCase());
     const invalidRoleNames = normalized.filter(

@@ -3,6 +3,7 @@ import type { RoleName } from "../../common/constants/role-names";
 import { RolesService } from "../roles/roles.service";
 import { UserProfileResponseDto } from "./dto/user-profile-response.dto";
 import {
+  type CreateStoredUserInput,
   type StoredUserProfileRecord,
   type StoredUserRecord,
   UsersRepository,
@@ -17,6 +18,10 @@ export type AuthUserRecord = {
   telefonNumarasi: string | null;
   sifreHash: string;
   roles: RoleName[];
+};
+
+export type CreateUserWithRoleInput = Omit<CreateStoredUserInput, "roleId"> & {
+  roleName: RoleName;
 };
 
 @Injectable()
@@ -39,6 +44,29 @@ export class UsersService {
   async findProfileById(id: number): Promise<UserProfileResponseDto | null> {
     const user = await this.usersRepository.findProfileById(id);
     return user ? this.mapStoredProfile(user) : null;
+  }
+
+  async existsByMail(mail: string): Promise<boolean> {
+    return this.usersRepository.existsByMail(mail);
+  }
+
+  async existsByUsername(kullaniciAdi: string): Promise<boolean> {
+    return this.usersRepository.existsByUsername(kullaniciAdi);
+  }
+
+  async createUserWithRole(input: CreateUserWithRoleInput): Promise<AuthUserRecord> {
+    const roleId = await this.rolesService.requireRoleId(input.roleName);
+    const user = await this.usersRepository.createWithRole({
+      ad: input.ad,
+      soyad: input.soyad,
+      mail: input.mail,
+      kullaniciAdi: input.kullaniciAdi,
+      telefonNumarasi: input.telefonNumarasi,
+      sifreHash: input.sifreHash,
+      roleId,
+    });
+
+    return this.mapStoredUser(user);
   }
 
   toUserProfile(user: Omit<AuthUserRecord, "sifreHash">): UserProfileResponseDto {

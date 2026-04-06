@@ -1,5 +1,46 @@
+import { Prisma } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+
+const authUserSelect = {
+  id: true,
+  ad: true,
+  soyad: true,
+  mail: true,
+  kullaniciAdi: true,
+  telefonNumarasi: true,
+  sifreHash: true,
+  roller: {
+    select: {
+      rol: {
+        select: {
+          rolAd: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.KullaniciSelect;
+
+const userProfileSelect = {
+  id: true,
+  ad: true,
+  soyad: true,
+  mail: true,
+  kullaniciAdi: true,
+  telefonNumarasi: true,
+  roller: {
+    select: {
+      rol: {
+        select: {
+          rolAd: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.KullaniciSelect;
+
+type StoredAuthUserQuery = Prisma.KullaniciGetPayload<{ select: typeof authUserSelect }>;
+type StoredProfileUserQuery = Prisma.KullaniciGetPayload<{ select: typeof userProfileSelect }>;
 
 export type StoredUserRecord = {
   id: number;
@@ -14,6 +55,16 @@ export type StoredUserRecord = {
 
 export type StoredUserProfileRecord = Omit<StoredUserRecord, "sifreHash">;
 
+export type CreateStoredUserInput = {
+  ad: string;
+  soyad: string;
+  mail: string;
+  kullaniciAdi: string;
+  telefonNumarasi: string | null;
+  sifreHash: string;
+  roleId: number;
+};
+
 @Injectable()
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -22,29 +73,91 @@ export class UsersRepository {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
         silmeTarihi: null,
-        OR: [{ mail: identifier }, { kullaniciAdi: identifier }],
-      },
-      select: {
-        id: true,
-        ad: true,
-        soyad: true,
-        mail: true,
-        kullaniciAdi: true,
-        telefonNumarasi: true,
-        sifreHash: true,
-        roller: {
-          select: {
-            rol: {
-              select: {
-                rolAd: true,
-              },
+        OR: [
+          {
+            mail: {
+              equals: identifier,
+              mode: Prisma.QueryMode.insensitive,
             },
           },
-        },
+          {
+            kullaniciAdi: {
+              equals: identifier,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+        ],
       },
+      select: authUserSelect,
     });
 
     return user ? this.mapStoredUser(user) : null;
+  }
+
+  async existsByMail(mail: string): Promise<boolean> {
+    const user = await this.prisma.client.kullanici.findFirst({
+      where: {
+        mail: {
+          equals: mail,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return Boolean(user);
+  }
+
+  async existsByUsername(kullaniciAdi: string): Promise<boolean> {
+    const user = await this.prisma.client.kullanici.findFirst({
+      where: {
+        kullaniciAdi: {
+          equals: kullaniciAdi,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return Boolean(user);
+  }
+
+  async createWithRole(input: CreateStoredUserInput): Promise<StoredUserRecord> {
+    const user = await this.prisma.client.$transaction(async (tx) => {
+      const createdUser = await tx.kullanici.create({
+        data: {
+          ad: input.ad,
+          soyad: input.soyad,
+          mail: input.mail,
+          kullaniciAdi: input.kullaniciAdi,
+          telefonNumarasi: input.telefonNumarasi,
+          sifreHash: input.sifreHash,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await tx.kullaniciRol.create({
+        data: {
+          kullaniciId: createdUser.id,
+          rolId: input.roleId,
+        },
+      });
+
+      return tx.kullanici.findUniqueOrThrow({
+        where: {
+          id: createdUser.id,
+        },
+        select: authUserSelect,
+      });
+    });
+
+    return this.mapStoredUser(user);
   }
 
   async findActiveById(id: number): Promise<StoredUserRecord | null> {
@@ -53,24 +166,7 @@ export class UsersRepository {
         id,
         silmeTarihi: null,
       },
-      select: {
-        id: true,
-        ad: true,
-        soyad: true,
-        mail: true,
-        kullaniciAdi: true,
-        telefonNumarasi: true,
-        sifreHash: true,
-        roller: {
-          select: {
-            rol: {
-              select: {
-                rolAd: true,
-              },
-            },
-          },
-        },
-      },
+      select: authUserSelect,
     });
 
     return user ? this.mapStoredUser(user) : null;
@@ -82,48 +178,13 @@ export class UsersRepository {
         id,
         silmeTarihi: null,
       },
-      select: {
-        id: true,
-        ad: true,
-        soyad: true,
-        mail: true,
-        kullaniciAdi: true,
-        telefonNumarasi: true,
-        roller: {
-          select: {
-            rol: {
-              select: {
-                rolAd: true,
-              },
-            },
-          },
-        },
-      },
+      select: userProfileSelect,
     });
 
-    return user
-      ? {
-          id: user.id,
-          ad: user.ad,
-          soyad: user.soyad,
-          mail: user.mail,
-          kullaniciAdi: user.kullaniciAdi,
-          telefonNumarasi: user.telefonNumarasi,
-          roleNames: user.roller.map((role) => role.rol.rolAd),
-        }
-      : null;
+    return user ? this.mapStoredProfile(user) : null;
   }
 
-  private mapStoredUser(user: {
-    id: number;
-    ad: string;
-    soyad: string;
-    mail: string;
-    kullaniciAdi: string;
-    telefonNumarasi: string | null;
-    sifreHash: string;
-    roller: Array<{ rol: { rolAd: string } }>;
-  }): StoredUserRecord {
+  private mapStoredUser(user: StoredAuthUserQuery): StoredUserRecord {
     return {
       id: user.id,
       ad: user.ad,
@@ -132,6 +193,18 @@ export class UsersRepository {
       kullaniciAdi: user.kullaniciAdi,
       telefonNumarasi: user.telefonNumarasi,
       sifreHash: user.sifreHash,
+      roleNames: user.roller.map((role) => role.rol.rolAd),
+    };
+  }
+
+  private mapStoredProfile(user: StoredProfileUserQuery): StoredUserProfileRecord {
+    return {
+      id: user.id,
+      ad: user.ad,
+      soyad: user.soyad,
+      mail: user.mail,
+      kullaniciAdi: user.kullaniciAdi,
+      telefonNumarasi: user.telefonNumarasi,
       roleNames: user.roller.map((role) => role.rol.rolAd),
     };
   }
