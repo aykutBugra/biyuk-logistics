@@ -67,3 +67,6 @@ Bu doküman, mevcut yapının neden bu hale getirildiğini kısa ve teknik olara
 # Toplantıda Kullanılacak Kısa Açıklama
 
 Repo artık iki ayrı uygulamaya ayrılmış durumda: `apps/web` frontend, `apps/api` backend çekirdeği. API tarafında yarım ve erken feature katmanları temizlenip çalışan bir bootstrap temel bırakıldı; bu geri gidiş değil, auth ve domain modüllerini doğru sınırlar üzerinde yeniden kurmak için yapılan mimari sadeleştirmedir.
+
+
+

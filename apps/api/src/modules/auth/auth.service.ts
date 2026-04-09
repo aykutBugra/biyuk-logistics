@@ -12,19 +12,19 @@ import { AuthTokenResponseDto } from "./dto/auth-token-response.dto";
 import { LoginDto } from "./dto/login.dto";
 import { type RegisterRoleName, RegisterDto } from "./dto/register.dto";
 
-type AccessTokenPayload = {
+type AccessTokenPayload = {   //AccessTokenPayload, erişim token'ının içinde yer alacak bilgileri tanımlayan bir türdür
   sub: number;
   mail: string;
   kullaniciAdi: string;
   roles: AuthUserRecord["roles"];
 };
 
-type RefreshTokenPayload = {
+type RefreshTokenPayload = {  //RefreshTokenPayload, yenileme token'ının içinde yer alacak bilgileri tanımlayan bir türdür
   sub: number;
   type: "refresh";
 };
 
-type NormalizedRegisterInput = {
+type NormalizedRegisterInput = {  //NormalizedRegisterInput, kayıt işlemi sırasında gelen verilerin normalize edilmiş halini temsil eden bir türdür
   ad: string;
   soyad: string;
   mail: string;
@@ -35,24 +35,24 @@ type NormalizedRegisterInput = {
 };
 
 @Injectable()
-export class AuthService {
+export class AuthService {    //AuthService, kimlik doğrulama işlemlerini gerçekleştiren bir hizmettir
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<AuthTokenResponseDto> {
-    const normalizedInput = this.normalizeRegisterInput(registerDto);
-
-    await this.assertRegistrationIdentifiersAvailable(
+  async register(registerDto: RegisterDto): Promise<AuthTokenResponseDto> { //register metodu, yeni bir kullanıcı kaydı oluşturur ve 
+    const normalizedInput = this.normalizeRegisterInput(registerDto);       //başarılı bir kayıt işleminden sonra erişim ve yenileme 
+                                                                            //token'ları içeren bir AuthTokenResponseDto döner
+    await this.assertRegistrationIdentifiersAvailable(  //Kayıt sırasında kullanılan mail ve kullanıcı adı gibi tanımlayıcıların benzersiz olduğunu doğrular
       normalizedInput.mail,
       normalizedInput.kullaniciAdi
     );
 
-    let user: AuthUserRecord;
+    let user: AuthUserRecord;   
 
-    try {
+    try { //Yeni kullanıcı oluşturma işlemi sırasında oluşabilecek benzersiz kısıtlama hatalarını yakalar ve uygun şekilde ConflictException olarak yeniden fırlatır
       user = await this.usersService.createUserWithRole({
         ad: normalizedInput.ad,
         soyad: normalizedInput.soyad,
@@ -62,7 +62,7 @@ export class AuthService {
         sifreHash: await hash(normalizedInput.password, 12),
         roleName: normalizedInput.role,
       });
-    } catch (error) {
+    } catch (error) { 
       this.rethrowUniqueConstraintAsConflict(error);
       throw error;
     }
@@ -75,9 +75,9 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto): Promise<AuthTokenResponseDto> {
-    const identifier = loginDto.identifier.trim();
-    const user = await this.usersService.findActiveByIdentifier(identifier);
+  async login(loginDto: LoginDto): Promise<AuthTokenResponseDto> {      //login metodu, kullanıcı giriş işlemini gerçekleştirir. Verilen kimlik bilgilerini 
+    const identifier = loginDto.identifier.trim();                       //doğrular ve başarılı bir girişten sonra erişim ve yenileme token'ları içeren bir 
+    const user = await this.usersService.findActiveByIdentifier(identifier);    //AuthTokenResponseDto döner
 
     if (!user) {
       throw new UnauthorizedException("Invalid credentials.");
@@ -97,8 +97,8 @@ export class AuthService {
     };
   }
 
-  async refresh(refreshToken: string): Promise<AuthTokenResponseDto> {
-    let payload: RefreshTokenPayload;
+  async refresh(refreshToken: string): Promise<AuthTokenResponseDto> {  //refresh metodu, geçerli bir yenileme token'ı alır, doğrular ve 
+    let payload: RefreshTokenPayload;                                   //yeni bir erişim ve yenileme token'ı çifti döner.
 
     try {
       payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(refreshToken, {
@@ -121,8 +121,8 @@ export class AuthService {
     return this.createTokenPair(user);
   }
 
-  async getCurrentUser(currentUser: AuthenticatedUser): Promise<UserProfileResponseDto> {
-    const user = await this.usersService.findProfileById(currentUser.id);
+  async getCurrentUser(currentUser: AuthenticatedUser): Promise<UserProfileResponseDto> { //getCurrentUser metodu, geçerli kimliği doğrulanmış kullanıcı bilgilerini alır ve UserProfileResponseDto formatında döner
+    const user = await this.usersService.findProfileById(currentUser.id);                 //bilgilerini alır ve UserProfileResponseDto formatında döner
 
     if (!user) {
       throw new UnauthorizedException("Current user could not be resolved.");
@@ -131,7 +131,7 @@ export class AuthService {
     return user;
   }
 
-  private async createTokenPair(user: AuthUserRecord): Promise<AuthTokenResponseDto> {
+  private async createTokenPair(user: AuthUserRecord): Promise<AuthTokenResponseDto> {  
     const accessPayload: AccessTokenPayload = {
       sub: user.id,
       mail: user.mail,
@@ -162,7 +162,7 @@ export class AuthService {
     };
   }
 
-  private async assertRegistrationIdentifiersAvailable(
+  private async assertRegistrationIdentifiersAvailable(  //Kayıt sırasında kullanılan mail ve kullanıcı adı gibi tanımlayıcıların benzersiz olduğunu doğrular
     mail: string,
     kullaniciAdi: string
   ): Promise<void> {
@@ -181,7 +181,7 @@ export class AuthService {
   }
 
   private normalizeRegisterInput(registerDto: RegisterDto): NormalizedRegisterInput {
-    return {
+    return {  
       ad: registerDto.ad.trim(),
       soyad: registerDto.soyad.trim(),
       mail: registerDto.mail.trim().toLowerCase(),
@@ -212,6 +212,7 @@ export class AuthService {
     throw new ConflictException("User identifiers must be unique.");
   }
 
+          //toUserIdentity, AuthUserRecord içinden sifreHash alanını çıkartarak kullanıcının kimlik bilgilerini temsil eden bir nesne döner
   private toUserIdentity(user: AuthUserRecord): Omit<AuthUserRecord, "sifreHash"> {
     return {
       id: user.id,

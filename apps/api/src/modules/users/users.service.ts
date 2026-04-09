@@ -24,6 +24,10 @@ export type CreateUserWithRoleInput = Omit<CreateStoredUserInput, "roleId"> & {
   roleName: RoleName;
 };
 
+type UsersRepositoryWithProfileList = UsersRepository & {
+  findAllActiveProfiles(): Promise<StoredUserProfileRecord[]>;
+};
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -44,6 +48,12 @@ export class UsersService {
   async findProfileById(id: number): Promise<UserProfileResponseDto | null> {
     const user = await this.usersRepository.findProfileById(id);
     return user ? this.mapStoredProfile(user) : null;
+  }
+
+  async getAllActiveProfiles(): Promise<UserProfileResponseDto[]> {
+    const usersRepository = this.usersRepository as UsersRepositoryWithProfileList;
+    const users: StoredUserProfileRecord[] = await usersRepository.findAllActiveProfiles();
+    return users.map((user: StoredUserProfileRecord) => this.mapStoredProfile(user));
   }
 
   async existsByMail(mail: string): Promise<boolean> {

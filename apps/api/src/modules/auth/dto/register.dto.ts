@@ -8,9 +8,9 @@ import {
   MaxLength,
   MinLength,
 } from "class-validator";
-import { ROLE_NAMES } from "../../../common/constants/role-names";
+import { ROLE_NAMES } from "../../../common/constants/role-names";    //ROLE_NAMES sabitlerini içeren bir modülü içe aktarır
 
-const trimString = ({ value }: { value: unknown }) =>
+const trimString = ({ value }: { value: unknown }) => //Verilen değerin bir string olup olmadığını kontrol eder ve eğer öyleyse başındaki ve sonundaki boşlukları kaldırır
   typeof value === "string" ? value.trim() : value;
 
 const trimOptionalString = ({ value }: { value: unknown }) => {
@@ -26,7 +26,7 @@ export const REGISTER_ROLE_VALUES = [ROLE_NAMES.MUSTERI, ROLE_NAMES.NAKLIYECI] a
 
 export type RegisterRoleName = (typeof REGISTER_ROLE_VALUES)[number];
 
-export class RegisterDto {
+export class RegisterDto {//RegisterDto, kullanıcı kayıt işlemi için gerekli olan bilgileri içeren bir DTO'dur
   @Transform(trimString)
   @IsString()
   @IsNotEmpty()
@@ -62,7 +62,7 @@ export class RegisterDto {
   @MaxLength(255)
   password!: string;
 
-  @Transform(({ value }: { value: unknown }) => {
+  @Transform(({ value }: { value: unknown }) => {//
     if (typeof value !== "string") {
       return value;
     }
@@ -71,6 +71,6 @@ export class RegisterDto {
     return trimmed.length > 0 ? trimmed.toUpperCase() : undefined;
   })
   @IsOptional()
-  @IsIn(REGISTER_ROLE_VALUES)
+  @IsIn(REGISTER_ROLE_VALUES) //Bu, role alanının sadece REGISTER_ROLE_VALUES içinde tanımlı olan değerleri kabul etmesini sağlar
   role?: RegisterRoleName;
 }

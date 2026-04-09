@@ -184,6 +184,20 @@ export class UsersRepository {
     return user ? this.mapStoredProfile(user) : null;
   }
 
+  async findAllActiveProfiles(): Promise<StoredUserProfileRecord[]> {
+    const users = await this.prisma.client.kullanici.findMany({
+      where: {
+        silmeTarihi: null,
+      },
+      select: userProfileSelect,
+      orderBy: {
+        id: "asc",
+      },
+    });
+
+    return users.map((user) => this.mapStoredProfile(user));
+  }
+
   private mapStoredUser(user: StoredAuthUserQuery): StoredUserRecord {
     return {
       id: user.id,

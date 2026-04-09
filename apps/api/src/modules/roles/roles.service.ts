@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import {
+  ROLE_NAMES,
   ROLE_VALUES,
   type RoleName,
 } from "../../common/constants/role-names";
@@ -31,7 +32,16 @@ export class RolesService {
   }
 
   normalizeRoleNames(roleNames: string[]): RoleName[] {
-    const normalized = roleNames.map((roleName) => roleName.trim().toUpperCase());
+    const normalized = roleNames.map((roleName) => {
+      const normalizedRoleName = roleName.trim().toUpperCase();
+
+      // Support legacy bootstrap data that used "kullanici" before MUSTERI.
+      if (normalizedRoleName === "KULLANICI") {
+        return ROLE_NAMES.MUSTERI;
+      }
+
+      return normalizedRoleName;
+    });
     const invalidRoleNames = normalized.filter(
       (roleName): roleName is string => !ROLE_VALUES.includes(roleName as RoleName)
     );
