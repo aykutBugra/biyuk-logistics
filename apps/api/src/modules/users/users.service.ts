@@ -50,6 +50,11 @@ export class UsersService {
     return user ? this.mapStoredProfile(user) : null;
   }
 
+  //getAllActiveProfiles, tüm aktif kullanıcı profillerini döndüren bir
+  // yöntemdir. Bu yöntem, UsersRepository'nin findAllActiveProfiles yöntemini
+  //  çağırarak veritabanından tüm aktif kullanıcıları alır ve ardından her
+  //  kullanıcıyı UserProfileResponseDto formatına dönüştürmek için
+  //  mapStoredProfile yöntemini kullanır.
   async getAllActiveProfiles(): Promise<UserProfileResponseDto[]> {
     const usersRepository = this.usersRepository as UsersRepositoryWithProfileList;
     const users: StoredUserProfileRecord[] = await usersRepository.findAllActiveProfiles();

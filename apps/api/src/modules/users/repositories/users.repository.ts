@@ -68,7 +68,7 @@ export type CreateStoredUserInput = {
 @Injectable()
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
-
+//
   async findActiveByIdentifier(identifier: string): Promise<StoredUserRecord | null> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -183,20 +183,22 @@ export class UsersRepository {
 
     return user ? this.mapStoredProfile(user) : null;
   }
-
   async findAllActiveProfiles(): Promise<StoredUserProfileRecord[]> {
-    const users = await this.prisma.client.kullanici.findMany({
-      where: {
-        silmeTarihi: null,
-      },
-      select: userProfileSelect,
-      orderBy: {
-        id: "asc",
-      },
-    });
+  const users = await this.prisma.client.kullanici.findMany({
+    where: {
+      silmeTarihi: null,
+    },
+    select: userProfileSelect,
+    orderBy: {
+      id: "asc",
+    },
+  });
 
-    return users.map((user) => this.mapStoredProfile(user));
-  }
+  return users.map((user) => this.mapStoredProfile(user));
+}
+
+
+  
 
   private mapStoredUser(user: StoredAuthUserQuery): StoredUserRecord {
     return {

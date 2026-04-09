@@ -85,6 +85,8 @@ export default function RegisterPage() {
     } catch (error) {
       if (error instanceof ApiClientError) {
         window.alert(error.message);
+      } else if (error instanceof Error) {
+        window.alert(error.message);
       } else {
         window.alert("Kayit sirasinda beklenmeyen bir hata olustu.");
       }
