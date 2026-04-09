@@ -22,7 +22,11 @@ const trimOptionalString = ({ value }: { value: unknown }) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-export const REGISTER_ROLE_VALUES = [ROLE_NAMES.MUSTERI, ROLE_NAMES.NAKLIYECI] as const;
+export const REGISTER_ROLE_VALUES = [
+  "KULLANICI",
+  ROLE_NAMES.MUSTERI,
+  ROLE_NAMES.NAKLIYECI,
+] as const;
 
 export type RegisterRoleName = (typeof REGISTER_ROLE_VALUES)[number];
 

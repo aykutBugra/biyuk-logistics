@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { Prisma } from "@prisma/client";
 import { JwtService } from "@nestjs/jwt";
 import { compare, hash } from "bcryptjs";
-import { ROLE_NAMES } from "../../common/constants/role-names";
+import { ROLE_NAMES, type RoleName } from "../../common/constants/role-names";
 import type { JwtTtlValue } from "../../config/auth.config";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { UserProfileResponseDto } from "../users/dto/user-profile-response.dto";
@@ -31,7 +31,7 @@ type NormalizedRegisterInput = {  //NormalizedRegisterInput, kayıt işlemi sır
   kullaniciAdi: string;
   telefonNumarasi: string | null;
   password: string;
-  role: RegisterRoleName;
+  role: RoleName;
 };
 
 @Injectable()
@@ -188,8 +188,16 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
       kullaniciAdi: registerDto.kullaniciAdi.trim().toLowerCase(),
       telefonNumarasi: registerDto.telefonNumarasi?.trim() || null,
       password: registerDto.password,
-      role: registerDto.role ?? ROLE_NAMES.MUSTERI,
+      role: this.normalizeRegisterRole(registerDto.role),
     };
+  }
+
+  private normalizeRegisterRole(role?: RegisterRoleName): RoleName {
+    if (!role || role === "KULLANICI") {
+      return ROLE_NAMES.MUSTERI;
+    }
+
+    return role;
   }
 
   private rethrowUniqueConstraintAsConflict(error: unknown): never | void {
