@@ -1,12 +1,16 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import InputField from "@/components/InputField";
 import { ApiClientError, apiFetch } from "@/lib/api/api-client";
-
-const AUTH_STORAGE_KEY = "nakliye.auth";
+import {
+  getStoredAuth,
+  setStoredAuth,
+  type StoredAuth,
+} from "@/lib/auth/auth-storage";
 
 type RegisterRole = "kullanici" | "nakliyeci";
 
@@ -19,21 +23,6 @@ type RegisterForm = {
   password: string;
 };
 
-type RegisterResponse = {
-  accessToken: string;
-  refreshToken: string;
-  tokenType: "Bearer";
-  user?: {
-    id: number;
-    ad: string;
-    soyad: string;
-    mail: string;
-    kullaniciAdi: string;
-    telefonNumarasi: string | null;
-    roles: string[];
-  };
-};
-
 const initialForm: RegisterForm = {
   ad: "",
   soyad: "",
@@ -44,9 +33,20 @@ const initialForm: RegisterForm = {
 };
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [role, setRole] = useState<RegisterRole>("kullanici");
   const [form, setForm] = useState<RegisterForm>(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    if (getStoredAuth()) {
+      router.replace("/");
+      return;
+    }
+
+    setIsCheckingAuth(false);
+  }, [router]);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -67,7 +67,7 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await apiFetch<RegisterResponse>("/auth/register", {
+      const response = await apiFetch<StoredAuth>("/auth/register", {
         method: "POST",
         body: JSON.stringify({
           ad: form.ad,
@@ -80,8 +80,8 @@ export default function RegisterPage() {
         }),
       });
 
-      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(response));
-      window.alert("Kayit basarili. Oturum acildi.");
+      setStoredAuth(response);
+      router.replace("/");
     } catch (error) {
       if (error instanceof ApiClientError) {
         window.alert(error.message);
@@ -94,6 +94,14 @@ export default function RegisterPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-gray-600 font-medium">Yönlendiriliyor...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

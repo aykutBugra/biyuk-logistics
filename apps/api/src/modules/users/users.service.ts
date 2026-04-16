@@ -28,6 +28,13 @@ type UsersRepositoryWithProfileList = UsersRepository & {
   findAllActiveProfiles(): Promise<StoredUserProfileRecord[]>;
 };
 
+//type UsersRepositoryWithProfileList = UsersRepository & {
+  //findAllActiveProfiles(ad?: string): Promise<StoredUserProfileRecord[]>;
+//};
+// Repository metodunun artık opsiyonel ad filtresi aldığını TypeScript'e söylüyoruz.
+
+
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -55,11 +62,29 @@ export class UsersService {
   //  çağırarak veritabanından tüm aktif kullanıcıları alır ve ardından her
   //  kullanıcıyı UserProfileResponseDto formatına dönüştürmek için
   //  mapStoredProfile yöntemini kullanır.
+  
   async getAllActiveProfiles(): Promise<UserProfileResponseDto[]> {
     const usersRepository = this.usersRepository as UsersRepositoryWithProfileList;
     const users: StoredUserProfileRecord[] = await usersRepository.findAllActiveProfiles();
     return users.map((user: StoredUserProfileRecord) => this.mapStoredProfile(user));
   }
+
+  //async getAllActiveProfiles(ad?: string): Promise<UserProfileResponseDto[]> {
+  //const usersRepository = this.usersRepository as UsersRepositoryWithProfileList;
+  //const users: StoredUserProfileRecord[] = await usersRepository.findAllActiveProfiles(ad);
+  //return users.map((user: StoredUserProfileRecord) => this.mapStoredProfile(user));
+//}
+
+
+
+
+
+
+
+
+
+
+
 
   async existsByMail(mail: string): Promise<boolean> {
     return this.usersRepository.existsByMail(mail);

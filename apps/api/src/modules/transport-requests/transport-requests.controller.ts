@@ -1,0 +1,54 @@
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from "@nestjs/common";
+import { ROLE_NAMES } from "../../common/constants/role-names";
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { Roles } from "../../common/decorators/roles.decorator";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { RolesGuard } from "../../common/guards/roles.guard";
+import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { CreateTransportRequestDto } from "./dto/create-transport-request.dto";
+import { TransportRequestDetailResponseDto } from "./dto/transport-request-detail-response.dto";
+import { TransportRequestListItemResponseDto } from "./dto/transport-request-list-item-response.dto";
+import { TransportRequestsService } from "./transport-requests.service";
+
+@Controller("transport-requests")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(ROLE_NAMES.MUSTERI)
+export class TransportRequestsController {
+  constructor(
+    private readonly transportRequestsService: TransportRequestsService
+  ) {}
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  create(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Body() createTransportRequestDto: CreateTransportRequestDto
+  ): Promise<TransportRequestDetailResponseDto> {
+    return this.transportRequestsService.create(currentUser, createTransportRequestDto);
+  }
+
+  @Get("my")
+  getMine(
+    @CurrentUser() currentUser: AuthenticatedUser
+  ): Promise<TransportRequestListItemResponseDto[]> {
+    return this.transportRequestsService.getMine(currentUser);
+  }
+
+  @Get(":id")
+  getMineById(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param("id", ParseIntPipe) id: number
+  ): Promise<TransportRequestDetailResponseDto> {
+    return this.transportRequestsService.getMineById(currentUser, id);
+  }
+}

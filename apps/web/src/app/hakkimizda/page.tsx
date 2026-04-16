@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ApiClientError, apiFetch } from "@/lib/api/api-client";
-
-const AUTH_STORAGE_KEY = "nakliye.auth";
-
-type AuthStorage = {
-  accessToken: string;
-};
+import { getAccessToken } from "@/lib/auth/auth-storage";
 
 type UserRow = {
   id: number;
@@ -26,27 +21,17 @@ export default function Page() {
 
   useEffect(() => {
     const run = async () => {
-      const rawAuth = window.localStorage.getItem(AUTH_STORAGE_KEY);
+      const accessToken = getAccessToken();
 
-      if (!rawAuth) {
+      if (!accessToken) {
         setError("Bu sayfayi gormek icin once giris yapmaniz gerekir.");
-        setIsLoading(false);
-        return;
-      }
-
-      let auth: AuthStorage;
-
-      try {
-        auth = JSON.parse(rawAuth) as AuthStorage;
-      } catch {
-        setError("Kayitli oturum verisi okunamadi.");
         setIsLoading(false);
         return;
       }
 
       try {
         const data = await apiFetch<UserRow[]>("/users", {
-          accessToken: auth.accessToken,
+          accessToken,
         });
 
         setUsers(data);
@@ -83,7 +68,9 @@ export default function Page() {
               <th className="border border-gray-300 p-2 text-left">Ad</th>
               <th className="border border-gray-300 p-2 text-left">Soyad</th>
               <th className="border border-gray-300 p-2 text-left">Mail</th>
-              <th className="border border-gray-300 p-2 text-left">Kullanici Adi</th>
+              <th className="border border-gray-300 p-2 text-left">
+                Kullanici Adi
+              </th>
               <th className="border border-gray-300 p-2 text-left">Telefon</th>
               <th className="border border-gray-300 p-2 text-left">Roller</th>
             </tr>
@@ -95,7 +82,9 @@ export default function Page() {
                 <td className="border border-gray-300 p-2">{user.ad}</td>
                 <td className="border border-gray-300 p-2">{user.soyad}</td>
                 <td className="border border-gray-300 p-2">{user.mail}</td>
-                <td className="border border-gray-300 p-2">{user.kullaniciAdi}</td>
+                <td className="border border-gray-300 p-2">
+                  {user.kullaniciAdi}
+                </td>
                 <td className="border border-gray-300 p-2">
                   {user.telefonNumarasi ?? "-"}
                 </td>

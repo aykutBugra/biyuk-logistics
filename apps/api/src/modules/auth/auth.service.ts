@@ -86,7 +86,7 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
     const isPasswordValid = await compare(loginDto.password, user.sifreHash);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException("Invalid credentials.");
+      throw new UnauthorizedException("şifre hatalı");
     }
 
     const tokens = await this.createTokenPair(user);

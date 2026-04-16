@@ -1,3 +1,7 @@
+
+//users module'ünün ana modülü. Kullanıcılarla ilgili tüm işlemler bu modül altında toplanır.
+//users controller, service ve repository bu modülün altındadır. 
+//RolesModule'u import ediyoruz çünkü kullanıcı oluştururken role ataması yapmamız gerekiyor.
 import { Module } from "@nestjs/common";
 import { RolesModule } from "../roles/roles.module";
 import { UsersController } from "./users.controller";

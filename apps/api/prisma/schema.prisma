@@ -53,6 +53,15 @@ model Kullanici {
   nakliyeler       Nakliye[]
 }
 
+
+
+
+
+
+
+
+
+
 model AracKutuphanesi {
   id      Int    @id @default(autoincrement())
   marka   String @db.VarChar(100)
@@ -60,6 +69,21 @@ model AracKutuphanesi {
   
   gercekAraclar Arac[]
 }
+
+
+
+
+
+//soft delete için ;
+
+//olusturmaTarihi DateTime @default(now())
+//guncellemeTarihi DateTime @updatedAt
+//silmeTarihi     DateTime?
+//cd C:\Users\aykut\nakliye-app\apps\api dizininde;
+//npx prisma migrate dev --name add_vehicle_soft_delete
+//cliantta yenileme : npm run prisma:generate
+
+
 
 model Arac {
   id                Int             @id @default(autoincrement())
@@ -73,6 +97,24 @@ model Arac {
   
   nakliyeler        Nakliye[]
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 model Istek {
   id              Int       @id @default(autoincrement())

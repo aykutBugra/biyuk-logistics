@@ -1,41 +1,34 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import InputField from "@/components/InputField";
 import { ApiClientError, apiFetch } from "@/lib/api/api-client";
-
-const AUTH_STORAGE_KEY = "nakliye.auth";
-
-//LoginResponse, giriş işlemi sonucunda API'den dönen yanıtın yapısını temsil eden bir 
-//türdür. Bu tür, accessToken, refreshToken, tokenType ve isteğe bağlı olarak user bilgilerini içerir
-type LoginResponse = {
-  accessToken: string;
-  refreshToken: string;
-  tokenType: "Bearer";
-  user?: {
-    id: number;
-    ad: string;
-    soyad: string;
-    mail: string;
-    kullaniciAdi: string;
-    telefonNumarasi: string | null;
-    roles: string[];
-  };
-};
-
-//Page bileşeni, kullanıcıların giriş yapmalarını sağlayan bir form içerir. Form, kullanıcı adı veya e-posta
-//adresi ve şifre alanlarını içerir. Kullanıcı formu gönderdiğinde, API'ye bir POST isteği gönderilir ve başarılı
-//bir yanıt alındığında token bilgileri localStorage'a kaydedilir. Ayrıca, kullanıcıya girişin başarılı olduğunu 
-//bildiren bir mesaj gösterilir. Hata durumunda ise uygun hata mesajları gösterilir.
+import {
+  getStoredAuth,
+  setStoredAuth,
+  type StoredAuth,
+} from "@/lib/auth/auth-storage";
 
 export default function Page() {
+  const router = useRouter();
   const [form, setForm] = useState({
     identifier: "",
     password: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    if (getStoredAuth()) {
+      router.replace("/");
+      return;
+    }
+
+    setIsCheckingAuth(false);
+  }, [router]);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -56,7 +49,7 @@ export default function Page() {
     setIsSubmitting(true);
 
     try {
-      const response = await apiFetch<LoginResponse>("/auth/login", {
+      const response = await apiFetch<StoredAuth>("/auth/login", {
         method: "POST",
         body: JSON.stringify({
           identifier: form.identifier,
@@ -64,11 +57,8 @@ export default function Page() {
         }),
       });
 
-
-      //Giriş başarılı olduğunda, alınan token bilgilerini localStorage'a kaydeder ve kullanıcıya bir başarı mesajı gösterir
-      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(response));
-      //window.alert, kullanıcıya girişin başarılı olduğunu bildiren bir mesaj gösterir
-      window.alert("Giris basarili.");
+      setStoredAuth(response);
+      router.replace("/");
     } catch (error) {
       if (error instanceof ApiClientError) {
         window.alert(error.message);
@@ -79,6 +69,14 @@ export default function Page() {
       setIsSubmitting(false);
     }
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-gray-600 font-medium">Yönlendiriliyor...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

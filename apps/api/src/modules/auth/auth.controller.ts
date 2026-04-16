@@ -44,4 +44,6 @@ export class AuthController {
   me(@CurrentUser() currentUser: AuthenticatedUser): Promise<UserProfileResponseDto> {
     return this.authService.getCurrentUser(currentUser);
   }
+
+  
 }

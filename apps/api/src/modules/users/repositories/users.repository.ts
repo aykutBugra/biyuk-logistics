@@ -1,7 +1,12 @@
 import { Prisma } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
+
+
+//gerçek db bağlantısı
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
+
+//listeleme için seçilen alan
 const authUserSelect = {
   id: true,
   ad: true,
@@ -9,7 +14,7 @@ const authUserSelect = {
   mail: true,
   kullaniciAdi: true,
   telefonNumarasi: true,
-  sifreHash: true,
+  sifreHash: true,  //login doğrulaması için gerekli
   roller: {
     select: {
       rol: {
@@ -21,6 +26,8 @@ const authUserSelect = {
   },
 } satisfies Prisma.KullaniciSelect;
 
+//listeleme için seçilen alanlar . sifreHash'i içermiyor çünkü profile response'da şifre 
+//hash'ine ihtiyaç yok.
 const userProfileSelect = {
   id: true,
   ad: true,
@@ -28,6 +35,7 @@ const userProfileSelect = {
   mail: true,
   kullaniciAdi: true,
   telefonNumarasi: true,
+  sifreHash: false, //profile response'unda şifre hash'ine ihtiyaç yok, bu yüzden false.
   roller: {
     select: {
       rol: {
@@ -39,9 +47,12 @@ const userProfileSelect = {
   },
 } satisfies Prisma.KullaniciSelect;
 
+//Prisma sorgularından dönen ham kullanıcı verisi.
+//Şifre hash'i içerir ve roller roleName olarak gelir.
 type StoredAuthUserQuery = Prisma.KullaniciGetPayload<{ select: typeof authUserSelect }>;
 type StoredProfileUserQuery = Prisma.KullaniciGetPayload<{ select: typeof userProfileSelect }>;
 
+//user repository'sinin uyguladığı interface. Kullanıcı verilerine erişmek için gerekli tüm yöntemleri tanımlar.
 export type StoredUserRecord = {
   id: number;
   ad: string;
@@ -54,7 +65,7 @@ export type StoredUserRecord = {
 };
 
 export type StoredUserProfileRecord = Omit<StoredUserRecord, "sifreHash">;
-
+//StoredUserRecord'dan şifre hash'ini çıkarıyoruz çünkü profile response'unda şifre hash'ine ihtiyaç yok.
 export type CreateStoredUserInput = {
   ad: string;
   soyad: string;
@@ -65,13 +76,18 @@ export type CreateStoredUserInput = {
   roleId: number;
 };
 
+//injectable olarak işaretliyoruz ki NestJS bu sınıfı dependency injection ile yönetebilsin.
 @Injectable()
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 //
+
+
+//
   async findActiveByIdentifier(identifier: string): Promise<StoredUserRecord | null> {
-    const user = await this.prisma.client.kullanici.findFirst({
-      where: {
+    const user = await this.prisma.client.kullanici.findFirst({ //findFirst çağrılıyor . DB ye istek(promise) atılıyor.
+                                                                //user veri değil . DB den veri gelene kadar beklemesi gerekiyor. 
+      where: {                                                  //burada await sonuç gelmeden aşağı geçme diyor .
         silmeTarihi: null,
         OR: [
           {
@@ -93,7 +109,7 @@ export class UsersRepository {
 
     return user ? this.mapStoredUser(user) : null;
   }
-
+  //login için tek kullanıcı getirme sorgusu. Silinmemiş kullanıcıyı mail veya kullanıcı adı ile getiriyor.
   async existsByMail(mail: string): Promise<boolean> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -109,7 +125,7 @@ export class UsersRepository {
 
     return Boolean(user);
   }
-
+  //kullanıcı adı ile kullanıcı var mı yok mu sorgusu. Kullanıcı adı benzersiz olduğu için sadece true false dönüyor.
   async existsByUsername(kullaniciAdi: string): Promise<boolean> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -125,7 +141,8 @@ export class UsersRepository {
 
     return Boolean(user);
   }
-
+  //kullanıcı oluşturma sorgusu. Kullanıcıyı oluşturduktan sonra role ataması yapıyor. 
+  //Transaction kullanarak iki işlemi tek seferde yapıyoruz.
   async createWithRole(input: CreateStoredUserInput): Promise<StoredUserRecord> {
     const user = await this.prisma.client.$transaction(async (tx) => {
       const createdUser = await tx.kullanici.create({
@@ -160,6 +177,8 @@ export class UsersRepository {
     return this.mapStoredUser(user);
   }
 
+//ana listeleme sorgusu. Silinmemiş tüm kullanıcıları getiriyor.
+
   async findActiveById(id: number): Promise<StoredUserRecord | null> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -172,6 +191,7 @@ export class UsersRepository {
     return user ? this.mapStoredUser(user) : null;
   }
 
+  //profile için tek kullanıcı getirme sorgusu. Silinmemiş kullanıcıyı id ile getiriyor.
   async findProfileById(id: number): Promise<StoredUserProfileRecord | null> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -183,10 +203,45 @@ export class UsersRepository {
 
     return user ? this.mapStoredProfile(user) : null;
   }
+
+  
+
+
+
+
   async findAllActiveProfiles(): Promise<StoredUserProfileRecord[]> {
+  const users = await this.prisma.client.kullanici.findMany({  //prisma ile DB ye sorgu atıyoruz.findmany birden fazla kayıt döndüreceği için kullanıyoruz.
+    where: {        //filtreleme koşulları
+      silmeTarihi: null,
+    },
+    select: userProfileSelect,  //db den sadece ihtiyacımız olan alanları seçiyoruz. gereksiz veri çekmemiş oluyoruz.
+    orderBy: {
+      id: "asc",
+    },
+  });
+
+  return users.map((user) => this.mapStoredProfile(user));//her kullanıcıyı tek tek dolaş ve her user ı dönüştür
+  }
+
+
+
+
+  /*
+  async findAllActiveProfiles(ad?: string): Promise<StoredUserProfileRecord[]> {
   const users = await this.prisma.client.kullanici.findMany({
     where: {
+      // Soft delete edilmemiş kullanıcıları getiriyoruz.
       silmeTarihi: null,
+
+      // Eğer ?ad=... geldiyse sadece o ada sahip kullanıcıyı filtreliyoruz.
+      ...(ad
+        ? {
+            ad: {
+              equals: ad,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          }
+        : {}),
     },
     select: userProfileSelect,
     orderBy: {
@@ -194,12 +249,10 @@ export class UsersRepository {
     },
   });
 
+  // Prisma sonucunu uygulamanın kullandığı profile record formatına çeviriyoruz.
   return users.map((user) => this.mapStoredProfile(user));
 }
-
-
-  
-
+*/
   private mapStoredUser(user: StoredAuthUserQuery): StoredUserRecord {
     return {
       id: user.id,

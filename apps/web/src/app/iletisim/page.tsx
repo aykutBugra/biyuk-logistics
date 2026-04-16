@@ -1,18 +1,19 @@
-'use client'
-import { useState } from "react";
+"use client";
 
 export default function Page() {
-  let [counter, setCounter] = useState(2);
-  function degistir(sayi:number){
-    let count = counter+sayi;
-    console.log(count)
-    return count
-  
-  }
-  return <div>
-    <button onClick={() => setCounter(counter+degistir(5))}>
-      tıkla
-    </button>
-    <p>counter = {counter}</p>
-  </div>;
+  return (
+    <div className="p-6">
+      
+      {/* Başlık */}
+      <h1 className="text-2xl font-semibold mb-6">
+        İletişim
+      </h1>
+
+      {/* Liste Alanı */}
+      <div className="space-y-4">
+        {/* BURAYA NAKLİYECİ LİSTESİ GELECEK */}
+      </div>
+
+    </div>
+  );
 }
