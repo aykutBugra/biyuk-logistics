@@ -113,6 +113,7 @@ export type AcceptOfferInput = {
 export type AcceptOfferResult =
   | {
       ok: true;
+      jobId: number;
     }
   | {
       ok: false;
@@ -723,7 +724,7 @@ export class OffersRepository {
           },
         });
 
-        await tx.nakliye.create({
+        const shipment = await tx.nakliye.create({
           data: {
             istekId: input.requestId,
             nakliyeciId: input.carrierId,
@@ -738,6 +739,7 @@ export class OffersRepository {
 
         return {
           ok: true,
+          jobId: shipment.id,
         };
       });
     } catch (error) {

@@ -37,6 +37,10 @@ export default function CustomerTransportRequestsShell({
           title: "Hesabim",
           items: [
             {
+              href: "/dashboard/bildirimler",
+              label: "Bildirimler",
+            },
+            {
               href: "/dashboard/puanlarim",
               label: "Puanlarim",
             },

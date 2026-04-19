@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { NotificationsPublisher } from "../notifications/notifications.publisher";
 import { JobDetailResponseDto } from "./dto/job-detail-response.dto";
 import { JobListItemResponseDto } from "./dto/job-list-item-response.dto";
 import {
@@ -43,7 +44,10 @@ const COMPLETED_REQUEST_STATUS = {
 
 @Injectable()
 export class JobsService {
-  constructor(private readonly jobsRepository: JobsRepository) {}
+  constructor(
+    private readonly jobsRepository: JobsRepository,
+    private readonly notificationsPublisher: NotificationsPublisher
+  ) {}
 
   async getMine(currentUser: AuthenticatedUser): Promise<JobListItemResponseDto[]> {
     if (this.isCarrier(currentUser)) {
@@ -116,6 +120,16 @@ export class JobsService {
     if (!updatedJob) {
       throw new NotFoundException("Shipment not found.");
     }
+
+    await this.notificationsPublisher.publishJobStarted({
+      customerId: updatedJob.customerId,
+      jobId: updatedJob.id,
+      requestId: updatedJob.requestId,
+      route: {
+        baslangicSehri: updatedJob.baslangicSehri,
+        varisSehri: updatedJob.varisSehri,
+      },
+    });
 
     return this.toDetailResponse(updatedJob, currentUser);
   }
@@ -194,6 +208,22 @@ export class JobsService {
     if (!updatedJob) {
       throw new NotFoundException("Shipment not found.");
     }
+
+    await Promise.all([
+      this.notificationsPublisher.publishJobCompleted({
+        customerId: updatedJob.customerId,
+        jobId: updatedJob.id,
+        requestId: updatedJob.requestId,
+        route: {
+          baslangicSehri: updatedJob.baslangicSehri,
+          varisSehri: updatedJob.varisSehri,
+        },
+      }),
+      this.notificationsPublisher.publishRatingPending({
+        userId: updatedJob.carrierId,
+        jobId: updatedJob.id,
+      }),
+    ]);
 
     return this.toDetailResponse(updatedJob, currentUser);
   }

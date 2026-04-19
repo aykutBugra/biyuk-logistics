@@ -54,6 +54,10 @@ export default function CarrierVehiclesShell({
           title: "Hesabim",
           items: [
             {
+              href: "/dashboard/bildirimler",
+              label: "Bildirimler",
+            },
+            {
               href: "/dashboard/puanlarim",
               label: "Puanlarim",
             },

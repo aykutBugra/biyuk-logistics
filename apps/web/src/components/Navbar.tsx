@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { ApiClientError } from "@/lib/api/api-client";
+import { getMyUnreadNotificationCount } from "@/lib/api/notifications";
 import {
   STORED_ROLE_NAMES,
   clearStoredAuth,
@@ -11,6 +13,7 @@ import {
   subscribeToAuthChanges,
   type StoredAuth,
 } from "@/lib/auth/auth-storage";
+import { subscribeToNotificationChanges } from "@/lib/notifications/notification-events";
 
 function getAuthLabel(auth: StoredAuth | null): string {
   if (!auth?.user) {
@@ -46,6 +49,7 @@ export default function Navbar() {
   const [auth, setAuth] = useState<StoredAuth | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   useEffect(() => {
     const syncAuth = () => {
@@ -59,6 +63,55 @@ export default function Navbar() {
   }, []);
 
   const dashboardHref = useMemo(() => getDashboardHref(auth), [auth]);
+  const notificationsHref = "/dashboard/bildirimler";
+  const displayedUnreadNotificationCount = auth ? unreadNotificationCount : 0;
+  const hasUnreadNotifications = displayedUnreadNotificationCount > 0;
+
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
+    if (!auth?.accessToken) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadUnreadCount = async () => {
+      try {
+        const response = await getMyUnreadNotificationCount(auth.accessToken);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setUnreadNotificationCount(response.unreadCount);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        if (error instanceof ApiClientError && error.status === 401) {
+          clearStoredAuth();
+          return;
+        }
+
+        setUnreadNotificationCount(0);
+      }
+    };
+
+    void loadUnreadCount();
+
+    const unsubscribeNotifications = subscribeToNotificationChanges(() => {
+      void loadUnreadCount();
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribeNotifications();
+    };
+  }, [auth, isReady, pathname]);
 
   const publicLinks = [
     { href: "/", label: "Ana Sayfa" },
@@ -114,6 +167,21 @@ export default function Navbar() {
               <div className="h-10 w-56" aria-hidden />
             ) : auth ? (
               <>
+                <Link
+                  href={notificationsHref}
+                  className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition ${
+                    isActive(pathname, notificationsHref)
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                  }`}
+                >
+                  <span>Bildirimler</span>
+                  {hasUnreadNotifications ? (
+                      <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white">
+                      {displayedUnreadNotificationCount}
+                    </span>
+                  ) : null}
+                </Link>
                 <Link
                   href={dashboardHref}
                   className={`rounded-full px-3 py-2 text-sm font-semibold transition ${
@@ -190,6 +258,18 @@ export default function Navbar() {
             {isReady ? (
               auth ? (
                 <div className="space-y-2 border-t border-slate-200 pt-3">
+                  <Link
+                    href={notificationsHref}
+                    onClick={handleMobileNavigate}
+                    className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
+                  >
+                    <span>Bildirimler</span>
+                    {hasUnreadNotifications ? (
+                      <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white">
+                        {displayedUnreadNotificationCount}
+                      </span>
+                    ) : null}
+                  </Link>
                   <Link
                     href={dashboardHref}
                     onClick={handleMobileNavigate}

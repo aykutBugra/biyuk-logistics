@@ -21,6 +21,7 @@ import {
   type StoredOfferRecord,
   OffersRepository,
 } from "./repositories/offers.repository";
+import { NotificationsPublisher } from "../notifications/notifications.publisher";
 
 const OPEN_OFFER_STATUS = {
   durumTuru: "TEKLIF",
@@ -54,7 +55,10 @@ const INITIAL_SHIPMENT_STATUS = {
 
 @Injectable()
 export class OffersService {
-  constructor(private readonly offersRepository: OffersRepository) {}
+  constructor(
+    private readonly offersRepository: OffersRepository,
+    private readonly notificationsPublisher: NotificationsPublisher
+  ) {}
 
   async getOpenRequests(
     currentUser: AuthenticatedUser
@@ -159,6 +163,16 @@ export class OffersService {
       fiyat: createOfferDto.fiyat,
       not: createOfferDto.not?.trim() || null,
       durumId: initialStatusId,
+    });
+
+    await this.notificationsPublisher.publishIncomingOffer({
+      customerId: request.musteriId,
+      offerId: offer.id,
+      requestId,
+      route: {
+        baslangicSehri: offer.baslangicSehri,
+        varisSehri: offer.varisSehri,
+      },
     });
 
     return this.toOfferResponse(offer);
@@ -285,6 +299,13 @@ export class OffersService {
     });
 
     if (result.ok) {
+      await this.notificationsPublisher.publishOfferAccepted({
+        carrierId: offer.carrierId,
+        offerId: offer.offerId,
+        requestId: offer.requestId,
+        jobId: result.jobId,
+      });
+
       return;
     }
 
@@ -330,6 +351,12 @@ export class OffersService {
     if (!wasRejected) {
       throw new ConflictException("Offer can no longer be rejected.");
     }
+
+    await this.notificationsPublisher.publishOfferRejected({
+      carrierId: offer.carrierId,
+      offerId: offer.offerId,
+      requestId: offer.requestId,
+    });
   }
 
   private async requireDecisionContext(

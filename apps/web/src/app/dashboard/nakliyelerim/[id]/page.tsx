@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/jobs";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
+import { emitNotificationsChanged } from "@/lib/notifications/notification-events";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("tr-TR", {
@@ -138,6 +139,7 @@ export default function CarrierJobDetailPage() {
         window.alert("Nakliye baslatildi.");
       } else {
         await completeJob(job.id, accessToken);
+        emitNotificationsChanged();
         window.alert("Nakliye tamamlandi.");
       }
 

@@ -51,6 +51,7 @@ model Kullanici {
   puanVerenler     Puanlama[]     @relation("PuanVeren")
   puanAlanlar      Puanlama[]     @relation("PuanAlan")
   nakliyeler       Nakliye[]
+  bildirimler      Bildirim[]
 }
 
 
@@ -187,4 +188,19 @@ model Puanlama {
   @@index([nakliyeId])
   @@index([puanlayanId])
   @@index([puanlananId])
+}
+
+model Bildirim {
+  id              Int       @id @default(autoincrement())
+  kullaniciId     Int
+  kullanici       Kullanici @relation(fields: [kullaniciId], references: [id])
+  tip             String    @db.VarChar(100)
+  baslik          String    @db.VarChar(150)
+  mesaj           String    @db.VarChar(300)
+  hedefUrl        String?   @db.VarChar(255)
+  olayAnahtari    String?   @unique @db.VarChar(200)
+  okunmaTarihi    DateTime?
+  olusturmaTarihi DateTime  @default(now())
+
+  @@index([kullaniciId, okunmaTarihi, olusturmaTarihi])
 }

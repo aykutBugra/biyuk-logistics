@@ -7,6 +7,7 @@ import { getEnvFilePaths } from "./config/env";
 import { PrismaModule } from "./infrastructure/prisma/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { JobsModule } from "./modules/jobs/jobs.module";
+import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { OffersModule } from "./modules/offers/offers.module";
 import { RatingsModule } from "./modules/ratings/ratings.module";
 import { RolesModule } from "./modules/roles/roles.module";
@@ -26,6 +27,7 @@ import { VehiclesModule } from "./modules/vehicles/vehicles.module";
     UsersModule,
     AuthModule,
     JobsModule,
+    NotificationsModule,
     OffersModule,
     RatingsModule,
     TransportRequestsModule,

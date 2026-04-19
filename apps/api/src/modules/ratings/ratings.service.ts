@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { NotificationsPublisher } from "../notifications/notifications.publisher";
 import { CreateRatingDto } from "./dto/create-rating.dto";
 import { MyRatingSummaryResponseDto } from "./dto/my-rating-summary-response.dto";
 import { RatingListItemResponseDto } from "./dto/rating-list-item-response.dto";
@@ -26,7 +27,10 @@ const RATING_TYPE = "SAYISAL_1_5";
 
 @Injectable()
 export class RatingsService {
-  constructor(private readonly ratingsRepository: RatingsRepository) {}
+  constructor(
+    private readonly ratingsRepository: RatingsRepository,
+    private readonly notificationsPublisher: NotificationsPublisher
+  ) {}
 
   async createForJob(
     currentUser: AuthenticatedUser,
@@ -75,6 +79,13 @@ export class RatingsService {
         puanTanimId: ratingTypeId,
         puanDegeri: createRatingDto.puanDegeri,
         yorum: createRatingDto.yorum,
+      });
+
+      await this.notificationsPublisher.publishRatingReceived({
+        ratedUserId,
+        ratingId: rating.id,
+        jobId: job.id,
+        puanDegeri: rating.puanDegeri,
       });
 
       return toSubmittedRatingResponse(rating);
