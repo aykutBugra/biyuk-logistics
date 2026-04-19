@@ -132,7 +132,7 @@ export default function RegisterPage() {
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Nakliye Sitesi'ne Kayit Ol
+            Bi’yük'e Kayit Ol
           </h2>
         </div>
         <div className="mt-20 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl">

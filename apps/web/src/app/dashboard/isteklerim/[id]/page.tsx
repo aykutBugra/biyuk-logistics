@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
+import RatingComposerCard from "@/components/RatingComposerCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   acceptOffer,
@@ -11,6 +12,7 @@ import {
   rejectOffer,
   type IncomingOfferItem,
 } from "@/lib/api/offers";
+import { createRatingForJob } from "@/lib/api/ratings";
 import {
   deleteTransportRequest,
   getTransportRequestDetail,
@@ -77,6 +79,7 @@ export default function TransportRequestDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [actingOfferId, setActingOfferId] = useState<number | null>(null);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -299,6 +302,47 @@ export default function TransportRequestDetailPage() {
     }
   };
 
+  const handleCreateRating = async (input: { puanDegeri: number; yorum?: string }) => {
+    if (!accessToken || !request?.nakliye || isSubmittingRating) {
+      return;
+    }
+
+    try {
+      setIsSubmittingRating(true);
+      await createRatingForJob(request.nakliye.id, input, accessToken);
+      window.alert("Puanin kaydedildi.");
+      setReloadKey((currentKey) => currentKey + 1);
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 401) {
+        clearStoredAuth();
+        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        router.replace("/login");
+        return;
+      }
+
+      if (error instanceof ApiClientError && error.status === 403) {
+        window.alert("Bu islem icin yetkin yok.");
+        router.replace("/");
+        return;
+      }
+
+      if (error instanceof ApiClientError && error.status === 404) {
+        window.alert("Bu nakliye artik bulunamiyor.");
+        setReloadKey((currentKey) => currentKey + 1);
+        return;
+      }
+
+      window.alert(
+        error instanceof ApiClientError
+          ? error.message
+          : "Puan gonderilirken beklenmeyen bir hata olustu."
+      );
+      setReloadKey((currentKey) => currentKey + 1);
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
+
   if (status !== "ready") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -444,6 +488,20 @@ export default function TransportRequestDetailPage() {
                 </div>
               </dl>
             </div>
+          ) : null}
+
+          {request.nakliye ? (
+            <RatingComposerCard
+              eyebrow="Kapanis degerlendirmesi"
+              title="Nakliyeciyi puanla"
+              description="Tamamlanan nakliye sonrasinda nakliyeci deneyimini 1 ile 5 arasinda puanlayabilirsin."
+              shipmentStatus={request.nakliye.durum}
+              pendingDescription="Nakliye tamamlandiginda nakliyeciyi puanlama alani burada acilacak."
+              canRateCounterparty={request.nakliye.ratingContext.canRateCounterparty}
+              mySubmittedRating={request.nakliye.ratingContext.mySubmittedRating}
+              isSubmitting={isSubmittingRating}
+              onSubmit={handleCreateRating}
+            />
           ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">

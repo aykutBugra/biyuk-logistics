@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import type { StoredSubmittedRatingRecord } from "../../ratings/rating-context.helpers";
 
 const jobRecordSelect = {
   id: true,
@@ -62,6 +63,16 @@ const jobRecordSelect = {
       },
     },
   },
+  puanlar: {
+    select: {
+      id: true,
+      puanlayanId: true,
+      puanlananId: true,
+      puanDegeri: true,
+      yorum: true,
+      tarih: true,
+    },
+  },
 } satisfies Prisma.NakliyeSelect;
 
 type StoredJobQuery = Prisma.NakliyeGetPayload<{
@@ -114,6 +125,7 @@ export type StoredJobDetailRecord = {
   aracMarka: string;
   aracModel: string;
   aracDeletedAt: Date | null;
+  ratings: StoredSubmittedRatingRecord[];
 };
 
 export type CompleteJobInput = {
@@ -356,6 +368,14 @@ export class JobsRepository {
       aracMarka: job.arac.aracBilgisi.marka,
       aracModel: job.arac.aracBilgisi.model,
       aracDeletedAt: job.arac.silmeTarihi,
+      ratings: job.puanlar.map((rating) => ({
+        id: rating.id,
+        puanlayanId: rating.puanlayanId,
+        puanlananId: rating.puanlananId,
+        puanDegeri: rating.puanDegeri,
+        yorum: rating.yorum,
+        tarih: rating.tarih,
+      })),
     };
   }
 }

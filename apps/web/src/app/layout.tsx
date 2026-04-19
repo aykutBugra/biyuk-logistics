@@ -15,11 +15,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "NakliyeSitesi",
-    template: "%s | NakliyeSitesi",
+    default: "Bi’yük",
+    template: "%s | Bi’yük",
   },
   description:
-    "Tasima taleplerini, teklifleri, araclarini ve anlasilan nakliyeleri tek akista yonet.",
+    "Bi’yük ile tasima taleplerini, tekliflerini, araclarini ve anlasilan nakliyelerini tek akista yonet.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

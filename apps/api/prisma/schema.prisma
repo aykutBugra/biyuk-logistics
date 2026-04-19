@@ -182,4 +182,9 @@ model Puanlama {
   
   yorum           String?       @db.VarChar(500)
   tarih           DateTime      @default(now())
+
+  @@unique([nakliyeId, puanlayanId, puanlananId])
+  @@index([nakliyeId])
+  @@index([puanlayanId])
+  @@index([puanlananId])
 }

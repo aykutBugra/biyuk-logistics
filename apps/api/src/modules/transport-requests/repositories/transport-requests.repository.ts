@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import type { StoredSubmittedRatingRecord } from "../../ratings/rating-context.helpers";
 
 const transportRequestSelect = {
   id: true,
@@ -27,6 +28,7 @@ const transportRequestSelect = {
       teslimTarihi: true,
       durum: {
         select: {
+          durumTuru: true,
           durumAdi: true,
         },
       },
@@ -42,6 +44,16 @@ const transportRequestSelect = {
         select: {
           id: true,
           plaka: true,
+        },
+      },
+      puanlar: {
+        select: {
+          id: true,
+          puanlayanId: true,
+          puanlananId: true,
+          puanDegeri: true,
+          yorum: true,
+          tarih: true,
         },
       },
     },
@@ -76,11 +88,13 @@ export type StoredTransportRequestJobRecord = {
   carrierUsername: string;
   aracId: number;
   aracPlaka: string;
+  durumTuru: string;
   anlasilanFiyat: number;
   durumAdi: string;
   olusturmaTarihi: Date;
   baslangicTarihi: Date | null;
   teslimTarihi: Date | null;
+  ratings: StoredSubmittedRatingRecord[];
 };
 
 export type StoredTransportRequestRecord = {
@@ -253,11 +267,20 @@ export class TransportRequestsRepository {
             carrierUsername: transportRequest.nakliye.nakliyeci.kullaniciAdi,
             aracId: transportRequest.nakliye.arac.id,
             aracPlaka: transportRequest.nakliye.arac.plaka,
+            durumTuru: transportRequest.nakliye.durum.durumTuru,
             anlasilanFiyat: transportRequest.nakliye.anlasilanFiyat.toNumber(),
             durumAdi: transportRequest.nakliye.durum.durumAdi,
             olusturmaTarihi: transportRequest.nakliye.olusturmaTarihi,
             baslangicTarihi: transportRequest.nakliye.baslangicTarihi,
             teslimTarihi: transportRequest.nakliye.teslimTarihi,
+            ratings: transportRequest.nakliye.puanlar.map((rating) => ({
+              id: rating.id,
+              puanlayanId: rating.puanlayanId,
+              puanlananId: rating.puanlananId,
+              puanDegeri: rating.puanDegeri,
+              yorum: rating.yorum,
+              tarih: rating.tarih,
+            })),
           }
         : null,
     };

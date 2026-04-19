@@ -1,4 +1,5 @@
 import { apiFetch } from "./api-client";
+import type { RatingContext } from "./ratings";
 
 export type CreateTransportRequestInput = {
   baslangicSehri: string;
@@ -38,6 +39,7 @@ export type TransportRequestDetail = TransportRequestListItem & {
     olusturmaTarihi: string;
     baslangicTarihi: string | null;
     teslimTarihi: string | null;
+    ratingContext: RatingContext;
   } | null;
 };
 

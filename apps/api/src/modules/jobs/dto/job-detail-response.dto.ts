@@ -1,3 +1,5 @@
+import { RatingContextResponseDto } from "../../ratings/dto/rating-context-response.dto";
+
 export class JobDetailResponseDto {
   id!: number;
   requestId!: number;
@@ -32,4 +34,5 @@ export class JobDetailResponseDto {
   };
   canStart!: boolean;
   canComplete!: boolean;
+  ratingContext!: RatingContextResponseDto;
 }

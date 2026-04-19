@@ -1,4 +1,5 @@
 import { apiFetch } from "./api-client";
+import type { RatingContext } from "./ratings";
 
 export type JobListItem = {
   id: number;
@@ -50,6 +51,7 @@ export type JobDetail = {
   };
   canStart: boolean;
   canComplete: boolean;
+  ratingContext: RatingContext;
 };
 
 export function getMyJobs(accessToken: string) {

@@ -17,6 +17,7 @@ import {
   type StoredTransportRequestRecord,
   TransportRequestsRepository,
 } from "./repositories/transport-requests.repository";
+import { buildRatingContext } from "../ratings/rating-context.helpers";
 
 const INITIAL_TRANSPORT_REQUEST_STATUS = {
   durumTuru: "ISTEK",
@@ -48,7 +49,7 @@ export class TransportRequestsService {
       durumId: initialStatusId,
     });
 
-    return this.toDetailResponse(transportRequest);
+    return this.toDetailResponse(transportRequest, currentUser);
   }
 
   async getMine(
@@ -80,7 +81,7 @@ export class TransportRequestsService {
       throw new NotFoundException("Transport request not found.");
     }
 
-    return this.toDetailResponse(transportRequest);
+    return this.toDetailResponse(transportRequest, currentUser);
   }
 
   async updateById(
@@ -125,7 +126,7 @@ export class TransportRequestsService {
       throw new NotFoundException("Transport request not found.");
     }
 
-    return this.toDetailResponse(transportRequest);
+    return this.toDetailResponse(transportRequest, currentUser);
   }
 
   async deleteById(
@@ -211,7 +212,8 @@ export class TransportRequestsService {
   }
 
   private toDetailResponse(
-    transportRequest: StoredTransportRequestRecord
+    transportRequest: StoredTransportRequestRecord,
+    currentUser: AuthenticatedUser
   ): TransportRequestDetailResponseDto {
     return {
       ...this.toListItemResponse(transportRequest),
@@ -219,12 +221,13 @@ export class TransportRequestsService {
       baslangicBoylam: transportRequest.baslangicBoylam,
       varisEnlem: transportRequest.varisEnlem,
       varisBoylam: transportRequest.varisBoylam,
-      nakliye: this.toJobSummaryResponse(transportRequest.nakliye),
+      nakliye: this.toJobSummaryResponse(transportRequest.nakliye, currentUser.id),
     };
   }
 
   private toJobSummaryResponse(
-    job: StoredTransportRequestJobRecord | null
+    job: StoredTransportRequestJobRecord | null,
+    currentUserId: number
   ): TransportRequestJobSummaryResponseDto | null {
     if (!job) {
       return null;
@@ -242,6 +245,14 @@ export class TransportRequestsService {
       olusturmaTarihi: job.olusturmaTarihi,
       baslangicTarihi: job.baslangicTarihi,
       teslimTarihi: job.teslimTarihi,
+      ratingContext: buildRatingContext({
+        ratings: job.ratings,
+        currentUserId,
+        carrierId: job.carrierId,
+        customerId: currentUserId,
+        durumTuru: job.durumTuru,
+        durumAdi: job.durumAdi,
+      }),
     };
   }
 }

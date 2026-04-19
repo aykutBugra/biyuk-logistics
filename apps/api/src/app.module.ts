@@ -8,6 +8,7 @@ import { PrismaModule } from "./infrastructure/prisma/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { JobsModule } from "./modules/jobs/jobs.module";
 import { OffersModule } from "./modules/offers/offers.module";
+import { RatingsModule } from "./modules/ratings/ratings.module";
 import { RolesModule } from "./modules/roles/roles.module";
 import { TransportRequestsModule } from "./modules/transport-requests/transport-requests.module";
 import { UsersModule } from "./modules/users/users.module";
@@ -26,6 +27,7 @@ import { VehiclesModule } from "./modules/vehicles/vehicles.module";
     AuthModule,
     JobsModule,
     OffersModule,
+    RatingsModule,
     TransportRequestsModule,
     VehiclesModule,
   ],

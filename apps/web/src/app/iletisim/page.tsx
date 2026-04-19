@@ -15,7 +15,7 @@ export default function ContactPage() {
           </p>
           <p>
             <span className="font-semibold text-slate-900">E-posta:</span>{" "}
-            destek@nakliyesitesi.local
+            destek@biyuk.local
           </p>
           <p>
             <span className="font-semibold text-slate-900">Calisma duzeni:</span>{" "}

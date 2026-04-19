@@ -1,3 +1,5 @@
+import { RatingContextResponseDto } from "../../ratings/dto/rating-context-response.dto";
+
 export class TransportRequestJobSummaryResponseDto {
   id!: number;
   carrierId!: number;
@@ -10,4 +12,5 @@ export class TransportRequestJobSummaryResponseDto {
   olusturmaTarihi!: Date;
   baslangicTarihi!: Date | null;
   teslimTarihi!: Date | null;
+  ratingContext!: RatingContextResponseDto;
 }

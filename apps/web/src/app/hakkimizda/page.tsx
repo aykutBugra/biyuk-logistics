@@ -10,7 +10,7 @@ export default function AboutPage() {
         </h1>
         <div className="mt-6 space-y-4 text-sm leading-7 text-slate-600">
           <p>
-            NakliyeSitesi, musterilerin tasima taleplerini hizli sekilde
+            Bi’yük, musterilerin tasima taleplerini hizli sekilde
             olusturabildigi ve nakliyecilerin bu taleplere dogrudan teklif
             verebildigi sade bir operasyon paneli olarak tasarlandi.
           </p>

@@ -38,16 +38,15 @@ export default function Home() {
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:items-start">
           <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm md:p-10">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600">
-              Nakliye operasyon akisi
+              Bi’yük
             </p>
             <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950 md:text-6xl">
-              Istek, teklif ve nakliye yonetimini tek yerde tutan sade panel.
+              Bi’yük ile istek, teklif ve nakliye yonetimini tek yerde tut.
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
-              NakliyeSitesi, musterilerin tasima taleplerini olusturup gelen
-              teklifleri degerlendirdigi; nakliyecilerin ise acik istekleri
-              kesfedip anlasilan nakliyeleri yonettigi sade bir operasyon
-              akisi sunar.
+              Bi’yük, musterilerin tasima taleplerini olusturup gelen teklifleri
+              degerlendirdigi; nakliyecilerin ise acik istekleri kesfedip
+              anlasilan nakliyeleri yonettigi sade bir operasyon akisi sunar.
             </p>
           </div>
 

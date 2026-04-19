@@ -83,7 +83,7 @@ export default function Page() {
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
         <div className="text-center mb-8">
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Nakliye Sitesine Giris Yap
+            Bi’yük'e Giris Yap
           </h2>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">

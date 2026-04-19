@@ -14,6 +14,7 @@ import {
   type StoredJobDetailRecord,
   type StoredJobRecord,
 } from "./repositories/jobs.repository";
+import { buildRatingContext } from "../ratings/rating-context.helpers";
 
 const CREATED_JOB_STATUS = {
   durumTuru: "NAKLIYE",
@@ -339,6 +340,14 @@ export class JobsService {
       canStart: canManageLifecycle && this.isJobCreated(job.durumTuru, job.durumAdi),
       canComplete:
         canManageLifecycle && this.isJobStarted(job.durumTuru, job.durumAdi),
+      ratingContext: buildRatingContext({
+        ratings: job.ratings,
+        currentUserId: currentUser.id,
+        carrierId: job.carrierId,
+        customerId: job.customerId,
+        durumTuru: job.durumTuru,
+        durumAdi: job.durumAdi,
+      }),
     };
   }
 }

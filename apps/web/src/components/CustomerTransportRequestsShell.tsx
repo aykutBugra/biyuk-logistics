@@ -33,6 +33,19 @@ export default function CustomerTransportRequestsShell({
             },
           ],
         },
+        {
+          title: "Hesabim",
+          items: [
+            {
+              href: "/dashboard/puanlarim",
+              label: "Puanlarim",
+            },
+            {
+              href: "/dashboard/profil",
+              label: "Profil",
+            },
+          ],
+        },
       ]}
       title={title}
       description={description}

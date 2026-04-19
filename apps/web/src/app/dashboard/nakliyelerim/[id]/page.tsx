@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
+import RatingComposerCard from "@/components/RatingComposerCard";
 import { ApiClientError } from "@/lib/api/api-client";
+import { createRatingForJob } from "@/lib/api/ratings";
 import {
   completeJob,
   getJobDetail,
@@ -42,6 +44,7 @@ export default function CarrierJobDetailPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actingAction, setActingAction] = useState<"start" | "complete" | null>(null);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -167,6 +170,47 @@ export default function CarrierJobDetailPage() {
       setReloadKey((currentKey) => currentKey + 1);
     } finally {
       setActingAction(null);
+    }
+  };
+
+  const handleCreateRating = async (input: { puanDegeri: number; yorum?: string }) => {
+    if (!accessToken || !job || isSubmittingRating) {
+      return;
+    }
+
+    try {
+      setIsSubmittingRating(true);
+      await createRatingForJob(job.id, input, accessToken);
+      window.alert("Puanin kaydedildi.");
+      setReloadKey((currentKey) => currentKey + 1);
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 401) {
+        clearStoredAuth();
+        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        router.replace("/login");
+        return;
+      }
+
+      if (error instanceof ApiClientError && error.status === 403) {
+        window.alert("Bu islem icin yetkin yok.");
+        router.replace("/");
+        return;
+      }
+
+      if (error instanceof ApiClientError && error.status === 404) {
+        window.alert("Bu nakliye artik bulunamiyor.");
+        router.replace("/dashboard/nakliyelerim");
+        return;
+      }
+
+      window.alert(
+        error instanceof ApiClientError
+          ? error.message
+          : "Puan gonderilirken beklenmeyen bir hata olustu."
+      );
+      setReloadKey((currentKey) => currentKey + 1);
+    } finally {
+      setIsSubmittingRating(false);
     }
   };
 
@@ -344,6 +388,18 @@ export default function CarrierJobDetailPage() {
               </dl>
             </div>
           </div>
+
+          <RatingComposerCard
+            eyebrow="Kapanis degerlendirmesi"
+            title="Musteriyi puanla"
+            description="Tamamlanan nakliye sonrasinda musteri deneyimini 1 ile 5 arasinda puanlayabilirsin."
+            shipmentStatus={job.durum}
+            pendingDescription="Nakliye tamamlandiginda musteri puanlama alani burada acilacak."
+            canRateCounterparty={job.ratingContext.canRateCounterparty}
+            mySubmittedRating={job.ratingContext.mySubmittedRating}
+            isSubmitting={isSubmittingRating}
+            onSubmit={handleCreateRating}
+          />
         </div>
       ) : null}
     </CarrierVehiclesShell>

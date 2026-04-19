@@ -85,7 +85,7 @@ export default function Navbar() {
               href="/"
               className="text-2xl font-black tracking-tight text-slate-950 transition hover:text-blue-700"
             >
-              Nakliye Sitesi<span className="text-blue-600">.</span>
+              Bi<span className="text-blue-600">’</span>yük
             </Link>
 
             <div className="hidden items-center gap-2 md:flex">
