@@ -6,6 +6,8 @@ import authConfig from "./config/auth.config";
 import { getEnvFilePaths } from "./config/env";
 import { PrismaModule } from "./infrastructure/prisma/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
+import { JobsModule } from "./modules/jobs/jobs.module";
+import { OffersModule } from "./modules/offers/offers.module";
 import { RolesModule } from "./modules/roles/roles.module";
 import { TransportRequestsModule } from "./modules/transport-requests/transport-requests.module";
 import { UsersModule } from "./modules/users/users.module";
@@ -22,6 +24,8 @@ import { VehiclesModule } from "./modules/vehicles/vehicles.module";
     RolesModule,
     UsersModule,
     AuthModule,
+    JobsModule,
+    OffersModule,
     TransportRequestsModule,
     VehiclesModule,
   ],

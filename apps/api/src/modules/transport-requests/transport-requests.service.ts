@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
@@ -7,9 +8,12 @@ import {
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { CreateTransportRequestDto } from "./dto/create-transport-request.dto";
+import { UpdateTransportRequestDto } from "./dto/update-transport-request.dto";
 import { TransportRequestDetailResponseDto } from "./dto/transport-request-detail-response.dto";
+import { TransportRequestJobSummaryResponseDto } from "./dto/transport-request-job-summary-response.dto";
 import { TransportRequestListItemResponseDto } from "./dto/transport-request-list-item-response.dto";
 import {
+  type StoredTransportRequestJobRecord,
   type StoredTransportRequestRecord,
   TransportRequestsRepository,
 } from "./repositories/transport-requests.repository";
@@ -79,6 +83,84 @@ export class TransportRequestsService {
     return this.toDetailResponse(transportRequest);
   }
 
+  async updateById(
+    currentUser: AuthenticatedUser,
+    id: number,
+    updateTransportRequestDto: UpdateTransportRequestDto
+  ): Promise<TransportRequestDetailResponseDto> {
+    this.assertCustomerRole(currentUser);
+
+    const existingTransportRequest =
+      await this.transportRequestsRepository.findByIdAndCustomerId(
+        id,
+        currentUser.id
+      );
+
+    if (!existingTransportRequest) {
+      throw new NotFoundException("Transport request not found.");
+    }
+
+    if (!this.isTransportRequestMutable(existingTransportRequest)) {
+      throw new ConflictException(
+        "Transport request can no longer be modified."
+      );
+    }
+
+    const transportRequest =
+      await this.transportRequestsRepository.updateByIdAndCustomerId(
+        id,
+        currentUser.id,
+        {
+          baslangicSehri: updateTransportRequestDto.baslangicSehri,
+          varisSehri: updateTransportRequestDto.varisSehri,
+          baslangicEnlem: updateTransportRequestDto.baslangicEnlem,
+          baslangicBoylam: updateTransportRequestDto.baslangicBoylam,
+          varisEnlem: updateTransportRequestDto.varisEnlem,
+          varisBoylam: updateTransportRequestDto.varisBoylam,
+          yukDetay: updateTransportRequestDto.yukDetay,
+        }
+      );
+
+    if (!transportRequest) {
+      throw new NotFoundException("Transport request not found.");
+    }
+
+    return this.toDetailResponse(transportRequest);
+  }
+
+  async deleteById(
+    currentUser: AuthenticatedUser,
+    id: number
+  ): Promise<void> {
+    this.assertCustomerRole(currentUser);
+
+    const existingTransportRequest =
+      await this.transportRequestsRepository.findByIdAndCustomerId(
+        id,
+        currentUser.id
+      );
+
+    if (!existingTransportRequest) {
+      throw new NotFoundException("Transport request not found.");
+    }
+
+    if (!this.isTransportRequestMutable(existingTransportRequest)) {
+      throw new ConflictException(
+        "Transport request can no longer be deleted."
+      );
+    }
+
+    const wasDeleted =
+      await this.transportRequestsRepository.softDeleteByIdAndCustomerId(
+        id,
+        currentUser.id
+      );
+
+    if (!wasDeleted) {
+      throw new NotFoundException("Transport request not found.");
+    }
+  }
+
   private async requireInitialStatusId(): Promise<number> {
     const initialStatusId =
       await this.transportRequestsRepository.findStatusIdByTypeAndName(
@@ -92,6 +174,18 @@ export class TransportRequestsService {
 
     throw new InternalServerErrorException(
       `Transport request initial status is not configured: ${INITIAL_TRANSPORT_REQUEST_STATUS.durumTuru}/${INITIAL_TRANSPORT_REQUEST_STATUS.durumAdi}.`
+    );
+  }
+
+  private isTransportRequestMutable(
+    transportRequest: StoredTransportRequestRecord
+  ): boolean {
+    return (
+      transportRequest.nakliye === null &&
+      transportRequest.durumTuru.trim().toUpperCase() ===
+        INITIAL_TRANSPORT_REQUEST_STATUS.durumTuru &&
+      transportRequest.durumAdi.trim().toUpperCase() ===
+        INITIAL_TRANSPORT_REQUEST_STATUS.durumAdi
     );
   }
 
@@ -125,6 +219,29 @@ export class TransportRequestsService {
       baslangicBoylam: transportRequest.baslangicBoylam,
       varisEnlem: transportRequest.varisEnlem,
       varisBoylam: transportRequest.varisBoylam,
+      nakliye: this.toJobSummaryResponse(transportRequest.nakliye),
+    };
+  }
+
+  private toJobSummaryResponse(
+    job: StoredTransportRequestJobRecord | null
+  ): TransportRequestJobSummaryResponseDto | null {
+    if (!job) {
+      return null;
+    }
+
+    return {
+      id: job.id,
+      carrierId: job.carrierId,
+      carrierName: job.carrierName,
+      carrierUsername: job.carrierUsername,
+      aracId: job.aracId,
+      aracPlaka: job.aracPlaka,
+      anlasilanFiyat: job.anlasilanFiyat,
+      durum: job.durumAdi,
+      olusturmaTarihi: job.olusturmaTarihi,
+      baslangicTarihi: job.baslangicTarihi,
+      teslimTarihi: job.teslimTarihi,
     };
   }
 }

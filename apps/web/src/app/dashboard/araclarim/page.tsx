@@ -5,7 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
 import { ApiClientError } from "@/lib/api/api-client";
-import { getMyVehicles, type VehicleListItem } from "@/lib/api/vehicles";
+import {
+  deleteVehicle,
+  getMyVehicles,
+  type VehicleListItem,
+} from "@/lib/api/vehicles";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
 
@@ -21,6 +25,7 @@ export default function MyVehiclesPage() {
   const [vehicles, setVehicles] = useState<VehicleListItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingVehicleId, setDeletingVehicleId] = useState<number | null>(null);
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
@@ -80,6 +85,57 @@ export default function MyVehiclesPage() {
     };
   }, [accessToken, router, status]);
 
+  const handleDelete = async (vehicleId: number) => {
+    if (!accessToken || deletingVehicleId !== null) {
+      return;
+    }
+
+    const isConfirmed = window.confirm(
+      "Bu araci silmek istedigine emin misin?"
+    );
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    try {
+      setDeletingVehicleId(vehicleId);
+      await deleteVehicle(vehicleId, accessToken);
+      setVehicles((currentVehicles) =>
+        currentVehicles.filter((vehicle) => vehicle.id !== vehicleId)
+      );
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 401) {
+        clearStoredAuth();
+        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        router.replace("/login");
+        return;
+      }
+
+      if (error instanceof ApiClientError && error.status === 403) {
+        window.alert("Bu islem icin yetkin yok.");
+        router.replace("/");
+        return;
+      }
+
+      if (error instanceof ApiClientError && error.status === 404) {
+        setVehicles((currentVehicles) =>
+          currentVehicles.filter((vehicle) => vehicle.id !== vehicleId)
+        );
+        window.alert("Bu arac artik bulunamiyor.");
+        return;
+      }
+
+      window.alert(
+        error instanceof ApiClientError
+          ? error.message
+          : "Arac silinirken beklenmeyen bir hata olustu."
+      );
+    } finally {
+      setDeletingVehicleId(null);
+    }
+  };
+
   if (status !== "ready") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -91,7 +147,7 @@ export default function MyVehiclesPage() {
   return (
     <CarrierVehiclesShell
       title="Araclarim"
-      description="Yalnizca giris yapan nakliyeciye ait arac kayitlari listelenir."
+      description="Yalnizca giris yapan nakliyeciye ait aktif arac kayitlari listelenir."
     >
       {isLoading ? (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
@@ -122,30 +178,56 @@ export default function MyVehiclesPage() {
 
       {!isLoading && !errorMessage && vehicles.length > 0 ? (
         <div className="grid gap-4">
-          {vehicles.map((vehicle) => (
-            <Link
-              key={vehicle.id}
-              href={`/dashboard/araclarim/${vehicle.id}`}
-              className="block rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-transform hover:-translate-y-0.5 hover:border-blue-200"
-            >
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
-                      {vehicle.plaka}
-                    </span>
-                    <span>#{vehicle.id}</span>
+          {vehicles.map((vehicle) => {
+            const isDeleting = deletingVehicleId === vehicle.id;
+
+            return (
+              <div
+                key={vehicle.id}
+                className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+              >
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
+                        {vehicle.plaka}
+                      </span>
+                      <span>#{vehicle.id}</span>
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      {vehicle.marka} {"->"} {vehicle.model}
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                      {vehicle.yil} model · {formatCapacity(vehicle.kapasite)}
+                    </p>
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    {vehicle.marka} {"->"} {vehicle.model}
-                  </h2>
-                  <p className="text-sm text-gray-600">
-                    {vehicle.yil} model · {formatCapacity(vehicle.kapasite)}
-                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/dashboard/araclarim/${vehicle.id}`}
+                      className="inline-flex items-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                      Detay
+                    </Link>
+                    <Link
+                      href={`/dashboard/araclarim/${vehicle.id}/duzenle`}
+                      className="inline-flex items-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                    >
+                      Duzenle
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(vehicle.id)}
+                      disabled={isDeleting}
+                      className="inline-flex items-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isDeleting ? "Siliniyor..." : "Sil"}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       ) : null}
     </CarrierVehiclesShell>

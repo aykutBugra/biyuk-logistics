@@ -10,6 +10,12 @@ import {
   type StoredAuth,
 } from "@/lib/auth/auth-storage";
 
+type HomeAction = {
+  href: string;
+  label: string;
+  variant: "primary" | "secondary";
+};
+
 export default function HomeCustomerActions() {
   const [auth, setAuth] = useState<StoredAuth | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -36,40 +42,57 @@ export default function HomeCustomerActions() {
     return null;
   }
 
-  const primaryAction = isCarrier
-    ? {
-        href: "/dashboard/arac_ekle",
-        label: "Arac Ekle",
-      }
-    : {
-        href: "/dashboard/istek_ekle",
-        label: "Yeni Istek Ekle",
-      };
-
-  const secondaryAction = isCarrier
-    ? {
-        href: "/dashboard/araclarim",
-        label: "Araclarimi Gor",
-      }
-    : {
-        href: "/dashboard/isteklerim",
-        label: "Isteklerimi Gor",
-      };
+  const actions: HomeAction[] = isCarrier
+    ? [
+        {
+          href: "/dashboard/arac_ekle",
+          label: "Arac Ekle",
+          variant: "primary",
+        },
+        {
+          href: "/dashboard/araclarim",
+          label: "Araclarim",
+          variant: "secondary",
+        },
+        {
+          href: "/dashboard/acik_istekler",
+          label: "Acik Istekler",
+          variant: "secondary",
+        },
+        {
+          href: "/dashboard/tekliflerim",
+          label: "Tekliflerim",
+          variant: "secondary",
+        },
+      ]
+    : [
+        {
+          href: "/dashboard/istek_ekle",
+          label: "Istek Ekle",
+          variant: "primary",
+        },
+        {
+          href: "/dashboard/isteklerim",
+          label: "Isteklerim",
+          variant: "secondary",
+        },
+      ];
 
   return (
-    <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row">
-      <Link
-        href={primaryAction.href}
-        className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-blue-700"
-      >
-        {primaryAction.label}
-      </Link>
-      <Link
-        href={secondaryAction.href}
-        className="inline-flex items-center justify-center rounded-xl border border-blue-200 px-6 py-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50"
-      >
-        {secondaryAction.label}
-      </Link>
+    <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+      {actions.map((action) => (
+        <Link
+          key={action.href}
+          href={action.href}
+          className={`inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold transition-colors ${
+            action.variant === "primary"
+              ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
+              : "border border-blue-200 text-blue-700 hover:bg-blue-50"
+          }`}
+        >
+          {action.label}
+        </Link>
+      ))}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { ApiClientError } from "@/lib/api/api-client";
 import {
   getVehicleDetail,
   updateVehicle,
-  type CreateVehicleInput,
+  type UpdateVehicleInput,
 } from "@/lib/api/vehicles";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
@@ -41,7 +41,7 @@ export default function EditVehiclePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {  //eski bilgileri doldurur ki güncelleme yaparken kullanıcı mevcut bilgileri görsün
+  useEffect(() => {
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -61,7 +61,6 @@ export default function EditVehiclePage() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
-
         const response = await getVehicleDetail(vehicleId, accessToken);
 
         if (!isMounted) {
@@ -129,13 +128,18 @@ export default function EditVehiclePage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (isSubmitting || !accessToken || !Number.isInteger(vehicleId) || vehicleId <= 0) {
+    if (
+      isSubmitting ||
+      !accessToken ||
+      !Number.isInteger(vehicleId) ||
+      vehicleId <= 0
+    ) {
       return;
     }
 
     setIsSubmitting(true);
 
-    const payload: CreateVehicleInput = {
+    const payload: UpdateVehicleInput = {
       marka: form.marka,
       model: form.model,
       plaka: form.plaka,
@@ -161,7 +165,7 @@ export default function EditVehiclePage() {
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-        window.alert("Bu arac bulunamadi.");
+        window.alert(error.message);
         router.replace("/dashboard/araclarim");
         return;
       }

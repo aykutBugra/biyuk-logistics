@@ -6,8 +6,15 @@ import { compare, hash } from "bcryptjs";
 import { ROLE_NAMES, type RoleName } from "../../common/constants/role-names";
 import type { JwtTtlValue } from "../../config/auth.config";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { RolesService } from "../roles/roles.service";
 import { UserProfileResponseDto } from "../users/dto/user-profile-response.dto";
 import { type AuthUserRecord, UsersService } from "../users/users.service";
+import {
+  createVehicleForOwner,
+  isVehiclePlateUniqueConstraintTarget,
+  type VehicleDraft,
+} from "../vehicles/vehicle-write.helpers";
 import { AuthTokenResponseDto } from "./dto/auth-token-response.dto";
 import { LoginDto } from "./dto/login.dto";
 import { type RegisterRoleName, RegisterDto } from "./dto/register.dto";
@@ -32,12 +39,15 @@ type NormalizedRegisterInput = {  //NormalizedRegisterInput, kayıt işlemi sır
   telefonNumarasi: string | null;
   password: string;
   role: RoleName;
+  initialVehicle: VehicleDraft | null;
 };
 
 @Injectable()
 export class AuthService {    //AuthService, kimlik doğrulama işlemlerini gerçekleştiren bir hizmettir
   constructor(
     private readonly usersService: UsersService,
+    private readonly rolesService: RolesService,
+    private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService
   ) {}
@@ -50,17 +60,30 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
       normalizedInput.kullaniciAdi
     );
 
+    const roleId = await this.rolesService.requireRoleId(normalizedInput.role);
+    const sifreHash = await hash(normalizedInput.password, 12);
     let user: AuthUserRecord;   
 
     try { //Yeni kullanıcı oluşturma işlemi sırasında oluşabilecek benzersiz kısıtlama hatalarını yakalar ve uygun şekilde ConflictException olarak yeniden fırlatır
-      user = await this.usersService.createUserWithRole({
-        ad: normalizedInput.ad,
-        soyad: normalizedInput.soyad,
-        mail: normalizedInput.mail,
-        kullaniciAdi: normalizedInput.kullaniciAdi,
-        telefonNumarasi: normalizedInput.telefonNumarasi,
-        sifreHash: await hash(normalizedInput.password, 12),
-        roleName: normalizedInput.role,
+      user = await this.prisma.client.$transaction(async (tx) => {
+        const createdUser = await this.usersService.createUserWithResolvedRoleIdInTransaction(tx, {
+          ad: normalizedInput.ad,
+          soyad: normalizedInput.soyad,
+          mail: normalizedInput.mail,
+          kullaniciAdi: normalizedInput.kullaniciAdi,
+          telefonNumarasi: normalizedInput.telefonNumarasi,
+          sifreHash,
+          roleId,
+        });
+
+        if (normalizedInput.initialVehicle) {
+          await createVehicleForOwner(tx, {
+            sahipId: createdUser.id,
+            ...normalizedInput.initialVehicle,
+          });
+        }
+
+        return createdUser;
       });
     } catch (error) { 
       this.rethrowUniqueConstraintAsConflict(error);
@@ -189,6 +212,16 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
       telefonNumarasi: registerDto.telefonNumarasi?.trim() || null,
       password: registerDto.password,
       role: this.normalizeRegisterRole(registerDto.role),
+      initialVehicle:
+        this.normalizeRegisterRole(registerDto.role) === ROLE_NAMES.NAKLIYECI
+          ? {
+              marka: registerDto.marka ?? "",
+              model: registerDto.model ?? "",
+              plaka: registerDto.plaka ?? "",
+              yil: registerDto.yil ?? 0,
+              kapasite: registerDto.kapasite ?? 0,
+            }
+          : null,
     };
   }
 
@@ -215,6 +248,10 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
 
     if (targets.includes("kullaniciAdi")) {
       throw new ConflictException("Username is already in use.");
+    }
+
+    if (isVehiclePlateUniqueConstraintTarget(targets)) {
+      throw new ConflictException("Vehicle plate is already in use.");
     }
 
     throw new ConflictException("User identifiers must be unique.");

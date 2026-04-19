@@ -6,3 +6,4 @@ WHERE NOT EXISTS (
     WHERE "durumTuru" = 'ISTEK'
       AND "durumAdi" = 'OLUSTURULDU'
 );
+

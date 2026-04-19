@@ -18,6 +18,34 @@ const transportRequestSelect = {
       durumAdi: true,
     },
   },
+  nakliye: {
+    select: {
+      id: true,
+      anlasilanFiyat: true,
+      olusturmaTarihi: true,
+      baslangicTarihi: true,
+      teslimTarihi: true,
+      durum: {
+        select: {
+          durumAdi: true,
+        },
+      },
+      nakliyeci: {
+        select: {
+          id: true,
+          ad: true,
+          soyad: true,
+          kullaniciAdi: true,
+        },
+      },
+      arac: {
+        select: {
+          id: true,
+          plaka: true,
+        },
+      },
+    },
+  },
 } satisfies Prisma.IstekSelect;
 
 type StoredTransportRequestQuery = Prisma.IstekGetPayload<{
@@ -36,6 +64,25 @@ export type CreateTransportRequestRecordInput = {
   durumId: number;
 };
 
+export type UpdateTransportRequestRecordInput = Omit<
+  CreateTransportRequestRecordInput,
+  "musteriId" | "durumId"
+>;
+
+export type StoredTransportRequestJobRecord = {
+  id: number;
+  carrierId: number;
+  carrierName: string;
+  carrierUsername: string;
+  aracId: number;
+  aracPlaka: string;
+  anlasilanFiyat: number;
+  durumAdi: string;
+  olusturmaTarihi: Date;
+  baslangicTarihi: Date | null;
+  teslimTarihi: Date | null;
+};
+
 export type StoredTransportRequestRecord = {
   id: number;
   baslangicSehri: string;
@@ -48,6 +95,7 @@ export type StoredTransportRequestRecord = {
   olusturmaTarihi: Date;
   durumTuru: string;
   durumAdi: string;
+  nakliye: StoredTransportRequestJobRecord | null;
 };
 
 @Injectable()
@@ -98,11 +146,64 @@ export class TransportRequestsRepository {
     return this.mapStoredTransportRequest(transportRequest);
   }
 
+  async updateByIdAndCustomerId(
+    id: number,
+    musteriId: number,
+    input: UpdateTransportRequestRecordInput
+  ): Promise<StoredTransportRequestRecord | null> {
+    const result = await this.prisma.client.istek.updateMany({
+      where: {
+        id,
+        musteriId,
+        silmeTarihi: null,
+      },
+      data: {
+        baslangicSehri: input.baslangicSehri,
+        varisSehri: input.varisSehri,
+        baslangicEnlem: new Prisma.Decimal(input.baslangicEnlem),
+        baslangicBoylam: new Prisma.Decimal(input.baslangicBoylam),
+        varisEnlem: new Prisma.Decimal(input.varisEnlem),
+        varisBoylam: new Prisma.Decimal(input.varisBoylam),
+        yukDetay: input.yukDetay,
+      },
+    });
+
+    if (result.count === 0) {
+      return null;
+    }
+
+    const transportRequest = await this.prisma.client.istek.findFirst({
+      where: {
+        id,
+        musteriId,
+        silmeTarihi: null,
+      },
+      select: transportRequestSelect,
+    });
+
+    return transportRequest ? this.mapStoredTransportRequest(transportRequest) : null;
+  }
+
+  async softDeleteByIdAndCustomerId(id: number, musteriId: number): Promise<boolean> {
+    const result = await this.prisma.client.istek.updateMany({
+      where: {
+        id,
+        musteriId,
+        silmeTarihi: null,
+      },
+      data: {
+        silmeTarihi: new Date(),
+      },
+    });
+
+    return result.count > 0;
+  }
 
   async findManyByCustomerId(musteriId: number): Promise<StoredTransportRequestRecord[]> {
     const transportRequests = await this.prisma.client.istek.findMany({
       where: {
         musteriId,
+        silmeTarihi: null,
       },
       orderBy: [{ olusturmaTarihi: "desc" }, { id: "desc" }],
       select: transportRequestSelect,
@@ -121,6 +222,7 @@ export class TransportRequestsRepository {
       where: {
         id,
         musteriId,
+        silmeTarihi: null,
       },
       select: transportRequestSelect,
     });
@@ -143,6 +245,21 @@ export class TransportRequestsRepository {
       olusturmaTarihi: transportRequest.olusturmaTarihi,
       durumTuru: transportRequest.durum.durumTuru,
       durumAdi: transportRequest.durum.durumAdi,
+      nakliye: transportRequest.nakliye
+        ? {
+            id: transportRequest.nakliye.id,
+            carrierId: transportRequest.nakliye.nakliyeci.id,
+            carrierName: `${transportRequest.nakliye.nakliyeci.ad} ${transportRequest.nakliye.nakliyeci.soyad}`.trim(),
+            carrierUsername: transportRequest.nakliye.nakliyeci.kullaniciAdi,
+            aracId: transportRequest.nakliye.arac.id,
+            aracPlaka: transportRequest.nakliye.arac.plaka,
+            anlasilanFiyat: transportRequest.nakliye.anlasilanFiyat.toNumber(),
+            durumAdi: transportRequest.nakliye.durum.durumAdi,
+            olusturmaTarihi: transportRequest.nakliye.olusturmaTarihi,
+            baslangicTarihi: transportRequest.nakliye.baslangicTarihi,
+            teslimTarihi: transportRequest.nakliye.teslimTarihi,
+          }
+        : null,
     };
   }
 }

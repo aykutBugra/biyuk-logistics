@@ -1,0 +1,26 @@
+INSERT INTO "Rol" ("rolAd")
+SELECT 'MUSTERI'
+WHERE NOT EXISTS (
+  SELECT 1 FROM "Rol" WHERE "rolAd" = 'MUSTERI'
+);
+
+INSERT INTO "Rol" ("rolAd")
+SELECT 'NAKLIYECI'
+WHERE NOT EXISTS (
+  SELECT 1 FROM "Rol" WHERE "rolAd" = 'NAKLIYECI'
+);
+
+INSERT INTO "Rol" ("rolAd")
+SELECT 'ADMIN'
+WHERE NOT EXISTS (
+  SELECT 1 FROM "Rol" WHERE "rolAd" = 'ADMIN'
+);
+
+INSERT INTO "Durum" ("durumTuru", "durumAdi")
+SELECT 'TEKLIF', 'OLUSTURULDU'
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM "Durum"
+  WHERE "durumTuru" = 'TEKLIF'
+    AND "durumAdi" = 'OLUSTURULDU'
+);

@@ -1,54 +1,54 @@
 import {
   ConflictException,
-  ForbiddenException, //service seviyesindeki iş kuralı hataları için kullanılır . 
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { ROLE_NAMES } from "../../common/constants/role-names"; //rol kontrolü
+import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
-import { CreateVehicleDto } from "./dto/create-vehicle.dto";  //create request verisi için kullanılan dto
-
-import { UpdateVehicleDto } from "./dto/update-vehicle.dto";  //update request verisi için kullanılan dto
-
-import { VehicleDetailResponseDto } from "./dto/vehicle-detail-response.dto"; //response shapeleri için kullanılan dto
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { CreateVehicleDto } from "./dto/create-vehicle.dto";
+import { UpdateVehicleDto } from "./dto/update-vehicle.dto";
+import { VehicleDetailResponseDto } from "./dto/vehicle-detail-response.dto";
 import { VehicleListItemResponseDto } from "./dto/vehicle-list-item-response.dto";
 import {
-  type StoredVehicleRecord,   //repo ile konuşmak için
+  type StoredVehicleRecord,
   VehiclesRepository,
 } from "./repositories/vehicles.repository";
-
-function normalizeCanonicalText(value: string): string {
-  return value.trim().replace(/\s+/g, " ").toUpperCase();   //fazla boşluk kaldırma fonksiyonu.
-}
-
-function normalizeVehiclePlate(value: string): string {   //plaka için normalizasyon fonksiyonu. 
-  return normalizeCanonicalText(value);                   //hem boşluk hem de büyük harfe çevirlip kontrol edilir . 
-}
+import {
+  isVehiclePlateUniqueConstraintTarget,
+  normalizeVehicleDraft,
+  resolveVehicleLibraryId,
+} from "./vehicle-write.helpers";
 
 @Injectable()
 export class VehiclesService {
-  constructor(private readonly vehiclesRepository: VehiclesRepository) {}
+  constructor(
+    private readonly vehiclesRepository: VehiclesRepository,
+    private readonly prisma: PrismaService
+  ) {}
 
-  async create(   //araç ekleme akışı merkezi . 
+  async create(
     currentUser: AuthenticatedUser,
     createVehicleDto: CreateVehicleDto
   ): Promise<VehicleDetailResponseDto> {
     this.assertCarrierRole(currentUser);
 
-    const marka = normalizeCanonicalText(createVehicleDto.marka);
-    const model = normalizeCanonicalText(createVehicleDto.model);
-    const plaka = normalizeVehiclePlate(createVehicleDto.plaka);
-    const aracKutuphaneId = await this.resolveVehicleLibraryId(marka, model); 
-    //arac kütüphanesi id sini alma. eğer yoksa oluşturur.
-    
+    const normalizedVehicle = normalizeVehicleDraft(createVehicleDto);
+    const aracKutuphaneId = await resolveVehicleLibraryId(
+      this.prisma.client,
+      normalizedVehicle.marka,
+      normalizedVehicle.model
+    );
+
     try {
       const vehicle = await this.vehiclesRepository.create({
         sahipId: currentUser.id,
         aracKutuphaneId,
-        plaka,
-        yil: createVehicleDto.yil,
-        kapasite: createVehicleDto.kapasite,
+        plaka: normalizedVehicle.plaka,
+        yil: normalizedVehicle.yil,
+        kapasite: normalizedVehicle.kapasite,
       });
 
       return this.toDetailResponse(vehicle);
@@ -58,16 +58,16 @@ export class VehiclesService {
     }
   }
 
-  async getMine(    //mylist . kullanıcı kendi araçlarını görür.
+  async getMine(
     currentUser: AuthenticatedUser
-  ): Promise<VehicleListItemResponseDto[]> {  //gelen kayıtlar liste DTO suna map edilir.
+  ): Promise<VehicleListItemResponseDto[]> {
     this.assertCarrierRole(currentUser);
 
     const vehicles = await this.vehiclesRepository.findManyByOwnerId(currentUser.id);
     return vehicles.map((vehicle) => this.toListItemResponse(vehicle));
   }
 
-  async getMineById(    //detail metodu . kullanıcı kendi araçlarından birinin detayını görür.
+  async getMineById(
     currentUser: AuthenticatedUser,
     id: number
   ): Promise<VehicleDetailResponseDto> {
@@ -78,16 +78,36 @@ export class VehiclesService {
     if (!vehicle) {
       throw new NotFoundException("Vehicle not found.");
     }
+
     return this.toDetailResponse(vehicle);
   }
-
 
   async deleteById(
     currentUser: AuthenticatedUser,
     id: number
   ): Promise<void> {
     this.assertCarrierRole(currentUser);
-    await this.vehiclesRepository.deleteById(id);
+
+    const hasActiveShipment =
+      await this.vehiclesRepository.hasNonTerminalShipmentByIdAndOwnerId(
+        id,
+        currentUser.id
+      );
+
+    if (hasActiveShipment) {
+      throw new ConflictException(
+        "Vehicle cannot be deleted while it is assigned to an active shipment."
+      );
+    }
+
+    const wasDeleted = await this.vehiclesRepository.softDeleteByIdAndOwnerId(
+      id,
+      currentUser.id
+    );
+
+    if (!wasDeleted) {
+      throw new NotFoundException("Vehicle not found.");
+    }
   }
 
   async updateById(
@@ -96,55 +116,35 @@ export class VehiclesService {
     updateVehicleDto: UpdateVehicleDto
   ): Promise<VehicleDetailResponseDto> {
     this.assertCarrierRole(currentUser);
-    console.log("Servis Başlangıcı" );
-    const existingVehicle = await this.vehiclesRepository.findByIdAndOwnerId(id, currentUser.id);
-    console.log("Existing vehicle:", existingVehicle); // Debug log to check the existing vehicle record
-    if (!existingVehicle) {
-      throw new NotFoundException("Vehicle not found.");
-    }
 
-    const marka = normalizeCanonicalText(updateVehicleDto.marka);
-    const model = normalizeCanonicalText(updateVehicleDto.model);
-    const plaka = normalizeVehiclePlate(updateVehicleDto.plaka);
-    const aracKutuphaneId = await this.resolveVehicleLibraryId(marka, model);
+    const normalizedVehicle = normalizeVehicleDraft(updateVehicleDto);
+    const aracKutuphaneId = await resolveVehicleLibraryId(
+      this.prisma.client,
+      normalizedVehicle.marka,
+      normalizedVehicle.model
+    );
 
     try {
-      const updatedVehicle = await this.vehiclesRepository.create({
-        sahipId: currentUser.id,
-        aracKutuphaneId,
-        plaka,
-        yil: updateVehicleDto.yil,
-        kapasite: updateVehicleDto.kapasite,
-      });
+      const updatedVehicle = await this.vehiclesRepository.updateByIdAndOwnerId(
+        id,
+        currentUser.id,
+        {
+          aracKutuphaneId,
+          plaka: normalizedVehicle.plaka,
+          yil: normalizedVehicle.yil,
+          kapasite: normalizedVehicle.kapasite,
+        }
+      );
+
+      if (!updatedVehicle) {
+        throw new NotFoundException("Vehicle not found.");
+      }
 
       return this.toDetailResponse(updatedVehicle);
     } catch (error) {
       this.rethrowUniquePlateAsConflict(error);
       throw error;
     }
-  
-  }
-
-
-
-
-
-
-
-
-
-  private async resolveVehicleLibraryId(
-    marka: string,
-    model: string
-  ): Promise<number> {
-    const existingVehicleLibraryId =
-      await this.vehiclesRepository.findVehicleLibraryByBrandAndModel(marka, model);
-
-    if (existingVehicleLibraryId !== null) {
-      return existingVehicleLibraryId;
-    }
-
-    return this.vehiclesRepository.createVehicleLibrary({ marka, model });
   }
 
   private assertCarrierRole(currentUser: AuthenticatedUser) {
@@ -164,7 +164,7 @@ export class VehiclesService {
       ? error.meta.target.map((target) => String(target))
       : [];
 
-    if (targets.includes("plaka")) {
+    if (isVehiclePlateUniqueConstraintTarget(targets)) {
       throw new ConflictException("Vehicle plate is already in use.");
     }
 

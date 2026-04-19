@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import type { RoleName } from "../../common/constants/role-names";
 import { RolesService } from "../roles/roles.service";
 import { UserProfileResponseDto } from "./dto/user-profile-response.dto";
@@ -23,6 +24,8 @@ export type AuthUserRecord = {
 export type CreateUserWithRoleInput = Omit<CreateStoredUserInput, "roleId"> & {
   roleName: RoleName;
 };
+
+export type CreateUserWithResolvedRoleIdInput = CreateStoredUserInput;
 
 type UsersRepositoryWithProfileList = UsersRepository & {
   findAllActiveProfiles(): Promise<StoredUserProfileRecord[]>;
@@ -96,7 +99,7 @@ export class UsersService {
 
   async createUserWithRole(input: CreateUserWithRoleInput): Promise<AuthUserRecord> {
     const roleId = await this.rolesService.requireRoleId(input.roleName);
-    const user = await this.usersRepository.createWithRole({
+    return this.createUserWithResolvedRoleId({
       ad: input.ad,
       soyad: input.soyad,
       mail: input.mail,
@@ -105,7 +108,20 @@ export class UsersService {
       sifreHash: input.sifreHash,
       roleId,
     });
+  }
 
+  async createUserWithResolvedRoleId(
+    input: CreateUserWithResolvedRoleIdInput
+  ): Promise<AuthUserRecord> {
+    const user = await this.usersRepository.createWithRole(input);
+    return this.mapStoredUser(user);
+  }
+
+  async createUserWithResolvedRoleIdInTransaction(
+    tx: Prisma.TransactionClient,
+    input: CreateUserWithResolvedRoleIdInput
+  ): Promise<AuthUserRecord> {
+    const user = await this.usersRepository.createWithRoleInTransaction(tx, input);
     return this.mapStoredUser(user);
   }
 

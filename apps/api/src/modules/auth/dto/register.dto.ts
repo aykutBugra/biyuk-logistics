@@ -1,12 +1,17 @@
 import { Transform } from "class-transformer";
 import {
   IsEmail,
+  IsInt,
   IsIn,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
   MinLength,
+  ValidateIf,
 } from "class-validator";
 import { ROLE_NAMES } from "../../../common/constants/role-names";    //ROLE_NAMES sabitlerini içeren bir modülü içe aktarır
 
@@ -29,6 +34,12 @@ export const REGISTER_ROLE_VALUES = [
 ] as const;
 
 export type RegisterRoleName = (typeof REGISTER_ROLE_VALUES)[number];
+
+const currentMaxVehicleYear = new Date().getFullYear() + 1;
+
+function isCarrierRegister(dto: RegisterDto): boolean {
+  return dto.role === ROLE_NAMES.NAKLIYECI;
+}
 
 export class RegisterDto {//RegisterDto, kullanıcı kayıt işlemi için gerekli olan bilgileri içeren bir DTO'dur
   @Transform(trimString)
@@ -77,4 +88,42 @@ export class RegisterDto {//RegisterDto, kullanıcı kayıt işlemi için gerekl
   @IsOptional()
   @IsIn(REGISTER_ROLE_VALUES) //Bu, role alanının sadece REGISTER_ROLE_VALUES içinde tanımlı olan değerleri kabul etmesini sağlar
   role?: RegisterRoleName;
+
+  @ValidateIf(isCarrierRegister)
+  @Transform(trimString)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  marka?: string;
+
+  @ValidateIf(isCarrierRegister)
+  @Transform(trimString)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  model?: string;
+
+  @ValidateIf(isCarrierRegister)
+  @Transform(trimString)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(20)
+  plaka?: string;
+
+  @ValidateIf(isCarrierRegister)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === "string" ? Number(value.trim()) : value
+  )
+  @IsInt()
+  @Min(1900)
+  @Max(currentMaxVehicleYear)
+  yil?: number;
+
+  @ValidateIf(isCarrierRegister)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === "string" ? Number(value.trim()) : value
+  )
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Min(0.01)
+  kapasite?: number;
 }

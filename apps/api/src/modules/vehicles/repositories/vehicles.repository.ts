@@ -1,9 +1,8 @@
-
 import { Prisma } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
-const vehicleSelect = {   //araçtan çekilen alanlar . 
+const vehicleSelect = {
   id: true,
   plaka: true,
   yil: true,
@@ -20,7 +19,7 @@ type StoredVehicleQuery = Prisma.AracGetPayload<{
   select: typeof vehicleSelect;
 }>;
 
-export type CreateVehicleRecordInput = {    //ben hangi veriyi alırım hangi veriyi dönerim  repo seviyesinde .
+export type CreateVehicleRecordInput = {
   sahipId: number;
   aracKutuphaneId: number;
   plaka: string;
@@ -28,15 +27,9 @@ export type CreateVehicleRecordInput = {    //ben hangi veriyi alırım hangi ve
   kapasite: number;
 };
 
+export type UpdateVehicleRecordInput = Omit<CreateVehicleRecordInput, "sahipId">;
 
-export type UpdateVehicleRecordInput = Omit<CreateVehicleRecordInput, "sahipId">; //update de sahipId değişmez o yüzden onu çıkartıyoruz .
-
-
-
-
-
-  
-export type CreateVehicleLibraryRecordInput = { 
+export type CreateVehicleLibraryRecordInput = {
   marka: string;
   model: string;
 };
@@ -111,23 +104,31 @@ export class VehiclesRepository {
     return this.mapStoredVehicle(vehicle);
   }
 
-
-  async deleteById(id: number): Promise<void> {
-    await this.prisma.client.arac.delete({
+  async softDeleteByIdAndOwnerId(id: number, sahipId: number): Promise<boolean> {
+    const result = await this.prisma.client.arac.updateMany({
       where: {
         id,
+        sahipId,
+        silmeTarihi: null,
+      },
+      data: {
+        silmeTarihi: new Date(),
       },
     });
+
+    return result.count > 0;
   }
 
-
-  async updateById(
+  async updateByIdAndOwnerId(
     id: number,
-    input: Omit<CreateVehicleRecordInput, "sahipId">
-  ): Promise<StoredVehicleRecord> {
-    const vehicle = await this.prisma.client.arac.update({
+    sahipId: number,
+    input: UpdateVehicleRecordInput
+  ): Promise<StoredVehicleRecord | null> {
+    const result = await this.prisma.client.arac.updateMany({
       where: {
         id,
+        sahipId,
+        silmeTarihi: null,
       },
       data: {
         aracKutuphaneId: input.aracKutuphaneId,
@@ -135,27 +136,60 @@ export class VehiclesRepository {
         yil: input.yil,
         kapasite: new Prisma.Decimal(input.kapasite),
       },
+    });
+
+    if (result.count === 0) {
+      return null;
+    }
+
+    const vehicle = await this.prisma.client.arac.findFirst({
+      where: {
+        id,
+        sahipId,
+        silmeTarihi: null,
+      },
       select: vehicleSelect,
     });
 
-    return this.mapStoredVehicle(vehicle);
+    return vehicle ? this.mapStoredVehicle(vehicle) : null;
   }
 
+  async hasNonTerminalShipmentByIdAndOwnerId(
+    id: number,
+    sahipId: number
+  ): Promise<boolean> {
+    const shipment = await this.prisma.client.nakliye.findFirst({
+      where: {
+        aracId: id,
+        arac: {
+          sahipId,
+        },
+        NOT: {
+          durum: {
+            durumTuru: {
+              equals: "NAKLIYE",
+              mode: Prisma.QueryMode.insensitive,
+            },
+            durumAdi: {
+              equals: "TAMAMLANDI",
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
 
-
-
-
-
-
-
-
-
-
+    return Boolean(shipment);
+  }
 
   async findManyByOwnerId(sahipId: number): Promise<StoredVehicleRecord[]> {
     const vehicles = await this.prisma.client.arac.findMany({
       where: {
         sahipId,
+        silmeTarihi: null,
       },
       orderBy: [{ id: "desc" }],
       select: vehicleSelect,
@@ -163,8 +197,6 @@ export class VehiclesRepository {
 
     return vehicles.map((vehicle) => this.mapStoredVehicle(vehicle));
   }
-
-
 
   async findByIdAndOwnerId(
     id: number,
@@ -174,14 +206,13 @@ export class VehiclesRepository {
       where: {
         id,
         sahipId,
+        silmeTarihi: null,
       },
       select: vehicleSelect,
     });
 
     return vehicle ? this.mapStoredVehicle(vehicle) : null;
   }
-
-
 
   private mapStoredVehicle(vehicle: StoredVehicleQuery): StoredVehicleRecord {
     return {

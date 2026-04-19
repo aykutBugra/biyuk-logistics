@@ -91,28 +91,14 @@ model Arac {
   sahip             Kullanici       @relation(fields: [sahipId], references: [id])
   aracKutuphaneId   Int
   aracBilgisi       AracKutuphanesi @relation(fields: [aracKutuphaneId], references: [id])
-  plaka             String          @unique @db.VarChar(20)
+  plaka             String          @db.VarChar(20)
   yil               Int
   kapasite          Decimal         @db.Decimal(10, 2)
+  silmeTarihi       DateTime?
   
+  teklifler         Teklif[]
   nakliyeler        Nakliye[]
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -128,6 +114,7 @@ model Istek {
   varisBoylam     Decimal   @db.Decimal(9, 6)
   yukDetay        String    @db.VarChar(500)
   olusturmaTarihi DateTime  @default(now())
+  silmeTarihi     DateTime?
   durumId         Int
   durum           Durum     @relation(fields: [durumId], references: [id])
 
@@ -141,6 +128,8 @@ model Teklif {
   istek           Istek     @relation(fields: [istekId], references: [id])
   nakliyeciId     Int
   nakliyeci       Kullanici @relation(fields: [nakliyeciId], references: [id])
+  aracId          Int?
+  arac            Arac?     @relation(fields: [aracId], references: [id])
   fiyat           Decimal   @db.Decimal(12, 2)
   not             String?   @db.VarChar(255)
   durumId         Int
@@ -156,7 +145,8 @@ model Nakliye {
   aracId          Int
   arac            Arac      @relation(fields: [aracId], references: [id])
   anlasilanFiyat  Decimal   @db.Decimal(12, 2)
-  baslangicTarihi DateTime  @default(now())
+  olusturmaTarihi DateTime  @default(now())
+  baslangicTarihi DateTime?
   teslimTarihi    DateTime?
   durumId         Int
   durum           Durum     @relation(fields: [durumId], references: [id])

@@ -19,14 +19,22 @@ const navItems = [
     href: "/dashboard/araclarim",
     label: "Araclarim",
   },
+  {
+    href: "/dashboard/acik_istekler",
+    label: "Acik Istekler",
+  },
+  {
+    href: "/dashboard/tekliflerim",
+    label: "Tekliflerim",
+  },
+  {
+    href: "/dashboard/nakliyelerim",
+    label: "Nakliyelerim",
+  },
 ];
 
 function isActiveNavItem(pathname: string, href: string): boolean {
-  if (href === "/dashboard/araclarim") {
-    return pathname === href || pathname.startsWith("/dashboard/araclarim/");
-  }
-
-  return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export default function CarrierVehiclesShell({
@@ -47,10 +55,10 @@ export default function CarrierVehiclesShell({
                   Nakliyeci Paneli
                 </p>
                 <h2 className="text-lg font-black tracking-tight text-blue-950">
-                  Vehicles
+                  Operasyonlar
                 </h2>
                 <p className="text-sm text-gray-600">
-                  Arac kaydi olusturma ve kendi araclarini takip etme alani.
+                  Araclarini yonet, acik istekleri incele ve verdigin teklifleri takip et.
                 </p>
               </div>
 
@@ -80,7 +88,7 @@ export default function CarrierVehiclesShell({
             <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
               <div className="space-y-2">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
-                  Vehicles
+                  Nakliyeci Akisi
                 </p>
                 <h1 className="text-3xl font-black tracking-tight text-blue-950">
                   {title}

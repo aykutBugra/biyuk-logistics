@@ -144,34 +144,41 @@ export class UsersRepository {
   //kullanıcı oluşturma sorgusu. Kullanıcıyı oluşturduktan sonra role ataması yapıyor. 
   //Transaction kullanarak iki işlemi tek seferde yapıyoruz.
   async createWithRole(input: CreateStoredUserInput): Promise<StoredUserRecord> {
-    const user = await this.prisma.client.$transaction(async (tx) => {
-      const createdUser = await tx.kullanici.create({
-        data: {
-          ad: input.ad,
-          soyad: input.soyad,
-          mail: input.mail,
-          kullaniciAdi: input.kullaniciAdi,
-          telefonNumarasi: input.telefonNumarasi,
-          sifreHash: input.sifreHash,
-        },
-        select: {
-          id: true,
-        },
-      });
+    return this.prisma.client.$transaction((tx) =>
+      this.createWithRoleInTransaction(tx, input)
+    );
+  }
 
-      await tx.kullaniciRol.create({
-        data: {
-          kullaniciId: createdUser.id,
-          rolId: input.roleId,
-        },
-      });
+  async createWithRoleInTransaction(
+    tx: Prisma.TransactionClient,
+    input: CreateStoredUserInput
+  ): Promise<StoredUserRecord> {
+    const createdUser = await tx.kullanici.create({
+      data: {
+        ad: input.ad,
+        soyad: input.soyad,
+        mail: input.mail,
+        kullaniciAdi: input.kullaniciAdi,
+        telefonNumarasi: input.telefonNumarasi,
+        sifreHash: input.sifreHash,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-      return tx.kullanici.findUniqueOrThrow({
-        where: {
-          id: createdUser.id,
-        },
-        select: authUserSelect,
-      });
+    await tx.kullaniciRol.create({
+      data: {
+        kullaniciId: createdUser.id,
+        rolId: input.roleId,
+      },
+    });
+
+    const user = await tx.kullanici.findUniqueOrThrow({
+      where: {
+        id: createdUser.id,
+      },
+      select: authUserSelect,
     });
 
     return this.mapStoredUser(user);

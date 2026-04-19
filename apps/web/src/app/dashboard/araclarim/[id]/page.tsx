@@ -1,27 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
 import { ApiClientError } from "@/lib/api/api-client";
-
-//import { getVehicleDetail, type VehicleDetail } from "@/lib/api/vehicles";
-
-//yeni importlar
 import {
   deleteVehicle,
   getVehicleDetail,
   type VehicleDetail,
 } from "@/lib/api/vehicles";
-import Link from "next/link";
-
-//
-
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
-
-
-
 
 function formatCapacity(value: number): string {
   return `${new Intl.NumberFormat("tr-TR", {
@@ -37,11 +27,8 @@ export default function VehicleDetailPage() {
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
- 
- //
   const [isDeleting, setIsDeleting] = useState(false);
- //
- 
+
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
@@ -111,59 +98,53 @@ export default function VehicleDetailPage() {
     };
   }, [accessToken, router, status, vehicleId]);
 
-  //
-    const handleDelete = async () => {
-  if (!accessToken || !vehicle || isDeleting) {
-    return;
-  }
-
-  const isConfirmed = window.confirm(
-    "Bu araci silmek istedigine emin misin?"
-  );
-
-  if (!isConfirmed) {
-    return;
-  }
-
-  try {
-    setIsDeleting(true);
-
-    await deleteVehicle(vehicle.id, accessToken);
-    router.replace("/dashboard/araclarim");
-  } catch (error) {
-    if (error instanceof ApiClientError && error.status === 401) {
-      clearStoredAuth();
-      window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
-      router.replace("/login");
+  const handleDelete = async () => {
+    if (!accessToken || !vehicle || isDeleting) {
       return;
     }
 
-    if (error instanceof ApiClientError && error.status === 403) {
-      window.alert("Bu islem icin yetkin yok.");
-      router.replace("/");
+    const isConfirmed = window.confirm(
+      "Bu araci silmek istedigine emin misin?"
+    );
+
+    if (!isConfirmed) {
       return;
     }
 
-    if (error instanceof ApiClientError && error.status === 404) {
-      window.alert("Bu arac bulunamadi.");
+    try {
+      setIsDeleting(true);
+      await deleteVehicle(vehicle.id, accessToken);
       router.replace("/dashboard/araclarim");
-      return;
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 401) {
+        clearStoredAuth();
+        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        router.replace("/login");
+        return;
+      }
+
+      if (error instanceof ApiClientError && error.status === 403) {
+        window.alert("Bu islem icin yetkin yok.");
+        router.replace("/");
+        return;
+      }
+
+      if (error instanceof ApiClientError && error.status === 404) {
+        window.alert("Bu arac bulunamadi.");
+        router.replace("/dashboard/araclarim");
+        return;
+      }
+
+      if (error instanceof ApiClientError) {
+        window.alert(error.message);
+        return;
+      }
+
+      window.alert("Arac silinirken beklenmeyen bir hata olustu.");
+    } finally {
+      setIsDeleting(false);
     }
-
-    if (error instanceof ApiClientError) {
-      window.alert(error.message);
-      return;
-    }
-
-    window.alert("Arac silinirken beklenmeyen bir hata olustu.");
-  } finally {
-    setIsDeleting(false);
-  }
-};
-//
-
-
-
+  };
 
   if (status !== "ready") {
     return (
@@ -211,15 +192,14 @@ export default function VehicleDetailPage() {
                 <div className="text-sm text-gray-500">{vehicle.yil} model</div>
                 <div className="flex flex-wrap gap-2">
                   <Link
-                    href={`/dashboard/araclarim/${vehicle.id}/duzenle`} 
+                    href={`/dashboard/araclarim/${vehicle.id}/duzenle`}
                     className="inline-flex items-center justify-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
                   >
-                    Araci Duzenle   
-                  </Link>   
-
+                    Araci Duzenle
+                  </Link>
                   <button
                     type="button"
-                    onClick={handleDelete}    //aracı sil aksiyonu
+                    onClick={handleDelete}
                     disabled={isDeleting}
                     className="inline-flex items-center justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >

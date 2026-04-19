@@ -12,7 +12,7 @@ import {
   type StoredAuth,
 } from "@/lib/auth/auth-storage";
 
-type RegisterRole = "kullanici" | "nakliyeci";
+type RegisterRole = "MUSTERI" | "NAKLIYECI";
 
 type RegisterForm = {
   ad: string;
@@ -21,6 +21,11 @@ type RegisterForm = {
   kullaniciAdi: string;
   mail: string;
   password: string;
+  marka: string;
+  model: string;
+  yil: string;
+  plaka: string;
+  kapasite: string;
 };
 
 const initialForm: RegisterForm = {
@@ -30,11 +35,16 @@ const initialForm: RegisterForm = {
   kullaniciAdi: "",
   mail: "",
   password: "",
+  marka: "",
+  model: "",
+  yil: "",
+  plaka: "",
+  kapasite: "",
 };
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [role, setRole] = useState<RegisterRole>("kullanici");
+  const [role, setRole] = useState<RegisterRole>("MUSTERI");
   const [form, setForm] = useState<RegisterForm>(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -77,6 +87,15 @@ export default function RegisterPage() {
           mail: form.mail,
           password: form.password,
           role,
+          ...(role === "NAKLIYECI"
+            ? {
+                marka: form.marka,
+                model: form.model,
+                yil: Number(form.yil),
+                plaka: form.plaka,
+                kapasite: Number(form.kapasite),
+              }
+            : {}),
         }),
       });
 
@@ -84,6 +103,11 @@ export default function RegisterPage() {
       router.replace("/");
     } catch (error) {
       if (error instanceof ApiClientError) {
+        if (error.message === "Vehicle plate is already in use.") {
+          window.alert("Bu plaka zaten aktif bir araca ait.");
+          return;
+        }
+
         window.alert(error.message);
       } else if (error instanceof Error) {
         window.alert(error.message);
@@ -114,22 +138,22 @@ export default function RegisterPage() {
         <div className="mt-20 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl">
           <button
             type="button"
-            onClick={() => setRole("kullanici")}
+            onClick={() => setRole("MUSTERI")}
             disabled={isSubmitting}
             className={`flex-1 py-2 rounded-lg font-bold border-2 transition-all disabled:opacity-60 ${
-              role === "kullanici"
+              role === "MUSTERI"
                 ? "bg-blue-600 text-white border-blue-600 shadow-md"
                 : "bg-white text-blue-600 border-blue-600"
             }`}
           >
-            Kullanici
+            Musteri
           </button>
           <button
             type="button"
-            onClick={() => setRole("nakliyeci")}
+            onClick={() => setRole("NAKLIYECI")}
             disabled={isSubmitting}
             className={`flex-1 py-2 rounded-lg font-bold border-2 transition-all disabled:opacity-60 ${
-              role === "nakliyeci"
+              role === "NAKLIYECI"
                 ? "bg-blue-600 text-white border-blue-600 shadow-md"
                 : "bg-white text-blue-600 border-blue-600"
             }`}
@@ -197,7 +221,7 @@ export default function RegisterPage() {
               onChange={handleChange}
               disabled={isSubmitting}
             />
-            {role === "nakliyeci" && (
+            {role === "NAKLIYECI" && (
               <>
                 <div className="relative py-4">
                   <div className="absolute inset-0 flex items-center">
@@ -210,42 +234,56 @@ export default function RegisterPage() {
                   </div>
                 </div>
                 <InputField
+                  name="marka"
                   label="Marka"
                   type="text"
                   placeholder="Orn: Mercedes, Volvo"
+                  value={form.marka}
+                  onChange={handleChange}
                   disabled={isSubmitting}
-                  required={false}
                 />
                 <InputField
+                  name="model"
                   label="Model"
                   type="text"
                   placeholder="Orn: Actros, FH"
+                  value={form.model}
+                  onChange={handleChange}
                   disabled={isSubmitting}
-                  required={false}
                 />
                 <InputField
+                  name="yil"
                   label="Yil"
-                  type="text"
+                  type="number"
+                  min="1900"
+                  max={`${new Date().getFullYear() + 1}`}
                   placeholder="Orn: 2020"
+                  value={form.yil}
+                  onChange={handleChange}
                   disabled={isSubmitting}
-                  required={false}
                 />
                 <InputField
+                  name="plaka"
                   label="Plaka No"
                   type="text"
                   placeholder="34 ABC 123"
+                  value={form.plaka}
+                  onChange={handleChange}
                   disabled={isSubmitting}
-                  required={false}
                 />
                 <InputField
+                  name="kapasite"
                   label="Kapasite"
-                  type="text"
-                  placeholder="Orn: 20 ton, 25 ton"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="Orn: 20"
+                  value={form.kapasite}
+                  onChange={handleChange}
                   disabled={isSubmitting}
-                  required={false}
                 />
                 <p className="text-sm text-gray-500">
-                  Nakliyeci arac bilgileri sonraki adimda kaydedilecektir.
+                  Bu ilk arac kaydi, nakliyeci hesabin olusturulurken dogrudan kaydedilir.
                 </p>
               </>
             )}

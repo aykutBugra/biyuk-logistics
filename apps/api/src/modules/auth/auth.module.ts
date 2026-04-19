@@ -4,6 +4,8 @@ import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";    //Auth’ın çalışmak için ihtiyaç duyduğu modüller
 import type { JwtTtlValue } from "../../config/auth.config";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { PrismaModule } from "../../infrastructure/prisma/prisma.module";
+import { RolesModule } from "../roles/roles.module";
 import { UsersModule } from "../users/users.module";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
@@ -12,6 +14,8 @@ import { JwtStrategy } from "./jwt.strategy";
 @Module({
   imports: [
     ConfigModule,
+    PrismaModule,
+    RolesModule,
     UsersModule,    //Auth’ın çalışmak için ihtiyaç duyduğu modüller
     PassportModule.register({
       defaultStrategy: "jwt",

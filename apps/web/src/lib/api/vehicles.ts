@@ -8,6 +8,8 @@ export type CreateVehicleInput = {
   kapasite: number;
 };
 
+export type UpdateVehicleInput = CreateVehicleInput;
+
 export type VehicleListItem = {
   id: number;
   plaka: string;
@@ -41,16 +43,11 @@ export function getVehicleDetail(id: number, accessToken: string) {
   });
 }
 
-
-
-
-
 export function updateVehicle(
   id: number,
-  input: CreateVehicleInput,
+  input: UpdateVehicleInput,
   accessToken: string
 ) {
-  console.log("updateVehicle fonksiyonu çağrıldı. id:", id, "input:", input);
   return apiFetch<VehicleDetail>(`/vehicles/${id}`, {
     method: "PUT",
     accessToken,
@@ -58,11 +55,9 @@ export function updateVehicle(
   });
 }
 
-
 export function deleteVehicle(id: number, accessToken: string) {
-  return apiFetch(`/vehicles/${id}`, {
+  return apiFetch<void>(`/vehicles/${id}`, {
     method: "DELETE",
     accessToken,
   });
 }
-
