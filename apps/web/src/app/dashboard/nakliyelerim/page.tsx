@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
+import EmptyStateCard from "@/components/EmptyStateCard";
+import StatusBadge from "@/components/StatusBadge";
+import SummaryStatCard from "@/components/SummaryStatCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import { getMyJobs, type JobListItem } from "@/lib/api/jobs";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
@@ -91,11 +94,20 @@ export default function MyJobsPage() {
 
   if (status !== "ready") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-gray-600 font-medium">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <div className="font-medium text-slate-600">Yukleniyor...</div>
       </div>
     );
   }
+
+  const activeJobCount = jobs.filter((job) => {
+    const normalizedStatus = job.durum.trim().toUpperCase();
+
+    return normalizedStatus === "OLUSTURULDU" || normalizedStatus === "BASLATILDI";
+  }).length;
+  const completedJobCount = jobs.filter(
+    (job) => job.durum.trim().toUpperCase() === "TAMAMLANDI"
+  ).length;
 
   return (
     <CarrierVehiclesShell
@@ -103,24 +115,45 @@ export default function MyJobsPage() {
       description="Anlasilan isleri ve olusan nakliye kayitlarini buradan takip et."
     >
       {isLoading ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
           Nakliyeler yukleniyor...
         </div>
       ) : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && jobs.length === 0 ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900">Henuz aktif nakliye yok</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Teklifin kabul edilince burada resmi nakliye kaydini goreceksin.
-          </p>
+      {!isLoading && !errorMessage && jobs.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          <SummaryStatCard
+            label="Toplam nakliye"
+            value={jobs.length}
+            hint="Listeye dusen resmi is kayitlari."
+          />
+          <SummaryStatCard
+            label="Aktif is"
+            value={activeJobCount}
+            hint="Henuz tamamlanmamis operasyon kayitlari."
+          />
+          <SummaryStatCard
+            label="Tamamlanan"
+            value={completedJobCount}
+            hint="Terminal duruma ulasmis nakliyeler."
+          />
         </div>
+      ) : null}
+
+      {!isLoading && !errorMessage && jobs.length === 0 ? (
+        <EmptyStateCard
+          eyebrow="Nakliye akisi"
+          title="Henuz aktif nakliye yok"
+          description="Teklifin kabul edildiginde resmi nakliye kaydi burada yonetim listesi olarak gorunecek."
+          actionHref="/dashboard/acik_istekler"
+          actionLabel="Acik istekleri incele"
+        />
       ) : null}
 
       {!isLoading && !errorMessage && jobs.length > 0 ? (
@@ -128,45 +161,53 @@ export default function MyJobsPage() {
           {jobs.map((job) => (
             <div
               key={job.id}
-              className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-200"
             >
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
-                      {job.durum}
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                    <StatusBadge status={job.durum} />
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                      Nakliye #{job.id}
                     </span>
-                    <span>Nakliye #{job.id}</span>
-                    <span>Istek #{job.requestId}</span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                      Istek #{job.requestId}
+                    </span>
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    {job.baslangicSehri} {"->"} {job.varisSehri}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    Musteri: {job.counterpartyName} (@{job.counterpartyUsername})
-                  </p>
-                  <p className="text-sm text-gray-500">Arac: {job.aracPlaka}</p>
+
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-black tracking-tight text-slate-950">
+                      {job.baslangicSehri} {"->"} {job.varisSehri}
+                    </h2>
+                    <p className="text-sm leading-6 text-slate-600">
+                      Musteri: {job.counterpartyName} (@{job.counterpartyUsername})
+                    </p>
+                    <p className="text-sm leading-6 text-slate-500">
+                      Arac: {job.aracPlaka}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-2 md:text-right">
-                  <p className="text-sm font-semibold text-emerald-700">
+
+                <div className="flex flex-col items-start gap-3 lg:min-w-[230px] lg:items-end">
+                  <p className="text-2xl font-black tracking-tight text-emerald-700">
                     {formatCurrency(job.anlasilanFiyat)}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                     Kayit: {formatDate(job.olusturmaTarihi)}
                   </p>
                   {job.baslangicTarihi ? (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-slate-500">
                       Basladi: {formatDate(job.baslangicTarihi)}
                     </p>
                   ) : null}
                   {job.teslimTarihi ? (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-slate-500">
                       Tamamlandi: {formatDate(job.teslimTarihi)}
                     </p>
                   ) : null}
                   <Link
                     href={`/dashboard/nakliyelerim/${job.id}`}
-                    className="inline-flex items-center justify-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                    className="inline-flex items-center justify-center rounded-2xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
                   >
                     Detay
                   </Link>

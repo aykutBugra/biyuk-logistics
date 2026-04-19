@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
+import EmptyStateCard from "@/components/EmptyStateCard";
+import SummaryStatCard from "@/components/SummaryStatCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   deleteVehicle,
@@ -138,11 +140,20 @@ export default function MyVehiclesPage() {
 
   if (status !== "ready") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-gray-600 font-medium">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <div className="font-medium text-slate-600">Yukleniyor...</div>
       </div>
     );
   }
+
+  const totalCapacity = vehicles.reduce(
+    (total, vehicle) => total + vehicle.kapasite,
+    0
+  );
+  const newestModelYear = vehicles.reduce(
+    (latestYear, vehicle) => Math.max(latestYear, vehicle.yil),
+    0
+  );
 
   return (
     <CarrierVehiclesShell
@@ -150,30 +161,45 @@ export default function MyVehiclesPage() {
       description="Yalnizca giris yapan nakliyeciye ait aktif arac kayitlari listelenir."
     >
       {isLoading ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
           Araclar yukleniyor...
         </div>
       ) : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && vehicles.length === 0 ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900">Henuz arac yok</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Ilk arac kaydini olusturunca burada goreceksin.
-          </p>
-          <Link
-            href="/dashboard/arac_ekle"
-            className="mt-4 inline-flex items-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-          >
-            Ilk araci ekle
-          </Link>
+      {!isLoading && !errorMessage && vehicles.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          <SummaryStatCard
+            label="Toplam arac"
+            value={vehicles.length}
+            hint="Aktif kayit durumundaki araclar."
+          />
+          <SummaryStatCard
+            label="Toplam kapasite"
+            value={formatCapacity(totalCapacity)}
+            hint="Arac varliginin tasima kapasitesi toplami."
+          />
+          <SummaryStatCard
+            label="En yeni model"
+            value={newestModelYear}
+            hint="Listede yer alan en guncel model yili."
+          />
         </div>
+      ) : null}
+
+      {!isLoading && !errorMessage && vehicles.length === 0 ? (
+        <EmptyStateCard
+          eyebrow="Arac varligi"
+          title="Henuz arac yok"
+          description="Ilk arac kaydini olusturdugunda yonetim listesi burada gorunecek."
+          actionHref="/dashboard/arac_ekle"
+          actionLabel="Ilk araci ekle"
+        />
       ) : null}
 
       {!isLoading && !errorMessage && vehicles.length > 0 ? (
@@ -184,45 +210,59 @@ export default function MyVehiclesPage() {
             return (
               <div
                 key={vehicle.id}
-                className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-200"
               >
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
                         {vehicle.plaka}
                       </span>
-                      <span>#{vehicle.id}</span>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                        Arac #{vehicle.id}
+                      </span>
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900">
-                      {vehicle.marka} {"->"} {vehicle.model}
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                      {vehicle.yil} model · {formatCapacity(vehicle.kapasite)}
-                    </p>
+
+                    <div className="space-y-2">
+                      <h2 className="text-2xl font-black tracking-tight text-slate-950">
+                        {vehicle.marka} {"->"} {vehicle.model}
+                      </h2>
+                      <p className="text-sm leading-6 text-slate-600">
+                        {vehicle.yil} model | {formatCapacity(vehicle.kapasite)}
+                      </p>
+                      <p className="text-sm leading-6 text-slate-500">
+                        Arac listesi yonetim odaklidir; plaka birincil kimlik,
+                        marka-model ise ikinci seviye ozet alanidir.
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <Link
-                      href={`/dashboard/araclarim/${vehicle.id}`}
-                      className="inline-flex items-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                    >
-                      Detay
-                    </Link>
-                    <Link
-                      href={`/dashboard/araclarim/${vehicle.id}/duzenle`}
-                      className="inline-flex items-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-                    >
-                      Duzenle
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(vehicle.id)}
-                      disabled={isDeleting}
-                      className="inline-flex items-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isDeleting ? "Siliniyor..." : "Sil"}
-                    </button>
+                  <div className="flex flex-col items-start gap-3 lg:min-w-[240px] lg:items-end">
+                    <p className="text-sm text-slate-500">
+                      Detay, duzenleme ve silme aksiyonlari bu karttan devam eder.
+                    </p>
+                    <div className="flex flex-wrap gap-2 lg:justify-end">
+                      <Link
+                        href={`/dashboard/araclarim/${vehicle.id}`}
+                        className="inline-flex items-center rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                      >
+                        Detay
+                      </Link>
+                      <Link
+                        href={`/dashboard/araclarim/${vehicle.id}/duzenle`}
+                        className="inline-flex items-center rounded-2xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+                      >
+                        Duzenle
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(vehicle.id)}
+                        disabled={isDeleting}
+                        className="inline-flex items-center rounded-2xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isDeleting ? "Siliniyor..." : "Sil"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

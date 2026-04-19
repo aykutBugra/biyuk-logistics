@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
+import EmptyStateCard from "@/components/EmptyStateCard";
+import StatusBadge from "@/components/StatusBadge";
+import SummaryStatCard from "@/components/SummaryStatCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import { getMyOffers, type OfferItem } from "@/lib/api/offers";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
-import { useRouter } from "next/navigation";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("tr-TR", {
@@ -83,11 +86,18 @@ export default function MyOffersPage() {
 
   if (status !== "ready") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-gray-600 font-medium">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <div className="font-medium text-slate-600">Yukleniyor...</div>
       </div>
     );
   }
+
+  const openOfferCount = offers.filter(
+    (offer) => offer.durum.trim().toUpperCase() === "OLUSTURULDU"
+  ).length;
+  const acceptedOfferCount = offers.filter(
+    (offer) => offer.durum.trim().toUpperCase() === "KABUL_EDILDI"
+  ).length;
 
   return (
     <CarrierVehiclesShell
@@ -95,24 +105,45 @@ export default function MyOffersPage() {
       description="Verdigin teklifleri ve bagli olduklari tasima taleplerini takip et."
     >
       {isLoading ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
           Teklifler yukleniyor...
         </div>
       ) : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && offers.length === 0 ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900">Henuz teklif yok</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Acik istekler ekranindan ilk teklifini olusturunca burada goreceksin.
-          </p>
+      {!isLoading && !errorMessage && offers.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          <SummaryStatCard
+            label="Toplam teklif"
+            value={offers.length}
+            hint="Nakliyeci hesabindan olusturulan teklifler."
+          />
+          <SummaryStatCard
+            label="Acik teklif"
+            value={openOfferCount}
+            hint="Henuz karar verilmemis teklifler."
+          />
+          <SummaryStatCard
+            label="Kabul edilen"
+            value={acceptedOfferCount}
+            hint="Anlasilan is akisina donusen teklifler."
+          />
         </div>
+      ) : null}
+
+      {!isLoading && !errorMessage && offers.length === 0 ? (
+        <EmptyStateCard
+          eyebrow="Teklif akisi"
+          title="Henuz teklif yok"
+          description="Acik istekler ekranindan ilk teklifini olusturdugunda yonetim listesi burada gorunecek."
+          actionHref="/dashboard/acik_istekler"
+          actionLabel="Acik istekleri incele"
+        />
       ) : null}
 
       {!isLoading && !errorMessage && offers.length > 0 ? (
@@ -120,33 +151,43 @@ export default function MyOffersPage() {
           {offers.map((offer) => (
             <div
               key={offer.id}
-              className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-200"
             >
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
-                      {offer.durum}
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                    <StatusBadge status={offer.durum} />
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                      Teklif #{offer.id}
                     </span>
-                    <span>Teklif #{offer.id}</span>
-                    <span>Istek #{offer.requestId}</span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                      Istek #{offer.requestId}
+                    </span>
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    {offer.baslangicSehri} {"->"} {offer.varisSehri}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    {offer.aracPlaka
-                      ? `Secilen arac: ${offer.aracPlaka}`
-                      : "Arac bilgisi bulunamadi."}
-                  </p>
-                  <p className="text-sm font-semibold text-emerald-700">
+
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-black tracking-tight text-slate-950">
+                      {offer.baslangicSehri} {"->"} {offer.varisSehri}
+                    </h2>
+                    <p className="text-sm leading-6 text-slate-600">
+                      {offer.aracPlaka
+                        ? `Secilen arac: ${offer.aracPlaka}`
+                        : "Arac bilgisi bulunamadi."}
+                    </p>
+                    <p className="max-w-3xl text-sm leading-6 text-slate-500 line-clamp-3">
+                      {offer.not ?? "Teklif notu eklenmedi."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-start gap-3 lg:min-w-[200px] lg:items-end">
+                  <p className="text-2xl font-black tracking-tight text-emerald-700">
                     {formatCurrency(offer.fiyat)}
                   </p>
-                  {offer.not ? (
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{offer.not}</p>
-                  ) : (
-                    <p className="text-sm text-gray-400">Teklif notu eklenmedi.</p>
-                  )}
+                  <p className="text-sm text-slate-500">
+                    Fiyat ve durum bu listede birincil tarama alanlari olarak
+                    one cikarildi.
+                  </p>
                 </div>
               </div>
             </div>

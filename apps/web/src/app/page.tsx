@@ -1,33 +1,107 @@
 import HomeCustomerActions from "@/components/HomeCustomerActions";
 
 export default function Home() {
+  const workflowSteps = [
+    {
+      title: "Istek olustur",
+      description:
+        "Musteri yuk bilgisi ve rota ile tasima talebini tek formdan yayinlar.",
+    },
+    {
+      title: "Teklifleri degerlendir",
+      description:
+        "Nakliyeciler uygun istekleri gorur, teklif verir ve musteri en uygun secimi yapar.",
+    },
+    {
+      title: "Nakliyeyi takip et",
+      description:
+        "Anlasilan is resmi nakliye kaydina donusur; durumlar panelde okunur kalir.",
+    },
+  ];
+
+  const surfaceHighlights = [
+    {
+      title: "Calisan operasyon halkasi",
+      description:
+        "Istek, teklif, kabul ve nakliye akisi bugun tek bir urun hikayesi olarak calisiyor.",
+    },
+    {
+      title: "Rol bazli hizli giris",
+      description:
+        "Musteri ve nakliyeci ayni urunde ama farkli is mantigiyla ilerliyor; ana sayfa bunu dogrudan gosteriyor.",
+    },
+  ];
+
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-white px-4 text-gray-900">
-      <div className="max-w-3xl space-y-6 text-center">
-        <h1 className="text-5xl font-extrabold tracking-tight text-blue-900 md:text-7xl">
-          NakliyeSitesi
-        </h1>
-        <p className="mx-auto max-w-2xl text-lg text-gray-600 md:text-xl">
-          Nakliye ilanlarinizi olusturun, gelen en iyi teklifi secip yukunuzu
-          guvenle tasiyin.
-        </p>
-      </div>
+    <main className="min-h-screen bg-slate-50 px-4 py-14 text-slate-950 md:py-18">
+      <div className="mx-auto max-w-6xl space-y-10">
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:items-start">
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm md:p-10">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600">
+              Nakliye operasyon akisi
+            </p>
+            <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950 md:text-6xl">
+              Istek, teklif ve nakliye yonetimini tek yerde tutan sade panel.
+            </h1>
+            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
+              NakliyeSitesi, musterilerin tasima taleplerini olusturup gelen
+              teklifleri degerlendirdigi; nakliyecilerin ise acik istekleri
+              kesfedip anlasilan nakliyeleri yonettigi sade bir operasyon
+              akisi sunar.
+            </p>
+          </div>
 
-      <HomeCustomerActions />
+          <div className="rounded-[2rem] border border-blue-200 bg-linear-to-br from-blue-600 to-blue-700 p-8 text-white shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-100">
+              Bugun platformda
+            </p>
+            <h2 className="mt-4 text-2xl font-black tracking-tight">
+              Mevcut urun halkasi
+            </h2>
+            <div className="mt-6 space-y-4 text-sm leading-6 text-blue-50">
+              <p>Istek olustur, teklif ver, teklifi kabul et ve resmi nakliye kaydini takip et.</p>
+              <p>Hem musteri hem nakliyeci kendi akisina uygun dashboard giris noktasi gorur.</p>
+              <p>Acik istekler sayfasi gelecekteki kesif listesinin ilk iskeleti olarak hazirlanir.</p>
+            </div>
+          </div>
+        </section>
 
-      <div className="mt-20 grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2">
-        <div className="rounded-2xl bg-blue-50 p-6">
-          <h3 className="mb-2 font-bold text-blue-900">Hizli Ilan</h3>
-          <p className="text-sm text-gray-600">
-            Saniyeler icinde nakliye ilani olusturun.
-          </p>
-        </div>
-        <div className="rounded-2xl bg-blue-50 p-6">
-          <h3 className="mb-2 font-bold text-blue-900">Guvenli Odeme</h3>
-          <p className="text-sm text-gray-600">
-            Is bitene kadar paraniz guvende kalsin.
-          </p>
-        </div>
+        <HomeCustomerActions />
+
+        <section className="grid gap-4 md:grid-cols-3">
+          {workflowSteps.map((step, index) => (
+            <div
+              key={step.title}
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                Adim 0{index + 1}
+              </p>
+              <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+                {step.title}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                {step.description}
+              </p>
+            </div>
+          ))}
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-2">
+          {surfaceHighlights.map((item) => (
+            <div
+              key={item.title}
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+            >
+              <h2 className="text-2xl font-black tracking-tight text-slate-950">
+                {item.title}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                {item.description}
+              </p>
+            </div>
+          ))}
+        </section>
       </div>
     </main>
   );

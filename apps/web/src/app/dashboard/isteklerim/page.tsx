@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
+import EmptyStateCard from "@/components/EmptyStateCard";
+import StatusBadge from "@/components/StatusBadge";
+import SummaryStatCard from "@/components/SummaryStatCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   deleteTransportRequest,
@@ -147,36 +150,58 @@ export default function MyTransportRequestsPage() {
     );
   }
 
+  const agreementCount = requests.filter((request) => {
+    const normalizedStatus = request.durum.trim().toUpperCase();
+
+    return normalizedStatus === "ANLASILDI" || normalizedStatus === "TAMAMLANDI";
+  }).length;
+  const activeCount = requests.length - agreementCount;
+
   return (
     <CustomerTransportRequestsShell
       title="Isteklerim"
       description="Yalnizca giris yapan musteriye ait aktif transport request kayitlari listelenir."
     >
       {isLoading ? (
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 text-gray-600">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
           Istekler yukleniyor...
         </div>
       ) : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && requests.length === 0 ? (
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900">Henuz istek yok</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Ilk transport request kaydini olusturunca burada goreceksin.
-          </p>
-          <Link
-            href="/dashboard/istek_ekle"
-            className="mt-4 inline-flex items-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-          >
-            Ilk istegi olustur
-          </Link>
+      {!isLoading && !errorMessage && requests.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          <SummaryStatCard
+            label="Toplam istek"
+            value={requests.length}
+            hint="Panelde gorunen aktif kayitlar."
+          />
+          <SummaryStatCard
+            label="Acik akista"
+            value={activeCount}
+            hint="Henuz anlasilma veya tamamlama noktasina gelmeyen istekler."
+          />
+          <SummaryStatCard
+            label="Anlasilan is"
+            value={agreementCount}
+            hint="Teklif kabul edilmis veya tamamlanmis kayitlar."
+          />
         </div>
+      ) : null}
+
+      {!isLoading && !errorMessage && requests.length === 0 ? (
+        <EmptyStateCard
+          eyebrow="Istek akisi"
+          title="Henuz istek yok"
+          description="Ilk transport request kaydini olusturdugunda yonetim listesi burada belirecek."
+          actionHref="/dashboard/istek_ekle"
+          actionLabel="Ilk istegi olustur"
+        />
       ) : null}
 
       {!isLoading && !errorMessage && requests.length > 0 ? (
@@ -187,34 +212,45 @@ export default function MyTransportRequestsPage() {
             return (
               <div
                 key={request.id}
-                className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 transition-transform hover:-translate-y-0.5 hover:border-blue-200"
+                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-200"
               >
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
-                        {request.durum}
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                      <StatusBadge status={request.durum} />
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                        Istek #{request.id}
                       </span>
-                      <span>#{request.id}</span>
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900">
-                      {request.baslangicSehri} {"->"} {request.varisSehri}
-                    </h2>
-                    <p className="text-sm text-gray-600">{request.yukDetay}</p>
+
+                    <div className="space-y-2">
+                      <h2 className="text-2xl font-black tracking-tight text-slate-950">
+                        {request.baslangicSehri} {"->"} {request.varisSehri}
+                      </h2>
+                      <p className="max-w-3xl text-sm leading-6 text-slate-600 line-clamp-3">
+                        {request.yukDetay}
+                      </p>
+                    </div>
+
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                      Olusturma zamani: {formatDate(request.olusturmaTarihi)}
+                    </p>
                   </div>
 
-                  <div className="flex flex-col items-start gap-3 text-sm text-gray-500 md:items-end">
-                    <div>{formatDate(request.olusturmaTarihi)}</div>
-                    <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col items-start gap-3 lg:min-w-[250px] lg:items-end">
+                    <p className="text-sm text-slate-500">
+                      Detay, duzenleme ve silme aksiyonlari bu kayit uzerinden devam eder.
+                    </p>
+                    <div className="flex flex-wrap gap-2 lg:justify-end">
                       <Link
                         href={`/dashboard/isteklerim/${request.id}`}
-                        className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                       >
                         Detay
                       </Link>
                       <Link
                         href={`/dashboard/isteklerim/${request.id}/duzenle`}
-                        className="inline-flex items-center justify-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                        className="inline-flex items-center justify-center rounded-2xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
                       >
                         Duzenle
                       </Link>
@@ -222,7 +258,7 @@ export default function MyTransportRequestsPage() {
                         type="button"
                         onClick={() => void handleDelete(request.id)}
                         disabled={isDeleting}
-                        className="inline-flex items-center justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center justify-center rounded-2xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {isDeleting ? "Siliniyor..." : "Sil"}
                       </button>
