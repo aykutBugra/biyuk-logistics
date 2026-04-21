@@ -89,10 +89,7 @@ export default function ProfilePage() {
     (summary?.asCarrier.ratingCount ?? 0) + (summary?.asCustomer.ratingCount ?? 0);
 
   return (
-    <Shell
-      title="Profil"
-      description="Profil ozetinde genel puanin ayri bir veri degil, tamamlanan nakliyelerden dogan puanlarin ortalamasi olarak gosterilir."
-    >
+    <Shell title="Profil">
       {isLoading ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
           Profil ozeti yukleniyor...
@@ -131,7 +128,7 @@ export default function ProfilePage() {
       ) : null}
 
       {!isLoading && !errorMessage && summary ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <SummaryStatCard
             label="Nakliyeci puanim"
             value={formatAverageRating(summary.asCarrier.averageRating)}
@@ -147,11 +144,6 @@ export default function ProfilePage() {
             value={totalReceivedCount}
             hint="Tamamlanan nakliyelerden gelen puanlar."
           />
-          <SummaryStatCard
-            label="Sistem karari"
-            value="Nakliye bazli"
-            hint="Genel puan ayri verilmez, is bazli kayitlardan turetilir."
-          />
         </div>
       ) : null}
 
@@ -159,7 +151,7 @@ export default function ProfilePage() {
         <EmptyStateCard
           eyebrow="Profil ozeti"
           title="Henuz profil puani olusmadi"
-          description="Tamamlanan nakliyeler sonrasinda gelen degerlendirmeler bu ozet alanini dolduracak."
+          description="Puan geldikce profil ozeti burada dolacak."
           actionHref="/dashboard/puanlarim"
           actionLabel="Puanlarimi gor"
         />

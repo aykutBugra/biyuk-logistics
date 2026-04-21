@@ -1,0 +1,100 @@
+export type TurkeyCityOption = {
+  label: string;
+  value: string;
+};
+
+export const TURKEY_CITY_OPTIONS: TurkeyCityOption[] = [
+  { label: "Adana", value: "ADANA" },
+  { label: "Adıyaman", value: "ADIYAMAN" },
+  { label: "Afyonkarahisar", value: "AFYONKARAHİSAR" },
+  { label: "Ağrı", value: "AĞRI" },
+  { label: "Amasya", value: "AMASYA" },
+  { label: "Ankara", value: "ANKARA" },
+  { label: "Antalya", value: "ANTALYA" },
+  { label: "Artvin", value: "ARTVİN" },
+  { label: "Aydın", value: "AYDIN" },
+  { label: "Balıkesir", value: "BALIKESİR" },
+  { label: "Bilecik", value: "BİLECİK" },
+  { label: "Bingöl", value: "BİNGÖL" },
+  { label: "Bitlis", value: "BİTLİS" },
+  { label: "Bolu", value: "BOLU" },
+  { label: "Burdur", value: "BURDUR" },
+  { label: "Bursa", value: "BURSA" },
+  { label: "Çanakkale", value: "ÇANAKKALE" },
+  { label: "Çankırı", value: "ÇANKIRI" },
+  { label: "Çorum", value: "ÇORUM" },
+  { label: "Denizli", value: "DENİZLİ" },
+  { label: "Diyarbakır", value: "DİYARBAKIR" },
+  { label: "Edirne", value: "EDİRNE" },
+  { label: "Elazığ", value: "ELAZIĞ" },
+  { label: "Erzincan", value: "ERZİNCAN" },
+  { label: "Erzurum", value: "ERZURUM" },
+  { label: "Eskişehir", value: "ESKİŞEHİR" },
+  { label: "Gaziantep", value: "GAZİANTEP" },
+  { label: "Giresun", value: "GİRESUN" },
+  { label: "Gümüşhane", value: "GÜMÜŞHANE" },
+  { label: "Hakkâri", value: "HAKKÂRİ" },
+  { label: "Hatay", value: "HATAY" },
+  { label: "Isparta", value: "ISPARTA" },
+  { label: "Mersin", value: "MERSİN" },
+  { label: "İstanbul", value: "İSTANBUL" },
+  { label: "İzmir", value: "İZMİR" },
+  { label: "Kars", value: "KARS" },
+  { label: "Kastamonu", value: "KASTAMONU" },
+  { label: "Kayseri", value: "KAYSERİ" },
+  { label: "Kırklareli", value: "KIRKLARELİ" },
+  { label: "Kırşehir", value: "KIRŞEHİR" },
+  { label: "Kocaeli", value: "KOCAELİ" },
+  { label: "Konya", value: "KONYA" },
+  { label: "Kütahya", value: "KÜTAHYA" },
+  { label: "Malatya", value: "MALATYA" },
+  { label: "Manisa", value: "MANİSA" },
+  { label: "Kahramanmaraş", value: "KAHRAMANMARAŞ" },
+  { label: "Mardin", value: "MARDİN" },
+  { label: "Muğla", value: "MUĞLA" },
+  { label: "Muş", value: "MUŞ" },
+  { label: "Nevşehir", value: "NEVŞEHİR" },
+  { label: "Niğde", value: "NİĞDE" },
+  { label: "Ordu", value: "ORDU" },
+  { label: "Rize", value: "RİZE" },
+  { label: "Sakarya", value: "SAKARYA" },
+  { label: "Samsun", value: "SAMSUN" },
+  { label: "Siirt", value: "SİİRT" },
+  { label: "Sinop", value: "SİNOP" },
+  { label: "Sivas", value: "SİVAS" },
+  { label: "Tekirdağ", value: "TEKİRDAĞ" },
+  { label: "Tokat", value: "TOKAT" },
+  { label: "Trabzon", value: "TRABZON" },
+  { label: "Tunceli", value: "TUNCELİ" },
+  { label: "Şanlıurfa", value: "ŞANLIURFA" },
+  { label: "Uşak", value: "UŞAK" },
+  { label: "Van", value: "VAN" },
+  { label: "Yozgat", value: "YOZGAT" },
+  { label: "Zonguldak", value: "ZONGULDAK" },
+  { label: "Aksaray", value: "AKSARAY" },
+  { label: "Bayburt", value: "BAYBURT" },
+  { label: "Karaman", value: "KARAMAN" },
+  { label: "Kırıkkale", value: "KIRIKKALE" },
+  { label: "Batman", value: "BATMAN" },
+  { label: "Şırnak", value: "ŞIRNAK" },
+  { label: "Bartın", value: "BARTIN" },
+  { label: "Ardahan", value: "ARDAHAN" },
+  { label: "Iğdır", value: "IĞDIR" },
+  { label: "Yalova", value: "YALOVA" },
+  { label: "Karabük", value: "KARABÜK" },
+  { label: "Kilis", value: "KİLİS" },
+  { label: "Osmaniye", value: "OSMANİYE" },
+  { label: "Düzce", value: "DÜZCE" },
+];
+
+const cityLabelMap = new Map(
+  TURKEY_CITY_OPTIONS.map((option) => [option.value, option.label])
+);
+
+export function getTurkeyCityLabel(value: string | null | undefined): string {
+  if (!value) {
+    return "";
+  }
+
+  return cityLabelMap.get(value) ?? value;
+}

@@ -13,13 +13,19 @@ import {
 } from "@/lib/api/vehicles";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
+import { VEHICLE_BODY_TYPE_OPTIONS } from "@/lib/logistics";
 
 type UpdateVehicleForm = {
   marka: string;
   model: string;
   plaka: string;
   yil: string;
-  kapasite: string;
+  maksimumAgirlikKg: string;
+  maksimumHacimM3: string;
+  kasaTipi: string;
+  uzunlukCm: string;
+  genislikCm: string;
+  yukseklikCm: string;
 };
 
 const initialForm: UpdateVehicleForm = {
@@ -27,7 +33,12 @@ const initialForm: UpdateVehicleForm = {
   model: "",
   plaka: "",
   yil: "",
-  kapasite: "",
+  maksimumAgirlikKg: "",
+  maksimumHacimM3: "",
+  kasaTipi: "DIGER",
+  uzunlukCm: "",
+  genislikCm: "",
+  yukseklikCm: "",
 };
 
 export default function EditVehiclePage() {
@@ -72,7 +83,12 @@ export default function EditVehiclePage() {
           model: response.model,
           plaka: response.plaka,
           yil: String(response.yil),
-          kapasite: String(response.kapasite),
+          maksimumAgirlikKg: String(response.maksimumAgirlikKg),
+          maksimumHacimM3: String(response.maksimumHacimM3 ?? ""),
+          kasaTipi: response.kasaTipi ?? "DIGER",
+          uzunlukCm: String(response.uzunlukCm ?? ""),
+          genislikCm: String(response.genislikCm ?? ""),
+          yukseklikCm: String(response.yukseklikCm ?? ""),
         });
       } catch (error) {
         if (!isMounted) {
@@ -116,7 +132,9 @@ export default function EditVehiclePage() {
     };
   }, [accessToken, router, status, vehicleId]);
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = event.target;
 
     setForm((currentForm) => ({
@@ -144,7 +162,12 @@ export default function EditVehiclePage() {
       model: form.model,
       plaka: form.plaka,
       yil: Number(form.yil),
-      kapasite: Number(form.kapasite),
+      maksimumAgirlikKg: Number(form.maksimumAgirlikKg),
+      maksimumHacimM3: Number(form.maksimumHacimM3),
+      kasaTipi: form.kasaTipi,
+      uzunlukCm: form.uzunlukCm ? Number(form.uzunlukCm) : undefined,
+      genislikCm: form.genislikCm ? Number(form.genislikCm) : undefined,
+      yukseklikCm: form.yukseklikCm ? Number(form.yukseklikCm) : undefined,
     };
 
     try {
@@ -182,17 +205,14 @@ export default function EditVehiclePage() {
 
   if (status !== "ready") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-gray-600 font-medium">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+        <div className="font-medium text-gray-600">Yukleniyor...</div>
       </div>
     );
   }
 
   return (
-    <CarrierVehiclesShell
-      title="Araci duzenle"
-      description="Bu ekranda aracinin temel bilgilerini guncelleyebilirsin."
-    >
+    <CarrierVehiclesShell title="Araci duzenle">
       {isLoading ? (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
           Arac bilgileri yukleniyor...
@@ -215,7 +235,6 @@ export default function EditVehiclePage() {
             <InputField
               name="marka"
               label="Marka"
-              placeholder="Orn: Ford"
               value={form.marka}
               onChange={handleChange}
               disabled={isSubmitting}
@@ -223,7 +242,6 @@ export default function EditVehiclePage() {
             <InputField
               name="model"
               label="Model"
-              placeholder="Orn: Transit"
               value={form.model}
               onChange={handleChange}
               disabled={isSubmitting}
@@ -231,7 +249,6 @@ export default function EditVehiclePage() {
             <InputField
               name="plaka"
               label="Plaka"
-              placeholder="Orn: 34 ABC 123"
               value={form.plaka}
               onChange={handleChange}
               disabled={isSubmitting}
@@ -242,29 +259,85 @@ export default function EditVehiclePage() {
               type="number"
               min="1900"
               max={`${new Date().getFullYear() + 1}`}
-              placeholder="Orn: 2020"
               value={form.yil}
               onChange={handleChange}
               disabled={isSubmitting}
             />
             <InputField
-              name="kapasite"
-              label="Kapasite (ton)"
+              name="maksimumAgirlikKg"
+              label="Maksimum agirlik (kg)"
               type="number"
               min="0.01"
-              max="1000"
               step="0.01"
-              placeholder="Orn: 20"
-              value={form.kapasite}
+              value={form.maksimumAgirlikKg}
               onChange={handleChange}
               disabled={isSubmitting}
+            />
+            <InputField
+              name="maksimumHacimM3"
+              label="Maksimum hacim (m3)"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={form.maksimumHacimM3}
+              onChange={handleChange}
+              disabled={isSubmitting}
+            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="kasaTipi">
+                Kasa tipi
+              </label>
+              <select
+                id="kasaTipi"
+                name="kasaTipi"
+                value={form.kasaTipi}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
+              >
+                {VEHICLE_BODY_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <InputField
+              name="uzunlukCm"
+              label="Uzunluk (cm)"
+              type="number"
+              min="1"
+              value={form.uzunlukCm}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              required={false}
+            />
+            <InputField
+              name="genislikCm"
+              label="Genislik (cm)"
+              type="number"
+              min="1"
+              value={form.genislikCm}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              required={false}
+            />
+            <InputField
+              name="yukseklikCm"
+              label="Yukseklik (cm)"
+              type="number"
+              min="1"
+              value={form.yukseklikCm}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              required={false}
             />
           </div>
 
           <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-gray-500">
-              Degisiklikler kaydedildiginde mevcut arac detayi ekranina donulecek.
-            </p>
             <button
               type="submit"
               disabled={isSubmitting}

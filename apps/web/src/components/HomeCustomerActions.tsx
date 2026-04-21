@@ -141,7 +141,7 @@ export default function HomeCustomerActions() {
             <ActionLink
               href="/dashboard/arac_ekle"
               label="Arac Ekle"
-              variant="ghost"
+              variant="secondary"
             />
           </div>
         </div>

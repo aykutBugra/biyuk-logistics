@@ -276,10 +276,7 @@ export default function NotificationsPage() {
   const Shell = isCarrier ? CarrierVehiclesShell : CustomerTransportRequestsShell;
 
   return (
-    <Shell
-      title="Bildirimler"
-      description="Teklif, nakliye ve puan akisindan dogan son olaylari tek bir merkezden takip et."
-    >
+    <Shell title="Bildirimler">
       {isLoading ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
           Bildirimler yukleniyor...
@@ -294,29 +291,19 @@ export default function NotificationsPage() {
 
       {!isLoading && !errorMessage ? (
         <div className="grid gap-4 md:grid-cols-3">
-          <SummaryStatCard
-            label="Toplam bildirim"
-            value={notifications.length}
-            hint="Listeye dusen son olay kayitlari."
-          />
-          <SummaryStatCard
-            label="Okunmamis"
-            value={unreadCount}
-            hint="Hala dikkat bekleyen bildirimler."
-          />
+          <SummaryStatCard label="Toplam bildirim" value={notifications.length} />
+          <SummaryStatCard label="Okunmamis" value={unreadCount} />
           <SummaryStatCard
             label="Okunmus"
             value={Math.max(0, notifications.length - unreadCount)}
-            hint="Merkezde gorulup temizlenen olaylar."
           />
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && notifications.length === 0 ? (
         <EmptyStateCard
-          eyebrow="Bildirim merkezi"
           title="Henuz bildirim yok"
-          description="Teklif, nakliye ve puan olaylari olustukca burada yonlendiren bir bildirim akisi goreceksin."
+          description="Yeni bildirimlerin burada listelenecek."
           actionHref={
             primaryRole === "NAKLIYECI"
               ? "/dashboard/acik_istekler"
@@ -332,12 +319,7 @@ export default function NotificationsPage() {
         <div className="space-y-4">
           <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">
-                Bildirim merkezi
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                Okunmamis olaylari temizleyebilir veya ilgili ekrana gecebilirsin.
-              </p>
+              <p className="text-sm text-slate-600">Okunmamis bildirimlerini yonet.</p>
             </div>
             <button
               type="button"

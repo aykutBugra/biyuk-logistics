@@ -16,6 +16,13 @@ export type OpenRequestListItemRecord = {
   id: number;
   baslangicSehri: string;
   varisSehri: string;
+  baslangicKonumMetni: string | null;
+  varisKonumMetni: string | null;
+  tekTasimaIstiyor: boolean;
+  agirlikKg: number | null;
+  hacimM3: number | null;
+  yukTipi: string;
+  tasimaTarihi: string | null;
   yukDetay: string;
   olusturmaTarihi: Date;
   durumAdi: string;
@@ -23,11 +30,31 @@ export type OpenRequestListItemRecord = {
 };
 
 export type OpenRequestDetailRecord = OpenRequestListItemRecord & {
+  baslangicProvider: string | null;
+  varisProvider: string | null;
+  baslangicPlaceId: string | null;
+  varisPlaceId: string | null;
+  normalizeBaslangicSehir: string | null;
+  normalizeVarisSehir: string | null;
+  normalizeBaslangicIlce: string | null;
+  normalizeVarisIlce: string | null;
   baslangicEnlem: number;
   baslangicBoylam: number;
   varisEnlem: number;
   varisBoylam: number;
   hasExistingOffer: boolean;
+};
+
+export type OpenRequestFilters = {
+  baslangicSehir?: string;
+  varisSehir?: string;
+  tekTasimaIstiyor?: boolean;
+  minAgirlikKg?: number;
+  maxAgirlikKg?: number;
+  minHacimM3?: number;
+  maxHacimM3?: number;
+  yukTipi?: string;
+  tasimaTarihi?: string;
 };
 
 export type OfferCreateContextRecord = {
@@ -68,6 +95,28 @@ export type StoredOfferRecord = {
 export type IncomingOfferListItemRecord = {
   id: number;
   requestId: number;
+  carrierId: number;
+  carrierName: string;
+  carrierUsername: string;
+  aracId: number | null;
+  aracPlaka: string | null;
+  fiyat: number;
+  not: string | null;
+  durumAdi: string;
+};
+
+export type MyIncomingOfferListItemRecord = {
+  id: number;
+  requestId: number;
+  baslangicSehri: string;
+  varisSehri: string;
+  baslangicKonumMetni: string | null;
+  varisKonumMetni: string | null;
+  tekTasimaIstiyor: boolean;
+  agirlikKg: number | null;
+  hacimM3: number | null;
+  yukTipi: string;
+  tasimaTarihi: string | null;
   carrierId: number;
   carrierName: string;
   carrierUsername: string;
@@ -159,33 +208,23 @@ export class OffersRepository {
   }
 
   async findOpenRequestsForCarrier(
-    carrierId: number
+    carrierId: number,
+    filters: OpenRequestFilters
   ): Promise<OpenRequestListItemRecord[]> {
     const requests = await this.prisma.client.istek.findMany({
-      where: {
-        silmeTarihi: null,
-        musteriId: {
-          not: carrierId,
-        },
-        nakliye: {
-          is: null,
-        },
-        durum: {
-          durumTuru: {
-            equals: OPEN_REQUEST_STATUS.durumTuru,
-            mode: Prisma.QueryMode.insensitive,
-          },
-          durumAdi: {
-            equals: OPEN_REQUEST_STATUS.durumAdi,
-            mode: Prisma.QueryMode.insensitive,
-          },
-        },
-      },
+      where: this.buildOpenRequestsWhere(carrierId, filters),
       orderBy: [{ olusturmaTarihi: "desc" }, { id: "desc" }],
       select: {
         id: true,
         baslangicSehri: true,
         varisSehri: true,
+        baslangicKonumMetni: true,
+        varisKonumMetni: true,
+        tekTasimaIstiyor: true,
+        agirlikKg: true,
+        hacimM3: true,
+        yukTipi: true,
+        tasimaTarihi: true,
         yukDetay: true,
         olusturmaTarihi: true,
         durum: {
@@ -219,6 +258,13 @@ export class OffersRepository {
       id: request.id,
       baslangicSehri: request.baslangicSehri,
       varisSehri: request.varisSehri,
+      baslangicKonumMetni: request.baslangicKonumMetni,
+      varisKonumMetni: request.varisKonumMetni,
+      tekTasimaIstiyor: request.tekTasimaIstiyor,
+      agirlikKg: request.agirlikKg?.toNumber() ?? null,
+      hacimM3: request.hacimM3?.toNumber() ?? null,
+      yukTipi: request.yukTipi,
+      tasimaTarihi: request.tasimaTarihi,
       yukDetay: request.yukDetay,
       olusturmaTarihi: request.olusturmaTarihi,
       durumAdi: request.durum.durumAdi,
@@ -255,10 +301,25 @@ export class OffersRepository {
         id: true,
         baslangicSehri: true,
         varisSehri: true,
+        baslangicKonumMetni: true,
+        varisKonumMetni: true,
+        baslangicProvider: true,
+        varisProvider: true,
+        baslangicPlaceId: true,
+        varisPlaceId: true,
+        normalizeBaslangicSehir: true,
+        normalizeVarisSehir: true,
+        normalizeBaslangicIlce: true,
+        normalizeVarisIlce: true,
         baslangicEnlem: true,
         baslangicBoylam: true,
         varisEnlem: true,
         varisBoylam: true,
+        tekTasimaIstiyor: true,
+        agirlikKg: true,
+        hacimM3: true,
+        yukTipi: true,
+        tasimaTarihi: true,
         yukDetay: true,
         olusturmaTarihi: true,
         durum: {
@@ -296,10 +357,25 @@ export class OffersRepository {
       id: request.id,
       baslangicSehri: request.baslangicSehri,
       varisSehri: request.varisSehri,
+      baslangicKonumMetni: request.baslangicKonumMetni,
+      varisKonumMetni: request.varisKonumMetni,
+      baslangicProvider: request.baslangicProvider,
+      varisProvider: request.varisProvider,
+      baslangicPlaceId: request.baslangicPlaceId,
+      varisPlaceId: request.varisPlaceId,
+      normalizeBaslangicSehir: request.normalizeBaslangicSehir,
+      normalizeVarisSehir: request.normalizeVarisSehir,
+      normalizeBaslangicIlce: request.normalizeBaslangicIlce,
+      normalizeVarisIlce: request.normalizeVarisIlce,
       baslangicEnlem: request.baslangicEnlem.toNumber(),
       baslangicBoylam: request.baslangicBoylam.toNumber(),
       varisEnlem: request.varisEnlem.toNumber(),
       varisBoylam: request.varisBoylam.toNumber(),
+      tekTasimaIstiyor: request.tekTasimaIstiyor,
+      agirlikKg: request.agirlikKg?.toNumber() ?? null,
+      hacimM3: request.hacimM3?.toNumber() ?? null,
+      yukTipi: request.yukTipi,
+      tasimaTarihi: request.tasimaTarihi,
       yukDetay: request.yukDetay,
       olusturmaTarihi: request.olusturmaTarihi,
       durumAdi: request.durum.durumAdi,
@@ -574,6 +650,103 @@ export class OffersRepository {
     }));
   }
 
+  async findMyIncomingOffersByCustomerId(
+    customerId: number
+  ): Promise<MyIncomingOfferListItemRecord[]> {
+    const offers = await this.prisma.client.teklif.findMany({
+      where: {
+        durum: {
+          durumTuru: {
+            equals: OPEN_OFFER_STATUS.durumTuru,
+            mode: Prisma.QueryMode.insensitive,
+          },
+          durumAdi: {
+            equals: OPEN_OFFER_STATUS.durumAdi,
+            mode: Prisma.QueryMode.insensitive,
+          },
+        },
+        istek: {
+          musteriId: customerId,
+          silmeTarihi: null,
+          nakliye: {
+            is: null,
+          },
+          durum: {
+            durumTuru: {
+              equals: OPEN_REQUEST_STATUS.durumTuru,
+              mode: Prisma.QueryMode.insensitive,
+            },
+            durumAdi: {
+              equals: OPEN_REQUEST_STATUS.durumAdi,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+        },
+      },
+      orderBy: [{ id: "desc" }],
+      select: {
+        id: true,
+        fiyat: true,
+        not: true,
+        istekId: true,
+        istek: {
+          select: {
+            baslangicSehri: true,
+            varisSehri: true,
+            baslangicKonumMetni: true,
+            varisKonumMetni: true,
+            tekTasimaIstiyor: true,
+            agirlikKg: true,
+            hacimM3: true,
+            yukTipi: true,
+            tasimaTarihi: true,
+          },
+        },
+        nakliyeci: {
+          select: {
+            id: true,
+            ad: true,
+            soyad: true,
+            kullaniciAdi: true,
+          },
+        },
+        arac: {
+          select: {
+            id: true,
+            plaka: true,
+          },
+        },
+        durum: {
+          select: {
+            durumAdi: true,
+          },
+        },
+      },
+    });
+
+    return offers.map((offer) => ({
+      id: offer.id,
+      requestId: offer.istekId,
+      baslangicSehri: offer.istek.baslangicSehri,
+      varisSehri: offer.istek.varisSehri,
+      baslangicKonumMetni: offer.istek.baslangicKonumMetni,
+      varisKonumMetni: offer.istek.varisKonumMetni,
+      tekTasimaIstiyor: offer.istek.tekTasimaIstiyor,
+      agirlikKg: offer.istek.agirlikKg?.toNumber() ?? null,
+      hacimM3: offer.istek.hacimM3?.toNumber() ?? null,
+      yukTipi: offer.istek.yukTipi,
+      tasimaTarihi: offer.istek.tasimaTarihi,
+      carrierId: offer.nakliyeci.id,
+      carrierName: `${offer.nakliyeci.ad} ${offer.nakliyeci.soyad}`.trim(),
+      carrierUsername: offer.nakliyeci.kullaniciAdi,
+      aracId: offer.arac?.id ?? null,
+      aracPlaka: offer.arac?.plaka ?? null,
+      fiyat: offer.fiyat.toNumber(),
+      not: offer.not,
+      durumAdi: offer.durum.durumAdi,
+    }));
+  }
+
   async findOfferDecisionContextById(
     offerId: number
   ): Promise<OfferDecisionContextRecord | null> {
@@ -762,5 +935,109 @@ export class OffersRepository {
 
       throw error;
     }
+  }
+
+
+  //filtreleme kriterlerine göre açık istekler için where koşulu oluşturur
+  private buildOpenRequestsWhere(
+    carrierId: number,
+    filters: OpenRequestFilters
+  ): Prisma.IstekWhereInput {
+    const andFilters: Prisma.IstekWhereInput[] = [];
+    const where: Prisma.IstekWhereInput = {
+      silmeTarihi: null,
+      musteriId: {
+        not: carrierId,
+      },
+      nakliye: {
+        is: null,
+      },
+      durum: {
+        durumTuru: {
+          equals: OPEN_REQUEST_STATUS.durumTuru,
+          mode: Prisma.QueryMode.insensitive,
+        },
+        durumAdi: {
+          equals: OPEN_REQUEST_STATUS.durumAdi,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      },
+    };
+
+    if (filters.baslangicSehir) {
+      andFilters.push({
+        OR: [
+          {
+            normalizeBaslangicSehir: {
+              equals: filters.baslangicSehir,
+            },
+          },
+          {
+            baslangicSehri: {
+              equals: filters.baslangicSehir,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+        ],
+      });
+    }
+
+    if (filters.varisSehir) {
+      andFilters.push({
+        OR: [
+          {
+            normalizeVarisSehir: {
+              equals: filters.varisSehir,
+            },
+          },
+          {
+            varisSehri: {
+              equals: filters.varisSehir,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+        ],
+      });
+    }
+
+    if (typeof filters.tekTasimaIstiyor === "boolean") {
+      where.tekTasimaIstiyor = filters.tekTasimaIstiyor;
+    }
+
+    if (typeof filters.minAgirlikKg === "number" || typeof filters.maxAgirlikKg === "number") {
+      where.agirlikKg = {
+        ...(typeof filters.minAgirlikKg === "number"
+          ? { gte: new Prisma.Decimal(filters.minAgirlikKg) }
+          : {}),
+        ...(typeof filters.maxAgirlikKg === "number"
+          ? { lte: new Prisma.Decimal(filters.maxAgirlikKg) }
+          : {}),
+      };
+    }
+
+    if (typeof filters.minHacimM3 === "number" || typeof filters.maxHacimM3 === "number") {
+      where.hacimM3 = {
+        ...(typeof filters.minHacimM3 === "number"
+          ? { gte: new Prisma.Decimal(filters.minHacimM3) }
+          : {}),
+        ...(typeof filters.maxHacimM3 === "number"
+          ? { lte: new Prisma.Decimal(filters.maxHacimM3) }
+          : {}),
+      };
+    }
+
+    if (filters.yukTipi) {
+      where.yukTipi = filters.yukTipi;
+    }
+
+    if (filters.tasimaTarihi) {
+      where.tasimaTarihi = filters.tasimaTarihi;
+    }
+
+    if (andFilters.length > 0) {
+      where.AND = andFilters;
+    }
+
+    return where;
   }
 }

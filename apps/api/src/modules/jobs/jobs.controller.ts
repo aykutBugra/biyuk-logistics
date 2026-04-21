@@ -1,4 +1,13 @@
-import { Controller, Get, Param, ParseIntPipe, Post, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from "@nestjs/common";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
@@ -31,6 +40,7 @@ export class JobsController {
   }
 
   @Post(":jobId/start")
+  @HttpCode(HttpStatus.OK)
   @Roles(ROLE_NAMES.NAKLIYECI)
   startById(
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -40,6 +50,7 @@ export class JobsController {
   }
 
   @Post(":jobId/complete")
+  @HttpCode(HttpStatus.OK)
   @Roles(ROLE_NAMES.NAKLIYECI)
   completeById(
     @CurrentUser() currentUser: AuthenticatedUser,

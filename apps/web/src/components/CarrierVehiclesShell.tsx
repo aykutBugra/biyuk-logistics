@@ -5,7 +5,7 @@ import DashboardShellFrame from "@/components/DashboardShellFrame";
 
 type CarrierVehiclesShellProps = {
   title: string;
-  description: string;
+  description?: string;
   children: ReactNode;
 };
 
@@ -16,9 +16,7 @@ export default function CarrierVehiclesShell({
 }: CarrierVehiclesShellProps) {
   return (
     <DashboardShellFrame
-      panelEyebrow="Nakliyeci Paneli"
-      panelTitle="Operasyonlar"
-      panelDescription="Acik istekleri kesfet, tekliflerini takip et, anlasilan isleri yurut ve arac varliklarini yonet."
+      panelTitle="Nakliyeci"
       navGroups={[
         {
           title: "Kesfet ve Yonet",
@@ -70,7 +68,6 @@ export default function CarrierVehiclesShell({
       ]}
       title={title}
       description={description}
-      pageEyebrow="Nakliyeci Akisi"
     >
       {children}
     </DashboardShellFrame>

@@ -20,6 +20,12 @@ import {
 } from "@/lib/api/transport-requests";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCustomerPageAccess } from "@/lib/auth/use-customer-page-access";
+import {
+  formatLocationLabel,
+  formatVolumeM3,
+  formatWeightKg,
+  getCargoTypeLabel,
+} from "@/lib/logistics";
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("tr-TR", {
@@ -34,6 +40,16 @@ function formatCurrency(value: number): string {
     currency: "TRY",
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function formatTransportDate(value: string | null): string {
+  if (!value) {
+    return "Belirtilmedi";
+  }
+
+  return new Intl.DateTimeFormat("tr-TR", {
+    dateStyle: "medium",
+  }).format(new Date(`${value}T00:00:00`));
 }
 
 function getJobStatusCopy(status: string): { title: string; description: string } {
@@ -359,10 +375,7 @@ export default function TransportRequestDetailPage() {
     : null;
 
   return (
-    <CustomerTransportRequestsShell
-      title="Istek detayi"
-      description="Ownership kurali nedeniyle yalnizca kendi kaydini gorebilirsin."
-    >
+    <CustomerTransportRequestsShell title="Istek detayi">
       {isLoading ? (
         <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 text-gray-600">
           Istek detayi yukleniyor...
@@ -388,8 +401,35 @@ export default function TransportRequestDetailPage() {
                   <span>#{request.id}</span>
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {request.baslangicSehri} {"->"} {request.varisSehri}
+                  {formatLocationLabel(
+                    request.baslangicKonumMetni,
+                    request.baslangicSehri
+                  )}{" "}
+                  {"->"}{" "}
+                  {formatLocationLabel(
+                    request.varisKonumMetni,
+                    request.varisSehri
+                  )}
                 </h2>
+                <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {getCargoTypeLabel(request.yukTipi)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {formatWeightKg(request.agirlikKg)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {formatVolumeM3(request.hacimM3)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {formatTransportDate(request.tasimaTarihi)}
+                  </span>
+                  {request.tekTasimaIstiyor ? (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">
+                      Tek tasima
+                    </span>
+                  ) : null}
+                </div>
               </div>
 
               <div className="flex flex-col items-start gap-3 md:items-end">
@@ -433,6 +473,28 @@ export default function TransportRequestDetailPage() {
 
           <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900">Yuk detayi</h3>
+            <dl className="mt-4 grid gap-3 text-sm text-gray-600 md:grid-cols-2">
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-gray-900">Yuk tipi</dt>
+                <dd>{getCargoTypeLabel(request.yukTipi)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-gray-900">Agirlik</dt>
+                <dd>{formatWeightKg(request.agirlikKg)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-gray-900">Hacim</dt>
+                <dd>{formatVolumeM3(request.hacimM3)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-gray-900">Tasima tarihi</dt>
+                <dd>{formatTransportDate(request.tasimaTarihi)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 md:col-span-2">
+                <dt className="font-medium text-gray-900">Tasima tercihi</dt>
+                <dd>{request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}</dd>
+              </div>
+            </dl>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-600">
               {request.yukDetay}
             </p>
@@ -509,17 +571,24 @@ export default function TransportRequestDetailPage() {
               <h3 className="text-lg font-bold text-gray-900">Baslangic</h3>
               <dl className="mt-4 space-y-3 text-sm text-gray-600">
                 <div className="flex items-center justify-between gap-4">
+                  <dt className="font-medium text-gray-900">Konum</dt>
+                  <dd className="text-right">
+                    {formatLocationLabel(
+                      request.baslangicKonumMetni,
+                      request.baslangicSehri
+                    )}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
                   <dt className="font-medium text-gray-900">Sehir</dt>
-                  <dd>{request.baslangicSehri}</dd>
+                  <dd>{request.normalizeBaslangicSehir || request.baslangicSehri}</dd>
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Enlem</dt>
-                  <dd>{request.baslangicEnlem}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Boylam</dt>
-                  <dd>{request.baslangicBoylam}</dd>
-                </div>
+                {request.normalizeBaslangicIlce ? (
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="font-medium text-gray-900">Ilce</dt>
+                    <dd>{request.normalizeBaslangicIlce}</dd>
+                  </div>
+                ) : null}
               </dl>
             </div>
 
@@ -527,17 +596,21 @@ export default function TransportRequestDetailPage() {
               <h3 className="text-lg font-bold text-gray-900">Varis</h3>
               <dl className="mt-4 space-y-3 text-sm text-gray-600">
                 <div className="flex items-center justify-between gap-4">
+                  <dt className="font-medium text-gray-900">Konum</dt>
+                  <dd className="text-right">
+                    {formatLocationLabel(request.varisKonumMetni, request.varisSehri)}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
                   <dt className="font-medium text-gray-900">Sehir</dt>
-                  <dd>{request.varisSehri}</dd>
+                  <dd>{request.normalizeVarisSehir || request.varisSehri}</dd>
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Enlem</dt>
-                  <dd>{request.varisEnlem}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Boylam</dt>
-                  <dd>{request.varisBoylam}</dd>
-                </div>
+                {request.normalizeVarisIlce ? (
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="font-medium text-gray-900">Ilce</dt>
+                    <dd>{request.normalizeVarisIlce}</dd>
+                  </div>
+                ) : null}
               </dl>
             </div>
           </div>

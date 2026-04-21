@@ -1,6 +1,6 @@
 type CollectionToolbarProps = {
   title: string;
-  description: string;
+  description?: string;
   countLabel: string;
   hint?: string;
 };
@@ -18,7 +18,9 @@ export default function CollectionToolbar({
           <h2 className="text-lg font-black tracking-tight text-slate-950">
             {title}
           </h2>
-          <p className="text-sm text-slate-600">{description}</p>
+          {description ? (
+            <p className="text-sm text-slate-600">{description}</p>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

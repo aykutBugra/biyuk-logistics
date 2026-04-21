@@ -100,10 +100,7 @@ export default function MyOffersPage() {
   ).length;
 
   return (
-    <CarrierVehiclesShell
-      title="Tekliflerim"
-      description="Verdigin teklifleri ve bagli olduklari tasima taleplerini takip et."
-    >
+    <CarrierVehiclesShell title="Tekliflerim">
       {isLoading ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
           Teklifler yukleniyor...
@@ -118,29 +115,16 @@ export default function MyOffersPage() {
 
       {!isLoading && !errorMessage && offers.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-3">
-          <SummaryStatCard
-            label="Toplam teklif"
-            value={offers.length}
-            hint="Nakliyeci hesabindan olusturulan teklifler."
-          />
-          <SummaryStatCard
-            label="Acik teklif"
-            value={openOfferCount}
-            hint="Henuz karar verilmemis teklifler."
-          />
-          <SummaryStatCard
-            label="Kabul edilen"
-            value={acceptedOfferCount}
-            hint="Anlasilan is akisina donusen teklifler."
-          />
+          <SummaryStatCard label="Toplam teklif" value={offers.length} />
+          <SummaryStatCard label="Acik teklif" value={openOfferCount} />
+          <SummaryStatCard label="Kabul edilen" value={acceptedOfferCount} />
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && offers.length === 0 ? (
         <EmptyStateCard
-          eyebrow="Teklif akisi"
           title="Henuz teklif yok"
-          description="Acik istekler ekranindan ilk teklifini olusturdugunda yonetim listesi burada gorunecek."
+          description="Ilk teklifini verdiginde burada goreceksin."
           actionHref="/dashboard/acik_istekler"
           actionLabel="Acik istekleri incele"
         />
@@ -183,10 +167,6 @@ export default function MyOffersPage() {
                 <div className="flex flex-col items-start gap-3 lg:min-w-[200px] lg:items-end">
                   <p className="text-2xl font-black tracking-tight text-emerald-700">
                     {formatCurrency(offer.fiyat)}
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    Fiyat ve durum bu listede birincil tarama alanlari olarak
-                    one cikarildi.
                   </p>
                 </div>
               </div>

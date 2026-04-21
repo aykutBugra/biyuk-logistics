@@ -1,13 +1,16 @@
 import { Transform } from "class-transformer";
 import {
   IsInt,
+  IsIn,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsString,
   Max,
   MaxLength,
   Min,
 } from "class-validator";
+import { VEHICLE_BODY_TYPES } from "../vehicle.constants";
 
 const trimAndCollapseWhitespace = ({ value }: { value: unknown }) => {
   if (typeof value !== "string") {
@@ -66,6 +69,39 @@ export class CreateVehicleDto {
   @Transform(toNumber)
   @IsNumber({ allowInfinity: false, allowNaN: false, maxDecimalPlaces: 2 })
   @Min(0.01)
+  @Max(100000)
+  maksimumAgirlikKg!: number;
+
+  @Transform(toNumber)
+  @IsNumber({ allowInfinity: false, allowNaN: false, maxDecimalPlaces: 2 })
+  @Min(0.01)
   @Max(1000)
-  kapasite!: number;
+  maksimumHacimM3!: number;
+
+  @Transform(trimAndCollapseWhitespace)
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(VEHICLE_BODY_TYPES)
+  kasaTipi!: string;
+
+  @Transform(toNumber)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  uzunlukCm?: number;
+
+  @Transform(toNumber)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  genislikCm?: number;
+
+  @Transform(toNumber)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  yukseklikCm?: number;
 }

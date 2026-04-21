@@ -19,19 +19,7 @@ export default function Home() {
     },
   ];
 
-  const surfaceHighlights = [
-    {
-      title: "Calisan operasyon halkasi",
-      description:
-        "Istek, teklif, kabul ve nakliye akisi bugun tek bir urun hikayesi olarak calisiyor.",
-    },
-    {
-      title: "Rol bazli hizli giris",
-      description:
-        "Musteri ve nakliyeci ayni urunde ama farkli is mantigiyla ilerliyor; ana sayfa bunu dogrudan gosteriyor.",
-    },
-  ];
-
+ 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-14 text-slate-950 md:py-18">
       <div className="mx-auto max-w-6xl space-y-10">
@@ -81,22 +69,6 @@ export default function Home() {
               </h2>
               <p className="mt-3 text-sm leading-6 text-slate-600">
                 {step.description}
-              </p>
-            </div>
-          ))}
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-2">
-          {surfaceHighlights.map((item) => (
-            <div
-              key={item.title}
-              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
-            >
-              <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                {item.title}
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                {item.description}
               </p>
             </div>
           ))}

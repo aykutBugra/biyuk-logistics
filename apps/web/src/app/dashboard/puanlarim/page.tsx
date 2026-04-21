@@ -182,10 +182,7 @@ export default function RatingsPage() {
   const totalRatingCount = givenRatings.length + receivedRatings.length;
 
   return (
-    <Shell
-      title="Puanlarim"
-      description="Tamamlanan nakliyelerden dogan verdigin ve aldigin degerlendirmeleri tek ekranda takip et."
-    >
+    <Shell title="Puanlarim">
       {isLoading ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
           Puanlar yukleniyor...
@@ -200,16 +197,8 @@ export default function RatingsPage() {
 
       {!isLoading && !errorMessage && summary ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <SummaryStatCard
-            label="Verdigim puan"
-            value={givenRatings.length}
-            hint="Tamamlanan isler icin gonderdigin puanlar."
-          />
-          <SummaryStatCard
-            label="Aldigim puan"
-            value={receivedRatings.length}
-            hint="Karsi taraflardan topladigin degerlendirmeler."
-          />
+          <SummaryStatCard label="Verdigim puan" value={givenRatings.length} />
+          <SummaryStatCard label="Aldigim puan" value={receivedRatings.length} />
           <SummaryStatCard
             label="Nakliyeci ortalamam"
             value={formatAverageRating(summary.asCarrier.averageRating)}
@@ -225,9 +214,8 @@ export default function RatingsPage() {
 
       {!isLoading && !errorMessage && totalRatingCount === 0 ? (
         <EmptyStateCard
-          eyebrow="Puan akisi"
           title="Henuz puan kaydi yok"
-          description="Nakliyeler tamamlandikca verdigin ve aldigin degerlendirmeler burada gorunecek."
+          description="Puanlarin burada listelenecek."
           actionHref={primaryRole === "NAKLIYECI" ? "/dashboard/nakliyelerim" : "/dashboard/isteklerim"}
           actionLabel={primaryRole === "NAKLIYECI" ? "Nakliyelerime git" : "Isteklerime git"}
         />

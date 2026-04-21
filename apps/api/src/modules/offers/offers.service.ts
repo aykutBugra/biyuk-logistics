@@ -7,14 +7,19 @@ import {
 } from "@nestjs/common";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { normalizeCityFilter } from "../../common/utils/normalize-city-filter";
 import { CreateOfferDto } from "./dto/create-offer.dto";
 import { IncomingOfferListItemResponseDto } from "./dto/incoming-offer-list-item-response.dto";
+import { MyIncomingOfferListItemResponseDto } from "./dto/my-incoming-offer-list-item-response.dto";
 import { MyOfferListItemResponseDto } from "./dto/my-offer-list-item-response.dto";
 import { OfferResponseDto } from "./dto/offer-response.dto";
 import { OpenRequestDetailResponseDto } from "./dto/open-request-detail-response.dto";
 import { OpenRequestListItemResponseDto } from "./dto/open-request-list-item-response.dto";
+import { OpenRequestQueryDto } from "./dto/open-request-query.dto";
 import {
   type IncomingOfferListItemRecord,
+  type MyIncomingOfferListItemRecord,
+  type OpenRequestFilters,
   type OfferDecisionContextRecord,
   type OpenRequestDetailRecord,
   type OpenRequestListItemRecord,
@@ -61,12 +66,14 @@ export class OffersService {
   ) {}
 
   async getOpenRequests(
-    currentUser: AuthenticatedUser
+    currentUser: AuthenticatedUser,
+    query: OpenRequestQueryDto
   ): Promise<OpenRequestListItemResponseDto[]> {
     this.assertCarrierRole(currentUser);
 
     const requests = await this.offersRepository.findOpenRequestsForCarrier(
-      currentUser.id
+      currentUser.id,
+      this.toOpenRequestFilters(query)
     );
 
     return requests.map((request) => this.toOpenRequestListItemResponse(request));
@@ -188,6 +195,18 @@ export class OffersService {
     );
 
     return offers.map((offer) => this.toMyOfferListItemResponse(offer));
+  }
+
+  async getMyIncoming(
+    currentUser: AuthenticatedUser
+  ): Promise<MyIncomingOfferListItemResponseDto[]> {
+    this.assertCustomerRole(currentUser);
+
+    const offers = await this.offersRepository.findMyIncomingOffersByCustomerId(
+      currentUser.id
+    );
+
+    return offers.map((offer) => this.toMyIncomingOfferListItemResponse(offer));
   }
 
   async getIncomingForRequest(
@@ -428,6 +447,13 @@ export class OffersService {
       id: request.id,
       baslangicSehri: request.baslangicSehri,
       varisSehri: request.varisSehri,
+      baslangicKonumMetni: request.baslangicKonumMetni,
+      varisKonumMetni: request.varisKonumMetni,
+      tekTasimaIstiyor: request.tekTasimaIstiyor,
+      agirlikKg: request.agirlikKg,
+      hacimM3: request.hacimM3,
+      yukTipi: request.yukTipi,
+      tasimaTarihi: request.tasimaTarihi,
       yukDetay: request.yukDetay,
       olusturmaTarihi: request.olusturmaTarihi,
       durum: request.durumAdi,
@@ -440,12 +466,34 @@ export class OffersService {
   ): OpenRequestDetailResponseDto {
     return {
       ...this.toOpenRequestListItemResponse(request),
+      baslangicProvider: request.baslangicProvider,
+      varisProvider: request.varisProvider,
+      baslangicPlaceId: request.baslangicPlaceId,
+      varisPlaceId: request.varisPlaceId,
+      normalizeBaslangicSehir: request.normalizeBaslangicSehir,
+      normalizeVarisSehir: request.normalizeVarisSehir,
+      normalizeBaslangicIlce: request.normalizeBaslangicIlce,
+      normalizeVarisIlce: request.normalizeVarisIlce,
       baslangicEnlem: request.baslangicEnlem,
       baslangicBoylam: request.baslangicBoylam,
       varisEnlem: request.varisEnlem,
       varisBoylam: request.varisBoylam,
       hasActiveVehicle: false,
       hasExistingOffer: request.hasExistingOffer,
+    };
+  }
+
+  private toOpenRequestFilters(query: OpenRequestQueryDto): OpenRequestFilters {
+    return {
+      baslangicSehir: normalizeCityFilter(query.baslangicSehir),
+      varisSehir: normalizeCityFilter(query.varisSehir),
+      tekTasimaIstiyor: query.tekTasimaIstiyor,
+      minAgirlikKg: query.minAgirlikKg,
+      maxAgirlikKg: query.maxAgirlikKg,
+      minHacimM3: query.minHacimM3,
+      maxHacimM3: query.maxHacimM3,
+      yukTipi: query.yukTipi,
+      tasimaTarihi: query.tasimaTarihi,
     };
   }
 
@@ -475,6 +523,32 @@ export class OffersService {
     return {
       id: offer.id,
       requestId: offer.requestId,
+      carrierId: offer.carrierId,
+      carrierName: offer.carrierName,
+      carrierUsername: offer.carrierUsername,
+      aracId: offer.aracId,
+      aracPlaka: offer.aracPlaka,
+      fiyat: offer.fiyat,
+      not: offer.not,
+      durum: offer.durumAdi,
+    };
+  }
+
+  private toMyIncomingOfferListItemResponse(
+    offer: MyIncomingOfferListItemRecord
+  ): MyIncomingOfferListItemResponseDto {
+    return {
+      id: offer.id,
+      requestId: offer.requestId,
+      baslangicSehri: offer.baslangicSehri,
+      varisSehri: offer.varisSehri,
+      baslangicKonumMetni: offer.baslangicKonumMetni,
+      varisKonumMetni: offer.varisKonumMetni,
+      tekTasimaIstiyor: offer.tekTasimaIstiyor,
+      agirlikKg: offer.agirlikKg,
+      hacimM3: offer.hacimM3,
+      yukTipi: offer.yukTipi,
+      tasimaTarihi: offer.tasimaTarihi,
       carrierId: offer.carrierId,
       carrierName: offer.carrierName,
       carrierUsername: offer.carrierUsername,

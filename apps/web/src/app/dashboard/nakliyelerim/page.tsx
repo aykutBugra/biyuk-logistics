@@ -110,10 +110,7 @@ export default function MyJobsPage() {
   ).length;
 
   return (
-    <CarrierVehiclesShell
-      title="Nakliyelerim"
-      description="Anlasilan isleri ve olusan nakliye kayitlarini buradan takip et."
-    >
+    <CarrierVehiclesShell title="Nakliyelerim">
       {isLoading ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
           Nakliyeler yukleniyor...
@@ -128,29 +125,16 @@ export default function MyJobsPage() {
 
       {!isLoading && !errorMessage && jobs.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-3">
-          <SummaryStatCard
-            label="Toplam nakliye"
-            value={jobs.length}
-            hint="Listeye dusen resmi is kayitlari."
-          />
-          <SummaryStatCard
-            label="Aktif is"
-            value={activeJobCount}
-            hint="Henuz tamamlanmamis operasyon kayitlari."
-          />
-          <SummaryStatCard
-            label="Tamamlanan"
-            value={completedJobCount}
-            hint="Terminal duruma ulasmis nakliyeler."
-          />
+          <SummaryStatCard label="Toplam nakliye" value={jobs.length} />
+          <SummaryStatCard label="Aktif is" value={activeJobCount} />
+          <SummaryStatCard label="Tamamlanan" value={completedJobCount} />
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && jobs.length === 0 ? (
         <EmptyStateCard
-          eyebrow="Nakliye akisi"
           title="Henuz aktif nakliye yok"
-          description="Teklifin kabul edildiginde resmi nakliye kaydi burada yonetim listesi olarak gorunecek."
+          description="Teklifin kabul edildiginde burada goreceksin."
           actionHref="/dashboard/acik_istekler"
           actionLabel="Acik istekleri incele"
         />

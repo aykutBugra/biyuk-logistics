@@ -1,13 +1,15 @@
 import { apiFetch } from "./api-client";
+import type { LocationSelectionInput } from "./locations";
 import type { RatingContext } from "./ratings";
 
 export type CreateTransportRequestInput = {
-  baslangicSehri: string;
-  varisSehri: string;
-  baslangicEnlem: number;
-  baslangicBoylam: number;
-  varisEnlem: number;
-  varisBoylam: number;
+  baslangicKonum: LocationSelectionInput;
+  varisKonum: LocationSelectionInput;
+  tekTasimaIstiyor: boolean;
+  agirlikKg: number;
+  hacimM3: number;
+  yukTipi: string;
+  tasimaTarihi: string;
   yukDetay: string;
 };
 
@@ -17,12 +19,27 @@ export type TransportRequestListItem = {
   id: number;
   baslangicSehri: string;
   varisSehri: string;
+  baslangicKonumMetni: string | null;
+  varisKonumMetni: string | null;
+  tekTasimaIstiyor: boolean;
+  agirlikKg: number | null;
+  hacimM3: number | null;
+  yukTipi: string;
+  tasimaTarihi: string | null;
   yukDetay: string;
   olusturmaTarihi: string;
   durum: string;
 };
 
 export type TransportRequestDetail = TransportRequestListItem & {
+  baslangicProvider: string | null;
+  varisProvider: string | null;
+  baslangicPlaceId: string | null;
+  varisPlaceId: string | null;
+  normalizeBaslangicSehir: string | null;
+  normalizeVarisSehir: string | null;
+  normalizeBaslangicIlce: string | null;
+  normalizeVarisIlce: string | null;
   baslangicEnlem: number;
   baslangicBoylam: number;
   varisEnlem: number;

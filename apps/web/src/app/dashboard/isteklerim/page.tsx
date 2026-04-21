@@ -15,6 +15,12 @@ import {
 } from "@/lib/api/transport-requests";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCustomerPageAccess } from "@/lib/auth/use-customer-page-access";
+import {
+  formatLocationLabel,
+  formatVolumeM3,
+  formatWeightKg,
+  getCargoTypeLabel,
+} from "@/lib/logistics";
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("tr-TR", {
@@ -158,10 +164,7 @@ export default function MyTransportRequestsPage() {
   const activeCount = requests.length - agreementCount;
 
   return (
-    <CustomerTransportRequestsShell
-      title="Isteklerim"
-      description="Yalnizca giris yapan musteriye ait aktif transport request kayitlari listelenir."
-    >
+    <CustomerTransportRequestsShell title="Isteklerim">
       {isLoading ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
           Istekler yukleniyor...
@@ -176,29 +179,16 @@ export default function MyTransportRequestsPage() {
 
       {!isLoading && !errorMessage && requests.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-3">
-          <SummaryStatCard
-            label="Toplam istek"
-            value={requests.length}
-            hint="Panelde gorunen aktif kayitlar."
-          />
-          <SummaryStatCard
-            label="Acik akista"
-            value={activeCount}
-            hint="Henuz anlasilma veya tamamlama noktasina gelmeyen istekler."
-          />
-          <SummaryStatCard
-            label="Anlasilan is"
-            value={agreementCount}
-            hint="Teklif kabul edilmis veya tamamlanmis kayitlar."
-          />
+          <SummaryStatCard label="Toplam istek" value={requests.length} />
+          <SummaryStatCard label="Acik akista" value={activeCount} />
+          <SummaryStatCard label="Anlasilan is" value={agreementCount} />
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && requests.length === 0 ? (
         <EmptyStateCard
-          eyebrow="Istek akisi"
           title="Henuz istek yok"
-          description="Ilk transport request kaydini olusturdugunda yonetim listesi burada belirecek."
+          description="Ilk istegini olusturdugunda burada goreceksin."
           actionHref="/dashboard/istek_ekle"
           actionLabel="Ilk istegi olustur"
         />
@@ -225,8 +215,37 @@ export default function MyTransportRequestsPage() {
 
                     <div className="space-y-2">
                       <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                        {request.baslangicSehri} {"->"} {request.varisSehri}
+                        {formatLocationLabel(
+                          request.baslangicKonumMetni,
+                          request.baslangicSehri
+                        )}{" "}
+                        {"->"}{" "}
+                        {formatLocationLabel(
+                          request.varisKonumMetni,
+                          request.varisSehri
+                        )}
                       </h2>
+                      <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                          {getCargoTypeLabel(request.yukTipi)}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                          {formatWeightKg(request.agirlikKg)}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                          {formatVolumeM3(request.hacimM3)}
+                        </span>
+                        {request.tekTasimaIstiyor ? (
+                          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700 ring-1 ring-amber-100">
+                            Tek tasima
+                          </span>
+                        ) : null}
+                        {request.tasimaTarihi ? (
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                            {request.tasimaTarihi}
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="max-w-3xl text-sm leading-6 text-slate-600 line-clamp-3">
                         {request.yukDetay}
                       </p>
@@ -238,9 +257,6 @@ export default function MyTransportRequestsPage() {
                   </div>
 
                   <div className="flex flex-col items-start gap-3 lg:min-w-[250px] lg:items-end">
-                    <p className="text-sm text-slate-500">
-                      Detay, duzenleme ve silme aksiyonlari bu kayit uzerinden devam eder.
-                    </p>
                     <div className="flex flex-wrap gap-2 lg:justify-end">
                       <Link
                         href={`/dashboard/isteklerim/${request.id}`}

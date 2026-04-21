@@ -15,12 +15,12 @@ type DashboardNavGroup = {
 };
 
 type DashboardShellFrameProps = {
-  panelEyebrow: string;
+  panelEyebrow?: string;
   panelTitle: string;
-  panelDescription: string;
+  panelDescription?: string;
   navGroups: DashboardNavGroup[];
   title: string;
-  description: string;
+  description?: string;
   children: ReactNode;
   pageEyebrow?: string;
 };
@@ -48,13 +48,17 @@ export default function DashboardShellFrame({
           <aside className="space-y-4">
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600">
-                  {panelEyebrow}
-                </p>
+                {panelEyebrow ? (
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600">
+                    {panelEyebrow}
+                  </p>
+                ) : null}
                 <h2 className="text-xl font-black tracking-tight text-slate-950">
                   {panelTitle}
                 </h2>
-                <p className="text-sm leading-6 text-slate-600">{panelDescription}</p>
+                {panelDescription ? (
+                  <p className="text-sm leading-6 text-slate-600">{panelDescription}</p>
+                ) : null}
               </div>
 
               <div className="mt-8 space-y-6">
@@ -94,15 +98,19 @@ export default function DashboardShellFrame({
           <section className="space-y-6">
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600">
-                  {pageEyebrow ?? panelEyebrow}
-                </p>
+                {pageEyebrow ?? panelEyebrow ? (
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-600">
+                    {pageEyebrow ?? panelEyebrow}
+                  </p>
+                ) : null}
                 <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
                   {title}
                 </h1>
-                <p className="max-w-3xl text-sm leading-6 text-slate-600 md:text-base">
-                  {description}
-                </p>
+                {description ? (
+                  <p className="max-w-3xl text-sm leading-6 text-slate-600 md:text-base">
+                    {description}
+                  </p>
+                ) : null}
               </div>
             </div>
 

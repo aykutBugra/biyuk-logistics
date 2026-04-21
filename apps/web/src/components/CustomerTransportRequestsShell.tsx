@@ -5,7 +5,7 @@ import DashboardShellFrame from "@/components/DashboardShellFrame";
 
 type CustomerTransportRequestsShellProps = {
   title: string;
-  description: string;
+  description?: string;
   children: ReactNode;
 };
 
@@ -16,9 +16,7 @@ export default function CustomerTransportRequestsShell({
 }: CustomerTransportRequestsShellProps) {
   return (
     <DashboardShellFrame
-      panelEyebrow="Musteri Paneli"
-      panelTitle="Istek Akisi"
-      panelDescription="Isteklerini olustur, teklifleri degerlendir ve anlasilan tasimalari tek yerden takip et."
+      panelTitle="Musteri"
       navGroups={[
         {
           title: "Hizli Eylemler",
@@ -30,6 +28,10 @@ export default function CustomerTransportRequestsShell({
             {
               href: "/dashboard/isteklerim",
               label: "Isteklerim",
+            },
+            {
+              href: "/dashboard/gelen_teklifler",
+              label: "Gelen Teklifler",
             },
           ],
         },
@@ -53,7 +55,6 @@ export default function CustomerTransportRequestsShell({
       ]}
       title={title}
       description={description}
-      pageEyebrow="Musteri Akisi"
     >
       {children}
     </DashboardShellFrame>

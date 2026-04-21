@@ -5,34 +5,70 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
 import InputField from "@/components/InputField";
+import LocationAutocompleteField from "@/components/LocationAutocompleteField";
 import { ApiClientError } from "@/lib/api/api-client";
+import type { SelectedLocation } from "@/lib/api/locations";
 import {
   getTransportRequestDetail,
   updateTransportRequest,
+  type TransportRequestDetail,
   type UpdateTransportRequestInput,
 } from "@/lib/api/transport-requests";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCustomerPageAccess } from "@/lib/auth/use-customer-page-access";
+import { CARGO_TYPE_OPTIONS, formatLocationLabel } from "@/lib/logistics";
 
 type UpdateTransportRequestForm = {
-  baslangicSehri: string;
-  varisSehri: string;
-  baslangicEnlem: string;
-  baslangicBoylam: string;
-  varisEnlem: string;
-  varisBoylam: string;
+  tekTasimaIstiyor: boolean;
+  agirlikKg: string;
+  hacimM3: string;
+  yukTipi: string;
+  tasimaTarihi: string;
   yukDetay: string;
 };
 
 const initialForm: UpdateTransportRequestForm = {
-  baslangicSehri: "",
-  varisSehri: "",
-  baslangicEnlem: "",
-  baslangicBoylam: "",
-  varisEnlem: "",
-  varisBoylam: "",
+  tekTasimaIstiyor: false,
+  agirlikKg: "",
+  hacimM3: "",
+  yukTipi: "GENEL",
+  tasimaTarihi: "",
   yukDetay: "",
 };
+
+function toSelectedLocation(
+  request: TransportRequestDetail,
+  direction: "baslangic" | "varis"
+): SelectedLocation | null {
+  const provider =
+    direction === "baslangic" ? request.baslangicProvider : request.varisProvider;
+  const placeId =
+    direction === "baslangic" ? request.baslangicPlaceId : request.varisPlaceId;
+
+  if (!provider || !placeId) {
+    return null;
+  }
+
+  return {
+    provider,
+    placeId,
+    konumMetni:
+      direction === "baslangic"
+        ? formatLocationLabel(request.baslangicKonumMetni, request.baslangicSehri)
+        : formatLocationLabel(request.varisKonumMetni, request.varisSehri),
+    sehir:
+      direction === "baslangic"
+        ? request.normalizeBaslangicSehir || request.baslangicSehri
+        : request.normalizeVarisSehir || request.varisSehri,
+    ilce:
+      direction === "baslangic"
+        ? request.normalizeBaslangicIlce
+        : request.normalizeVarisIlce,
+    lat: direction === "baslangic" ? request.baslangicEnlem : request.varisEnlem,
+    lng:
+      direction === "baslangic" ? request.baslangicBoylam : request.varisBoylam,
+  };
+}
 
 export default function EditTransportRequestPage() {
   const router = useRouter();
@@ -41,6 +77,17 @@ export default function EditTransportRequestPage() {
   const requestId = Number(params.id);
 
   const [form, setForm] = useState<UpdateTransportRequestForm>(initialForm);
+  const [baslangicKonum, setBaslangicKonum] = useState<SelectedLocation | null>(
+    null
+  );
+  const [varisKonum, setVarisKonum] = useState<SelectedLocation | null>(null);
+  const [legacyRouteHint, setLegacyRouteHint] = useState<{
+    baslangic: string | null;
+    varis: string | null;
+  }>({
+    baslangic: null,
+    varis: null,
+  });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,13 +119,25 @@ export default function EditTransportRequestPage() {
         }
 
         setForm({
-          baslangicSehri: response.baslangicSehri,
-          varisSehri: response.varisSehri,
-          baslangicEnlem: String(response.baslangicEnlem),
-          baslangicBoylam: String(response.baslangicBoylam),
-          varisEnlem: String(response.varisEnlem),
-          varisBoylam: String(response.varisBoylam),
+          tekTasimaIstiyor: response.tekTasimaIstiyor,
+          agirlikKg: String(response.agirlikKg ?? ""),
+          hacimM3: String(response.hacimM3 ?? ""),
+          yukTipi: response.yukTipi,
+          tasimaTarihi: response.tasimaTarihi ?? "",
           yukDetay: response.yukDetay,
+        });
+        setBaslangicKonum(toSelectedLocation(response, "baslangic"));
+        setVarisKonum(toSelectedLocation(response, "varis"));
+        setLegacyRouteHint({
+          baslangic: response.baslangicPlaceId
+            ? null
+            : formatLocationLabel(
+                response.baslangicKonumMetni,
+                response.baslangicSehri
+              ),
+          varis: response.varisPlaceId
+            ? null
+            : formatLocationLabel(response.varisKonumMetni, response.varisSehri),
         });
       } catch (error) {
         if (!isMounted) {
@@ -123,13 +182,22 @@ export default function EditTransportRequestPage() {
   }, [accessToken, requestId, router, status]);
 
   const handleChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = event.target;
 
     setForm((currentForm) => ({
       ...currentForm,
       [name]: value,
+    }));
+  };
+
+  const handleCheckboxChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = event.target;
+
+    setForm((currentForm) => ({
+      ...currentForm,
+      [name]: checked,
     }));
   };
 
@@ -145,15 +213,29 @@ export default function EditTransportRequestPage() {
       return;
     }
 
+    if (!baslangicKonum || !varisKonum) {
+      window.alert("Baslangic ve varis konumunu yeniden secmelisin.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const payload: UpdateTransportRequestInput = {
-      baslangicSehri: form.baslangicSehri,
-      varisSehri: form.varisSehri,
-      baslangicEnlem: Number(form.baslangicEnlem),
-      baslangicBoylam: Number(form.baslangicBoylam),
-      varisEnlem: Number(form.varisEnlem),
-      varisBoylam: Number(form.varisBoylam),
+      baslangicKonum: {
+        provider: baslangicKonum.provider,
+        placeId: baslangicKonum.placeId,
+        sessionToken: baslangicKonum.sessionToken,
+      },
+      varisKonum: {
+        provider: varisKonum.provider,
+        placeId: varisKonum.placeId,
+        sessionToken: varisKonum.sessionToken,
+      },
+      tekTasimaIstiyor: form.tekTasimaIstiyor,
+      agirlikKg: Number(form.agirlikKg),
+      hacimM3: Number(form.hacimM3),
+      yukTipi: form.yukTipi,
+      tasimaTarihi: form.tasimaTarihi,
       yukDetay: form.yukDetay,
     };
 
@@ -192,25 +274,22 @@ export default function EditTransportRequestPage() {
 
   if (status !== "ready") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-gray-600 font-medium">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+        <div className="font-medium text-gray-600">Yukleniyor...</div>
       </div>
     );
   }
 
   return (
-    <CustomerTransportRequestsShell
-      title="Istek duzenle"
-      description="Bu ekranda aktif tasima isteginin temel bilgilerini guncelleyebilirsin."
-    >
+    <CustomerTransportRequestsShell title="Istek duzenle">
       {isLoading ? (
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 text-gray-600">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
           Istek bilgileri yukleniyor...
         </div>
       ) : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-gray-900">Kayit duzenlenemedi</h2>
           <p className="mt-2 text-sm text-gray-600">{errorMessage}</p>
         </div>
@@ -219,83 +298,100 @@ export default function EditTransportRequestPage() {
       {!isLoading && !errorMessage ? (
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-2xl bg-white p-6 shadow-sm border border-gray-100"
+          className="space-y-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
         >
           <div className="grid gap-4 md:grid-cols-2">
-            <InputField
-              name="baslangicSehri"
-              label="Baslangic sehri"
-              placeholder="Orn: Istanbul"
-              value={form.baslangicSehri}
-              onChange={handleChange}
+            <LocationAutocompleteField
+              label="Baslangic konumu"
+              placeholder="Yukleme noktasini ara"
+              accessToken={accessToken ?? ""}
+              value={baslangicKonum}
+              onSelect={setBaslangicKonum}
+              legacyHint={legacyRouteHint.baslangic}
               disabled={isSubmitting}
             />
-            <InputField
-              name="varisSehri"
-              label="Varis sehri"
-              placeholder="Orn: Ankara"
-              value={form.varisSehri}
-              onChange={handleChange}
+            <LocationAutocompleteField
+              label="Varis konumu"
+              placeholder="Teslim noktasini ara"
+              accessToken={accessToken ?? ""}
+              value={varisKonum}
+              onSelect={setVarisKonum}
+              legacyHint={legacyRouteHint.varis}
               disabled={isSubmitting}
             />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <InputField
-              name="baslangicEnlem"
-              label="Baslangic enlem"
+              name="agirlikKg"
+              label="Agirlik (kg)"
               type="number"
-              step="0.000001"
-              min="-90"
-              max="90"
-              placeholder="Orn: 41.008200"
-              value={form.baslangicEnlem}
+              min="0.01"
+              step="0.01"
+              value={form.agirlikKg}
               onChange={handleChange}
               disabled={isSubmitting}
             />
             <InputField
-              name="baslangicBoylam"
-              label="Baslangic boylam"
+              name="hacimM3"
+              label="Hacim (m3)"
               type="number"
-              step="0.000001"
-              min="-180"
-              max="180"
-              placeholder="Orn: 28.978400"
-              value={form.baslangicBoylam}
+              min="0.01"
+              step="0.01"
+              value={form.hacimM3}
               onChange={handleChange}
               disabled={isSubmitting}
             />
+            <div>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="yukTipi">
+                Yuk tipi
+              </label>
+              <select
+                id="yukTipi"
+                name="yukTipi"
+                value={form.yukTipi}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
+              >
+                {CARGO_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <InputField
-              name="varisEnlem"
-              label="Varis enlem"
-              type="number"
-              step="0.000001"
-              min="-90"
-              max="90"
-              placeholder="Orn: 39.933400"
-              value={form.varisEnlem}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            <InputField
-              name="varisBoylam"
-              label="Varis boylam"
-              type="number"
-              step="0.000001"
-              min="-180"
-              max="180"
-              placeholder="Orn: 32.859700"
-              value={form.varisBoylam}
+              name="tasimaTarihi"
+              label="Tasima tarihi"
+              type="date"
+              value={form.tasimaTarihi}
               onChange={handleChange}
               disabled={isSubmitting}
             />
           </div>
 
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              name="tekTasimaIstiyor"
+              checked={form.tekTasimaIstiyor}
+              onChange={handleCheckboxChange}
+              disabled={isSubmitting}
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>
+              <span className="block font-semibold text-slate-900">
+                Tek tasima istiyorum
+              </span>
+              <span className="block text-xs text-slate-500">
+                Bu yukun baska yuklerle birlestirilmeden tasinmasini ister.
+              </span>
+            </span>
+          </label>
+
           <div className="space-y-2">
-            <label
-              htmlFor="yukDetay"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="yukDetay" className="block text-sm font-medium text-gray-700">
               Yuk detayi
             </label>
             <textarea
@@ -306,15 +402,12 @@ export default function EditTransportRequestPage() {
               value={form.yukDetay}
               onChange={handleChange}
               disabled={isSubmitting}
-              placeholder="Tasima ihtiyacini kisaca acikla"
+              placeholder="Tasima ihtiyacini, paketleme seklini veya ozel notlari acikla."
               className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
             />
           </div>
 
           <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-gray-500">
-              Degisiklikler kaydedildiginde mevcut istek detay ekranina donulecek.
-            </p>
             <button
               type="submit"
               disabled={isSubmitting}

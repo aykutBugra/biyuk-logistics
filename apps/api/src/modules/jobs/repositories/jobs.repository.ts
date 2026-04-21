@@ -20,10 +20,17 @@ const jobRecordSelect = {
       id: true,
       baslangicSehri: true,
       varisSehri: true,
+      baslangicKonumMetni: true,
+      varisKonumMetni: true,
       baslangicEnlem: true,
       baslangicBoylam: true,
       varisEnlem: true,
       varisBoylam: true,
+      tekTasimaIstiyor: true,
+      agirlikKg: true,
+      hacimM3: true,
+      yukTipi: true,
+      tasimaTarihi: true,
       yukDetay: true,
       silmeTarihi: true,
       durum: {
@@ -100,10 +107,17 @@ export type StoredJobDetailRecord = {
   requestId: number;
   baslangicSehri: string;
   varisSehri: string;
+  baslangicKonumMetni: string | null;
+  varisKonumMetni: string | null;
   baslangicEnlem: number;
   baslangicBoylam: number;
   varisEnlem: number;
   varisBoylam: number;
+  tekTasimaIstiyor: boolean;
+  agirlikKg: number | null;
+  hacimM3: number | null;
+  yukTipi: string;
+  tasimaTarihi: string | null;
   yukDetay: string;
   anlasilanFiyat: number;
   durumTuru: string;
@@ -343,10 +357,17 @@ export class JobsRepository {
       requestId: job.istek.id,
       baslangicSehri: job.istek.baslangicSehri,
       varisSehri: job.istek.varisSehri,
+      baslangicKonumMetni: job.istek.baslangicKonumMetni,
+      varisKonumMetni: job.istek.varisKonumMetni,
       baslangicEnlem: job.istek.baslangicEnlem.toNumber(),
       baslangicBoylam: job.istek.baslangicBoylam.toNumber(),
       varisEnlem: job.istek.varisEnlem.toNumber(),
       varisBoylam: job.istek.varisBoylam.toNumber(),
+      tekTasimaIstiyor: job.istek.tekTasimaIstiyor,
+      agirlikKg: job.istek.agirlikKg?.toNumber() ?? null,
+      hacimM3: job.istek.hacimM3?.toNumber() ?? null,
+      yukTipi: job.istek.yukTipi,
+      tasimaTarihi: job.istek.tasimaTarihi,
       yukDetay: job.istek.yukDetay,
       anlasilanFiyat: job.anlasilanFiyat.toNumber(),
       durumTuru: job.durum.durumTuru,

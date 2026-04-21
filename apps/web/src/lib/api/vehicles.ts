@@ -5,7 +5,12 @@ export type CreateVehicleInput = {
   model: string;
   plaka: string;
   yil: number;
-  kapasite: number;
+  maksimumAgirlikKg: number;
+  maksimumHacimM3: number;
+  kasaTipi: string;
+  uzunlukCm?: number;
+  genislikCm?: number;
+  yukseklikCm?: number;
 };
 
 export type UpdateVehicleInput = CreateVehicleInput;
@@ -16,7 +21,12 @@ export type VehicleListItem = {
   marka: string;
   model: string;
   yil: number;
-  kapasite: number;
+  maksimumAgirlikKg: number;
+  maksimumHacimM3: number | null;
+  kasaTipi: string | null;
+  uzunlukCm: number | null;
+  genislikCm: number | null;
+  yukseklikCm: number | null;
 };
 
 export type VehicleDetail = VehicleListItem;

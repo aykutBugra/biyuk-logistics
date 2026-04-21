@@ -14,12 +14,11 @@ import {
 } from "@/lib/api/vehicles";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
-
-function formatCapacity(value: number): string {
-  return `${new Intl.NumberFormat("tr-TR", {
-    maximumFractionDigits: 2,
-  }).format(value)} ton`;
-}
+import {
+  formatVolumeM3,
+  formatWeightKg,
+  getVehicleBodyTypeLabel,
+} from "@/lib/logistics";
 
 export default function MyVehiclesPage() {
   const router = useRouter();
@@ -92,11 +91,7 @@ export default function MyVehiclesPage() {
       return;
     }
 
-    const isConfirmed = window.confirm(
-      "Bu araci silmek istedigine emin misin?"
-    );
-
-    if (!isConfirmed) {
+    if (!window.confirm("Bu araci silmek istedigine emin misin?")) {
       return;
     }
 
@@ -146,20 +141,17 @@ export default function MyVehiclesPage() {
     );
   }
 
-  const totalCapacity = vehicles.reduce(
-    (total, vehicle) => total + vehicle.kapasite,
+  const totalWeightCapacity = vehicles.reduce(
+    (total, vehicle) => total + vehicle.maksimumAgirlikKg,
     0
   );
-  const newestModelYear = vehicles.reduce(
-    (latestYear, vehicle) => Math.max(latestYear, vehicle.yil),
+  const totalVolumeCapacity = vehicles.reduce(
+    (total, vehicle) => total + (vehicle.maksimumHacimM3 ?? 0),
     0
   );
 
   return (
-    <CarrierVehiclesShell
-      title="Araclarim"
-      description="Yalnizca giris yapan nakliyeciye ait aktif arac kayitlari listelenir."
-    >
+    <CarrierVehiclesShell title="Araclarim">
       {isLoading ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
           Araclar yukleniyor...
@@ -174,29 +166,22 @@ export default function MyVehiclesPage() {
 
       {!isLoading && !errorMessage && vehicles.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-3">
+          <SummaryStatCard label="Toplam arac" value={vehicles.length} />
           <SummaryStatCard
-            label="Toplam arac"
-            value={vehicles.length}
-            hint="Aktif kayit durumundaki araclar."
+            label="Toplam agirlik"
+            value={formatWeightKg(totalWeightCapacity)}
           />
           <SummaryStatCard
-            label="Toplam kapasite"
-            value={formatCapacity(totalCapacity)}
-            hint="Arac varliginin tasima kapasitesi toplami."
-          />
-          <SummaryStatCard
-            label="En yeni model"
-            value={newestModelYear}
-            hint="Listede yer alan en guncel model yili."
+            label="Toplam hacim"
+            value={formatVolumeM3(totalVolumeCapacity)}
           />
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && vehicles.length === 0 ? (
         <EmptyStateCard
-          eyebrow="Arac varligi"
           title="Henuz arac yok"
-          description="Ilk arac kaydini olusturdugunda yonetim listesi burada gorunecek."
+          description="Ilk aracini eklediginde burada goreceksin."
           actionHref="/dashboard/arac_ekle"
           actionLabel="Ilk araci ekle"
         />
@@ -227,20 +212,24 @@ export default function MyVehiclesPage() {
                       <h2 className="text-2xl font-black tracking-tight text-slate-950">
                         {vehicle.marka} {"->"} {vehicle.model}
                       </h2>
-                      <p className="text-sm leading-6 text-slate-600">
-                        {vehicle.yil} model | {formatCapacity(vehicle.kapasite)}
-                      </p>
-                      <p className="text-sm leading-6 text-slate-500">
-                        Arac listesi yonetim odaklidir; plaka birincil kimlik,
-                        marka-model ise ikinci seviye ozet alanidir.
-                      </p>
+                      <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                          {getVehicleBodyTypeLabel(vehicle.kasaTipi)}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                          {formatWeightKg(vehicle.maksimumAgirlikKg)}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                          {formatVolumeM3(vehicle.maksimumHacimM3)}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                          {vehicle.yil} model
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex flex-col items-start gap-3 lg:min-w-[240px] lg:items-end">
-                    <p className="text-sm text-slate-500">
-                      Detay, duzenleme ve silme aksiyonlari bu karttan devam eder.
-                    </p>
                     <div className="flex flex-wrap gap-2 lg:justify-end">
                       <Link
                         href={`/dashboard/araclarim/${vehicle.id}`}

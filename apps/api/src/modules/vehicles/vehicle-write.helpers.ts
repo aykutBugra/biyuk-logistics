@@ -7,7 +7,12 @@ export type VehicleDraft = {
   model: string;
   plaka: string;
   yil: number;
-  kapasite: number;
+  maksimumAgirlikKg: number;
+  maksimumHacimM3: number;
+  kasaTipi: string;
+  uzunlukCm?: number;
+  genislikCm?: number;
+  yukseklikCm?: number;
 };
 
 export type NormalizedVehicleDraft = VehicleDraft;
@@ -32,7 +37,12 @@ export function normalizeVehicleDraft(
     model: normalizeVehicleCanonicalText(input.model),
     plaka: normalizeVehiclePlate(input.plaka),
     yil: input.yil,
-    kapasite: input.kapasite,
+    maksimumAgirlikKg: input.maksimumAgirlikKg,
+    maksimumHacimM3: input.maksimumHacimM3,
+    kasaTipi: normalizeVehicleCanonicalText(input.kasaTipi),
+    uzunlukCm: input.uzunlukCm,
+    genislikCm: input.genislikCm,
+    yukseklikCm: input.yukseklikCm,
   };
 }
 
@@ -105,7 +115,12 @@ export async function createVehicleForOwner(
       aracKutuphaneId,
       plaka: normalizedVehicle.plaka,
       yil: normalizedVehicle.yil,
-      kapasite: new Prisma.Decimal(normalizedVehicle.kapasite),
+      maksimumAgirlikKg: new Prisma.Decimal(normalizedVehicle.maksimumAgirlikKg),
+      maksimumHacimM3: new Prisma.Decimal(normalizedVehicle.maksimumHacimM3),
+      kasaTipi: normalizedVehicle.kasaTipi,
+      uzunlukCm: normalizedVehicle.uzunlukCm,
+      genislikCm: normalizedVehicle.genislikCm,
+      yukseklikCm: normalizedVehicle.yukseklikCm,
     },
     select: {
       id: true,

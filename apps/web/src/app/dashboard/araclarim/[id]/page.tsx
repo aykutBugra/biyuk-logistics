@@ -12,12 +12,12 @@ import {
 } from "@/lib/api/vehicles";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
-
-function formatCapacity(value: number): string {
-  return `${new Intl.NumberFormat("tr-TR", {
-    maximumFractionDigits: 2,
-  }).format(value)} ton`;
-}
+import {
+  formatDimensionsCm,
+  formatVolumeM3,
+  formatWeightKg,
+  getVehicleBodyTypeLabel,
+} from "@/lib/logistics";
 
 export default function VehicleDetailPage() {
   const router = useRouter();
@@ -103,11 +103,7 @@ export default function VehicleDetailPage() {
       return;
     }
 
-    const isConfirmed = window.confirm(
-      "Bu araci silmek istedigine emin misin?"
-    );
-
-    if (!isConfirmed) {
+    if (!window.confirm("Bu araci silmek istedigine emin misin?")) {
       return;
     }
 
@@ -135,12 +131,11 @@ export default function VehicleDetailPage() {
         return;
       }
 
-      if (error instanceof ApiClientError) {
-        window.alert(error.message);
-        return;
-      }
-
-      window.alert("Arac silinirken beklenmeyen bir hata olustu.");
+      window.alert(
+        error instanceof ApiClientError
+          ? error.message
+          : "Arac silinirken beklenmeyen bir hata olustu."
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -148,17 +143,14 @@ export default function VehicleDetailPage() {
 
   if (status !== "ready") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-gray-600 font-medium">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+        <div className="font-medium text-gray-600">Yukleniyor...</div>
       </div>
     );
   }
 
   return (
-    <CarrierVehiclesShell
-      title="Arac detayi"
-      description="Ownership kurali nedeniyle yalnizca kendi arac kaydini gorebilirsin."
-    >
+    <CarrierVehiclesShell title="Arac detayi">
       {isLoading ? (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
           Arac detayi yukleniyor...
@@ -230,8 +222,20 @@ export default function VehicleDetailPage() {
                 <dd>{vehicle.yil}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Kapasite</dt>
-                <dd>{formatCapacity(vehicle.kapasite)}</dd>
+                <dt className="font-medium text-gray-900">Kasa tipi</dt>
+                <dd>{getVehicleBodyTypeLabel(vehicle.kasaTipi)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-gray-900">Maksimum agirlik</dt>
+                <dd>{formatWeightKg(vehicle.maksimumAgirlikKg)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-gray-900">Maksimum hacim</dt>
+                <dd>{formatVolumeM3(vehicle.maksimumHacimM3)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-gray-900">Yukleme alani</dt>
+                <dd>{formatDimensionsCm(vehicle)}</dd>
               </div>
             </dl>
           </div>

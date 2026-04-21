@@ -219,7 +219,12 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
               model: registerDto.model ?? "",
               plaka: registerDto.plaka ?? "",
               yil: registerDto.yil ?? 0,
-              kapasite: registerDto.kapasite ?? 0,
+              maksimumAgirlikKg: registerDto.maksimumAgirlikKg ?? 0,
+              maksimumHacimM3: registerDto.maksimumHacimM3 ?? 0,
+              kasaTipi: registerDto.kasaTipi ?? "DIGER",
+              uzunlukCm: registerDto.uzunlukCm,
+              genislikCm: registerDto.genislikCm,
+              yukseklikCm: registerDto.yukseklikCm,
             }
           : null,
     };

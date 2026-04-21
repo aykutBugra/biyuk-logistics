@@ -18,6 +18,7 @@ import {
   TransportRequestsRepository,
 } from "./repositories/transport-requests.repository";
 import { buildRatingContext } from "../ratings/rating-context.helpers";
+import { LocationsService } from "../locations/locations.service";
 
 const INITIAL_TRANSPORT_REQUEST_STATUS = {
   durumTuru: "ISTEK",
@@ -27,7 +28,8 @@ const INITIAL_TRANSPORT_REQUEST_STATUS = {
 @Injectable()
 export class TransportRequestsService {
   constructor(
-    private readonly transportRequestsRepository: TransportRequestsRepository
+    private readonly transportRequestsRepository: TransportRequestsRepository,
+    private readonly locationsService: LocationsService
   ) {}
 
   async create(
@@ -37,14 +39,41 @@ export class TransportRequestsService {
     this.assertCustomerRole(currentUser);
 
     const initialStatusId = await this.requireInitialStatusId();
+    const [baslangicKonum, varisKonum] = await Promise.all([
+      this.locationsService.resolveCanonicalLocation(
+        createTransportRequestDto.baslangicKonum.provider,
+        createTransportRequestDto.baslangicKonum.placeId,
+        createTransportRequestDto.baslangicKonum.sessionToken
+      ),
+      this.locationsService.resolveCanonicalLocation(
+        createTransportRequestDto.varisKonum.provider,
+        createTransportRequestDto.varisKonum.placeId,
+        createTransportRequestDto.varisKonum.sessionToken
+      ),
+    ]);
     const transportRequest = await this.transportRequestsRepository.create({
       musteriId: currentUser.id,
-      baslangicSehri: createTransportRequestDto.baslangicSehri,
-      varisSehri: createTransportRequestDto.varisSehri,
-      baslangicEnlem: createTransportRequestDto.baslangicEnlem,
-      baslangicBoylam: createTransportRequestDto.baslangicBoylam,
-      varisEnlem: createTransportRequestDto.varisEnlem,
-      varisBoylam: createTransportRequestDto.varisBoylam,
+      baslangicSehri: baslangicKonum.sehir,
+      varisSehri: varisKonum.sehir,
+      baslangicKonumMetni: baslangicKonum.konumMetni,
+      varisKonumMetni: varisKonum.konumMetni,
+      baslangicProvider: baslangicKonum.provider,
+      varisProvider: varisKonum.provider,
+      baslangicPlaceId: baslangicKonum.placeId,
+      varisPlaceId: varisKonum.placeId,
+      normalizeBaslangicSehir: baslangicKonum.sehir,
+      normalizeVarisSehir: varisKonum.sehir,
+      normalizeBaslangicIlce: baslangicKonum.ilce,
+      normalizeVarisIlce: varisKonum.ilce,
+      baslangicEnlem: baslangicKonum.lat,
+      baslangicBoylam: baslangicKonum.lng,
+      varisEnlem: varisKonum.lat,
+      varisBoylam: varisKonum.lng,
+      tekTasimaIstiyor: createTransportRequestDto.tekTasimaIstiyor,
+      agirlikKg: createTransportRequestDto.agirlikKg,
+      hacimM3: createTransportRequestDto.hacimM3,
+      yukTipi: createTransportRequestDto.yukTipi,
+      tasimaTarihi: createTransportRequestDto.tasimaTarihi,
       yukDetay: createTransportRequestDto.yukDetay,
       durumId: initialStatusId,
     });
@@ -107,17 +136,45 @@ export class TransportRequestsService {
       );
     }
 
+    const [baslangicKonum, varisKonum] = await Promise.all([
+      this.locationsService.resolveCanonicalLocation(
+        updateTransportRequestDto.baslangicKonum.provider,
+        updateTransportRequestDto.baslangicKonum.placeId,
+        updateTransportRequestDto.baslangicKonum.sessionToken
+      ),
+      this.locationsService.resolveCanonicalLocation(
+        updateTransportRequestDto.varisKonum.provider,
+        updateTransportRequestDto.varisKonum.placeId,
+        updateTransportRequestDto.varisKonum.sessionToken
+      ),
+    ]);
+
     const transportRequest =
       await this.transportRequestsRepository.updateByIdAndCustomerId(
         id,
         currentUser.id,
         {
-          baslangicSehri: updateTransportRequestDto.baslangicSehri,
-          varisSehri: updateTransportRequestDto.varisSehri,
-          baslangicEnlem: updateTransportRequestDto.baslangicEnlem,
-          baslangicBoylam: updateTransportRequestDto.baslangicBoylam,
-          varisEnlem: updateTransportRequestDto.varisEnlem,
-          varisBoylam: updateTransportRequestDto.varisBoylam,
+          baslangicSehri: baslangicKonum.sehir,
+          varisSehri: varisKonum.sehir,
+          baslangicKonumMetni: baslangicKonum.konumMetni,
+          varisKonumMetni: varisKonum.konumMetni,
+          baslangicProvider: baslangicKonum.provider,
+          varisProvider: varisKonum.provider,
+          baslangicPlaceId: baslangicKonum.placeId,
+          varisPlaceId: varisKonum.placeId,
+          normalizeBaslangicSehir: baslangicKonum.sehir,
+          normalizeVarisSehir: varisKonum.sehir,
+          normalizeBaslangicIlce: baslangicKonum.ilce,
+          normalizeVarisIlce: varisKonum.ilce,
+          baslangicEnlem: baslangicKonum.lat,
+          baslangicBoylam: baslangicKonum.lng,
+          varisEnlem: varisKonum.lat,
+          varisBoylam: varisKonum.lng,
+          tekTasimaIstiyor: updateTransportRequestDto.tekTasimaIstiyor,
+          agirlikKg: updateTransportRequestDto.agirlikKg,
+          hacimM3: updateTransportRequestDto.hacimM3,
+          yukTipi: updateTransportRequestDto.yukTipi,
+          tasimaTarihi: updateTransportRequestDto.tasimaTarihi,
           yukDetay: updateTransportRequestDto.yukDetay,
         }
       );
@@ -205,6 +262,13 @@ export class TransportRequestsService {
       id: transportRequest.id,
       baslangicSehri: transportRequest.baslangicSehri,
       varisSehri: transportRequest.varisSehri,
+      baslangicKonumMetni: transportRequest.baslangicKonumMetni,
+      varisKonumMetni: transportRequest.varisKonumMetni,
+      tekTasimaIstiyor: transportRequest.tekTasimaIstiyor,
+      agirlikKg: transportRequest.agirlikKg,
+      hacimM3: transportRequest.hacimM3,
+      yukTipi: transportRequest.yukTipi,
+      tasimaTarihi: transportRequest.tasimaTarihi,
       yukDetay: transportRequest.yukDetay,
       olusturmaTarihi: transportRequest.olusturmaTarihi,
       durum: transportRequest.durumAdi,
@@ -217,6 +281,14 @@ export class TransportRequestsService {
   ): TransportRequestDetailResponseDto {
     return {
       ...this.toListItemResponse(transportRequest),
+      baslangicProvider: transportRequest.baslangicProvider,
+      varisProvider: transportRequest.varisProvider,
+      baslangicPlaceId: transportRequest.baslangicPlaceId,
+      varisPlaceId: transportRequest.varisPlaceId,
+      normalizeBaslangicSehir: transportRequest.normalizeBaslangicSehir,
+      normalizeVarisSehir: transportRequest.normalizeVarisSehir,
+      normalizeBaslangicIlce: transportRequest.normalizeBaslangicIlce,
+      normalizeVarisIlce: transportRequest.normalizeVarisIlce,
       baslangicEnlem: transportRequest.baslangicEnlem,
       baslangicBoylam: transportRequest.baslangicBoylam,
       varisEnlem: transportRequest.varisEnlem,

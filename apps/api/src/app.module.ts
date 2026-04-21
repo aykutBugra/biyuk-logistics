@@ -4,9 +4,11 @@ import { AppController } from "./app.controller";
 import appConfig from "./config/app.config";
 import authConfig from "./config/auth.config";
 import { getEnvFilePaths } from "./config/env";
+import mapsConfig from "./config/maps.config";
 import { PrismaModule } from "./infrastructure/prisma/prisma.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { JobsModule } from "./modules/jobs/jobs.module";
+import { LocationsModule } from "./modules/locations/locations.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { OffersModule } from "./modules/offers/offers.module";
 import { RatingsModule } from "./modules/ratings/ratings.module";
@@ -19,7 +21,7 @@ import { VehiclesModule } from "./modules/vehicles/vehicles.module";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, authConfig],
+      load: [appConfig, authConfig, mapsConfig],
       envFilePath: getEnvFilePaths(),
     }),
     PrismaModule,
@@ -27,6 +29,7 @@ import { VehiclesModule } from "./modules/vehicles/vehicles.module";
     UsersModule,
     AuthModule,
     JobsModule,
+    LocationsModule,
     NotificationsModule,
     OffersModule,
     RatingsModule,

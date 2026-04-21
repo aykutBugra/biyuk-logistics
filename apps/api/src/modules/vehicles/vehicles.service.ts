@@ -48,7 +48,12 @@ export class VehiclesService {
         aracKutuphaneId,
         plaka: normalizedVehicle.plaka,
         yil: normalizedVehicle.yil,
-        kapasite: normalizedVehicle.kapasite,
+        maksimumAgirlikKg: normalizedVehicle.maksimumAgirlikKg,
+        maksimumHacimM3: normalizedVehicle.maksimumHacimM3,
+        kasaTipi: normalizedVehicle.kasaTipi,
+        uzunlukCm: normalizedVehicle.uzunlukCm,
+        genislikCm: normalizedVehicle.genislikCm,
+        yukseklikCm: normalizedVehicle.yukseklikCm,
       });
 
       return this.toDetailResponse(vehicle);
@@ -132,7 +137,12 @@ export class VehiclesService {
           aracKutuphaneId,
           plaka: normalizedVehicle.plaka,
           yil: normalizedVehicle.yil,
-          kapasite: normalizedVehicle.kapasite,
+          maksimumAgirlikKg: normalizedVehicle.maksimumAgirlikKg,
+          maksimumHacimM3: normalizedVehicle.maksimumHacimM3,
+          kasaTipi: normalizedVehicle.kasaTipi,
+          uzunlukCm: normalizedVehicle.uzunlukCm,
+          genislikCm: normalizedVehicle.genislikCm,
+          yukseklikCm: normalizedVehicle.yukseklikCm,
         }
       );
 
@@ -180,7 +190,12 @@ export class VehiclesService {
       marka: vehicle.marka,
       model: vehicle.model,
       yil: vehicle.yil,
-      kapasite: vehicle.kapasite,
+      maksimumAgirlikKg: vehicle.maksimumAgirlikKg,
+      maksimumHacimM3: vehicle.maksimumHacimM3,
+      kasaTipi: vehicle.kasaTipi,
+      uzunlukCm: vehicle.uzunlukCm,
+      genislikCm: vehicle.genislikCm,
+      yukseklikCm: vehicle.yukseklikCm,
     };
   }
 

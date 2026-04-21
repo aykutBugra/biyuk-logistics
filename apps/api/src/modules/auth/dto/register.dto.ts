@@ -1,8 +1,8 @@
 import { Transform } from "class-transformer";
 import {
   IsEmail,
-  IsInt,
   IsIn,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -13,9 +13,10 @@ import {
   MinLength,
   ValidateIf,
 } from "class-validator";
-import { ROLE_NAMES } from "../../../common/constants/role-names";    //ROLE_NAMES sabitlerini içeren bir modülü içe aktarır
+import { ROLE_NAMES } from "../../../common/constants/role-names";
+import { VEHICLE_BODY_TYPES } from "../../vehicles/vehicle.constants";
 
-const trimString = ({ value }: { value: unknown }) => //Verilen değerin bir string olup olmadığını kontrol eder ve eğer öyleyse başındaki ve sonundaki boşlukları kaldırır
+const trimString = ({ value }: { value: unknown }) =>
   typeof value === "string" ? value.trim() : value;
 
 const trimOptionalString = ({ value }: { value: unknown }) => {
@@ -25,6 +26,25 @@ const trimOptionalString = ({ value }: { value: unknown }) => {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const toNumber = ({ value }: { value: unknown }) => {
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isNaN(parsed) ? value : parsed;
 };
 
 export const REGISTER_ROLE_VALUES = [
@@ -41,7 +61,7 @@ function isCarrierRegister(dto: RegisterDto): boolean {
   return dto.role === ROLE_NAMES.NAKLIYECI;
 }
 
-export class RegisterDto {//RegisterDto, kullanıcı kayıt işlemi için gerekli olan bilgileri içeren bir DTO'dur
+export class RegisterDto {
   @Transform(trimString)
   @IsString()
   @IsNotEmpty()
@@ -77,7 +97,7 @@ export class RegisterDto {//RegisterDto, kullanıcı kayıt işlemi için gerekl
   @MaxLength(255)
   password!: string;
 
-  @Transform(({ value }: { value: unknown }) => {//
+  @Transform(({ value }: { value: unknown }) => {
     if (typeof value !== "string") {
       return value;
     }
@@ -86,7 +106,7 @@ export class RegisterDto {//RegisterDto, kullanıcı kayıt işlemi için gerekl
     return trimmed.length > 0 ? trimmed.toUpperCase() : undefined;
   })
   @IsOptional()
-  @IsIn(REGISTER_ROLE_VALUES) //Bu, role alanının sadece REGISTER_ROLE_VALUES içinde tanımlı olan değerleri kabul etmesini sağlar
+  @IsIn(REGISTER_ROLE_VALUES)
   role?: RegisterRoleName;
 
   @ValidateIf(isCarrierRegister)
@@ -111,19 +131,56 @@ export class RegisterDto {//RegisterDto, kullanıcı kayıt işlemi için gerekl
   plaka?: string;
 
   @ValidateIf(isCarrierRegister)
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === "string" ? Number(value.trim()) : value
-  )
+  @Transform(toNumber)
   @IsInt()
   @Min(1900)
   @Max(currentMaxVehicleYear)
   yil?: number;
 
   @ValidateIf(isCarrierRegister)
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === "string" ? Number(value.trim()) : value
-  )
+  @Transform(toNumber)
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @Min(0.01)
-  kapasite?: number;
+  maksimumAgirlikKg?: number;
+
+  @ValidateIf(isCarrierRegister)
+  @Transform(toNumber)
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Min(0.01)
+  maksimumHacimM3?: number;
+
+  @ValidateIf(isCarrierRegister)
+  @Transform(({ value }: { value: unknown }) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed.toUpperCase() : undefined;
+  })
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(VEHICLE_BODY_TYPES)
+  kasaTipi?: string;
+
+  @ValidateIf(isCarrierRegister)
+  @Transform(toNumber)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  uzunlukCm?: number;
+
+  @ValidateIf(isCarrierRegister)
+  @Transform(toNumber)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  genislikCm?: number;
+
+  @ValidateIf(isCarrierRegister)
+  @Transform(toNumber)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  yukseklikCm?: number;
 }

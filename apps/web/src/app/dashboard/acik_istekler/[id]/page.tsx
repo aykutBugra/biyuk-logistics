@@ -13,6 +13,12 @@ import {
 import { getMyVehicles, type VehicleListItem } from "@/lib/api/vehicles";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
+import {
+  formatLocationLabel,
+  formatVolumeM3,
+  formatWeightKg,
+  getCargoTypeLabel,
+} from "@/lib/logistics";
 
 type OfferForm = {
   aracId: string;
@@ -150,7 +156,7 @@ export default function OpenTransportRequestDetailPage() {
     }
 
     if (!form.aracId) {
-      window.alert("Teklif vermeden once bir arac secmelisiniz.");
+      window.alert("Teklif vermeden once bir arac secmelisin.");
       return;
     }
 
@@ -188,7 +194,7 @@ export default function OpenTransportRequestDetailPage() {
 
       if (error instanceof ApiClientError && error.status === 409) {
         if (error.message === "You have already created an open offer for this transport request.") {
-          window.alert("Bu istege zaten acik bir teklif verdiniz.");
+          window.alert("Bu istege zaten acik bir teklif verdin.");
           return;
         }
 
@@ -202,7 +208,7 @@ export default function OpenTransportRequestDetailPage() {
           error.message ===
           "The selected vehicle is not an active vehicle of the current carrier."
         ) {
-          window.alert("Sectiginiz arac artik aktif degil. Lutfen aktif bir arac secin.");
+          window.alert("Sectigin arac artik aktif degil. Lutfen aktif bir arac sec.");
           return;
         }
       }
@@ -219,17 +225,14 @@ export default function OpenTransportRequestDetailPage() {
 
   if (status !== "ready") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-gray-600 font-medium">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+        <div className="font-medium text-gray-600">Yukleniyor...</div>
       </div>
     );
   }
 
   return (
-    <CarrierVehiclesShell
-      title="Istek detayi ve teklif"
-      description="Teklif vermeden once tasima talebini ve yuk detaylarini kontrol et."
-    >
+    <CarrierVehiclesShell title="Istek detayi ve teklif">
       {isLoading ? (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
           Istek detayi yukleniyor...
@@ -260,8 +263,34 @@ export default function OpenTransportRequestDetailPage() {
                   ) : null}
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {request.baslangicSehri} {"->"} {request.varisSehri}
+                  {formatLocationLabel(
+                    request.baslangicKonumMetni,
+                    request.baslangicSehri
+                  )}{" "}
+                  {"->"}{" "}
+                  {formatLocationLabel(request.varisKonumMetni, request.varisSehri)}
                 </h2>
+                <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {getCargoTypeLabel(request.yukTipi)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {formatWeightKg(request.agirlikKg)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {formatVolumeM3(request.hacimM3)}
+                  </span>
+                  {request.tekTasimaIstiyor ? (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">
+                      Tek tasima
+                    </span>
+                  ) : null}
+                  {request.tasimaTarihi ? (
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                      {request.tasimaTarihi}
+                    </span>
+                  ) : null}
+                </div>
               </div>
               <div className="text-sm text-gray-500">
                 {formatDate(request.olusturmaTarihi)}
@@ -271,13 +300,13 @@ export default function OpenTransportRequestDetailPage() {
 
           {!request.hasActiveVehicle ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-              Teklif verebilmek icin once en az bir aktif araciniz olmali.
+              Teklif verebilmek icin once en az bir aktif aracin olmali.
             </div>
           ) : null}
 
           {request.hasExistingOffer ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-              Bu istege zaten acik bir teklif verdiniz. Yeni teklif olusturamazsiniz.
+              Bu istege zaten acik bir teklif verdin. Yeni teklif olusturamazsin.
             </div>
           ) : null}
 
@@ -293,17 +322,24 @@ export default function OpenTransportRequestDetailPage() {
               <h3 className="text-lg font-bold text-gray-900">Baslangic</h3>
               <dl className="mt-4 space-y-3 text-sm text-gray-600">
                 <div className="flex items-center justify-between gap-4">
+                  <dt className="font-medium text-gray-900">Konum</dt>
+                  <dd className="text-right">
+                    {formatLocationLabel(
+                      request.baslangicKonumMetni,
+                      request.baslangicSehri
+                    )}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
                   <dt className="font-medium text-gray-900">Sehir</dt>
-                  <dd>{request.baslangicSehri}</dd>
+                  <dd>{request.normalizeBaslangicSehir || request.baslangicSehri}</dd>
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Enlem</dt>
-                  <dd>{request.baslangicEnlem}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Boylam</dt>
-                  <dd>{request.baslangicBoylam}</dd>
-                </div>
+                {request.normalizeBaslangicIlce ? (
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="font-medium text-gray-900">Ilce</dt>
+                    <dd>{request.normalizeBaslangicIlce}</dd>
+                  </div>
+                ) : null}
               </dl>
             </div>
 
@@ -311,17 +347,21 @@ export default function OpenTransportRequestDetailPage() {
               <h3 className="text-lg font-bold text-gray-900">Varis</h3>
               <dl className="mt-4 space-y-3 text-sm text-gray-600">
                 <div className="flex items-center justify-between gap-4">
+                  <dt className="font-medium text-gray-900">Konum</dt>
+                  <dd className="text-right">
+                    {formatLocationLabel(request.varisKonumMetni, request.varisSehri)}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
                   <dt className="font-medium text-gray-900">Sehir</dt>
-                  <dd>{request.varisSehri}</dd>
+                  <dd>{request.normalizeVarisSehir || request.varisSehri}</dd>
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Enlem</dt>
-                  <dd>{request.varisEnlem}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Boylam</dt>
-                  <dd>{request.varisBoylam}</dd>
-                </div>
+                {request.normalizeVarisIlce ? (
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="font-medium text-gray-900">Ilce</dt>
+                    <dd>{request.normalizeVarisIlce}</dd>
+                  </div>
+                ) : null}
               </dl>
             </div>
           </div>
@@ -330,10 +370,7 @@ export default function OpenTransportRequestDetailPage() {
             <h3 className="text-lg font-bold text-gray-900">Teklif ver</h3>
             <form className="mt-4 grid gap-4" onSubmit={handleSubmit}>
               <div className="grid gap-2">
-                <label
-                  className="text-sm font-semibold text-gray-900"
-                  htmlFor="aracId"
-                >
+                <label className="text-sm font-semibold text-gray-900" htmlFor="aracId">
                   Aktif arac sec
                 </label>
                 <select
@@ -356,10 +393,7 @@ export default function OpenTransportRequestDetailPage() {
               </div>
 
               <div className="grid gap-2">
-                <label
-                  className="text-sm font-semibold text-gray-900"
-                  htmlFor="fiyat"
-                >
+                <label className="text-sm font-semibold text-gray-900" htmlFor="fiyat">
                   Teklif fiyatiniz (TRY)
                 </label>
                 <input

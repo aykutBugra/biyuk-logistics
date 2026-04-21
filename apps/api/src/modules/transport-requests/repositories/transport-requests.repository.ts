@@ -7,10 +7,25 @@ const transportRequestSelect = {
   id: true,
   baslangicSehri: true,
   varisSehri: true,
+  baslangicKonumMetni: true,
+  varisKonumMetni: true,
+  baslangicProvider: true,
+  varisProvider: true,
+  baslangicPlaceId: true,
+  varisPlaceId: true,
+  normalizeBaslangicSehir: true,
+  normalizeVarisSehir: true,
+  normalizeBaslangicIlce: true,
+  normalizeVarisIlce: true,
   baslangicEnlem: true,
   baslangicBoylam: true,
   varisEnlem: true,
   varisBoylam: true,
+  tekTasimaIstiyor: true,
+  agirlikKg: true,
+  hacimM3: true,
+  yukTipi: true,
+  tasimaTarihi: true,
   yukDetay: true,
   olusturmaTarihi: true,
   durum: {
@@ -68,10 +83,25 @@ export type CreateTransportRequestRecordInput = {
   musteriId: number;
   baslangicSehri: string;
   varisSehri: string;
+  baslangicKonumMetni: string;
+  varisKonumMetni: string;
+  baslangicProvider: string;
+  varisProvider: string;
+  baslangicPlaceId: string;
+  varisPlaceId: string;
+  normalizeBaslangicSehir: string;
+  normalizeVarisSehir: string;
+  normalizeBaslangicIlce: string | null;
+  normalizeVarisIlce: string | null;
   baslangicEnlem: number;
   baslangicBoylam: number;
   varisEnlem: number;
   varisBoylam: number;
+  tekTasimaIstiyor: boolean;
+  agirlikKg: number;
+  hacimM3: number;
+  yukTipi: string;
+  tasimaTarihi: string;
   yukDetay: string;
   durumId: number;
 };
@@ -101,10 +131,25 @@ export type StoredTransportRequestRecord = {
   id: number;
   baslangicSehri: string;
   varisSehri: string;
+  baslangicKonumMetni: string | null;
+  varisKonumMetni: string | null;
+  baslangicProvider: string | null;
+  varisProvider: string | null;
+  baslangicPlaceId: string | null;
+  varisPlaceId: string | null;
+  normalizeBaslangicSehir: string | null;
+  normalizeVarisSehir: string | null;
+  normalizeBaslangicIlce: string | null;
+  normalizeVarisIlce: string | null;
   baslangicEnlem: number;
   baslangicBoylam: number;
   varisEnlem: number;
   varisBoylam: number;
+  tekTasimaIstiyor: boolean;
+  agirlikKg: number | null;
+  hacimM3: number | null;
+  yukTipi: string;
+  tasimaTarihi: string | null;
   yukDetay: string;
   olusturmaTarihi: Date;
   durumTuru: string;
@@ -147,10 +192,25 @@ export class TransportRequestsRepository {
         musteriId: input.musteriId,
         baslangicSehri: input.baslangicSehri,
         varisSehri: input.varisSehri,
+        baslangicKonumMetni: input.baslangicKonumMetni,
+        varisKonumMetni: input.varisKonumMetni,
+        baslangicProvider: input.baslangicProvider,
+        varisProvider: input.varisProvider,
+        baslangicPlaceId: input.baslangicPlaceId,
+        varisPlaceId: input.varisPlaceId,
+        normalizeBaslangicSehir: input.normalizeBaslangicSehir,
+        normalizeVarisSehir: input.normalizeVarisSehir,
+        normalizeBaslangicIlce: input.normalizeBaslangicIlce,
+        normalizeVarisIlce: input.normalizeVarisIlce,
         baslangicEnlem: new Prisma.Decimal(input.baslangicEnlem),
         baslangicBoylam: new Prisma.Decimal(input.baslangicBoylam),
         varisEnlem: new Prisma.Decimal(input.varisEnlem),
         varisBoylam: new Prisma.Decimal(input.varisBoylam),
+        tekTasimaIstiyor: input.tekTasimaIstiyor,
+        agirlikKg: new Prisma.Decimal(input.agirlikKg),
+        hacimM3: new Prisma.Decimal(input.hacimM3),
+        yukTipi: input.yukTipi,
+        tasimaTarihi: input.tasimaTarihi,
         yukDetay: input.yukDetay,
         durumId: input.durumId,
       },
@@ -174,10 +234,25 @@ export class TransportRequestsRepository {
       data: {
         baslangicSehri: input.baslangicSehri,
         varisSehri: input.varisSehri,
+        baslangicKonumMetni: input.baslangicKonumMetni,
+        varisKonumMetni: input.varisKonumMetni,
+        baslangicProvider: input.baslangicProvider,
+        varisProvider: input.varisProvider,
+        baslangicPlaceId: input.baslangicPlaceId,
+        varisPlaceId: input.varisPlaceId,
+        normalizeBaslangicSehir: input.normalizeBaslangicSehir,
+        normalizeVarisSehir: input.normalizeVarisSehir,
+        normalizeBaslangicIlce: input.normalizeBaslangicIlce,
+        normalizeVarisIlce: input.normalizeVarisIlce,
         baslangicEnlem: new Prisma.Decimal(input.baslangicEnlem),
         baslangicBoylam: new Prisma.Decimal(input.baslangicBoylam),
         varisEnlem: new Prisma.Decimal(input.varisEnlem),
         varisBoylam: new Prisma.Decimal(input.varisBoylam),
+        tekTasimaIstiyor: input.tekTasimaIstiyor,
+        agirlikKg: new Prisma.Decimal(input.agirlikKg),
+        hacimM3: new Prisma.Decimal(input.hacimM3),
+        yukTipi: input.yukTipi,
+        tasimaTarihi: input.tasimaTarihi,
         yukDetay: input.yukDetay,
       },
     });
@@ -251,10 +326,25 @@ export class TransportRequestsRepository {
       id: transportRequest.id,
       baslangicSehri: transportRequest.baslangicSehri,
       varisSehri: transportRequest.varisSehri,
+      baslangicKonumMetni: transportRequest.baslangicKonumMetni,
+      varisKonumMetni: transportRequest.varisKonumMetni,
+      baslangicProvider: transportRequest.baslangicProvider,
+      varisProvider: transportRequest.varisProvider,
+      baslangicPlaceId: transportRequest.baslangicPlaceId,
+      varisPlaceId: transportRequest.varisPlaceId,
+      normalizeBaslangicSehir: transportRequest.normalizeBaslangicSehir,
+      normalizeVarisSehir: transportRequest.normalizeVarisSehir,
+      normalizeBaslangicIlce: transportRequest.normalizeBaslangicIlce,
+      normalizeVarisIlce: transportRequest.normalizeVarisIlce,
       baslangicEnlem: transportRequest.baslangicEnlem.toNumber(),
       baslangicBoylam: transportRequest.baslangicBoylam.toNumber(),
       varisEnlem: transportRequest.varisEnlem.toNumber(),
       varisBoylam: transportRequest.varisBoylam.toNumber(),
+      tekTasimaIstiyor: transportRequest.tekTasimaIstiyor,
+      agirlikKg: transportRequest.agirlikKg?.toNumber() ?? null,
+      hacimM3: transportRequest.hacimM3?.toNumber() ?? null,
+      yukTipi: transportRequest.yukTipi,
+      tasimaTarihi: transportRequest.tasimaTarihi,
       yukDetay: transportRequest.yukDetay,
       olusturmaTarihi: transportRequest.olusturmaTarihi,
       durumTuru: transportRequest.durum.durumTuru,

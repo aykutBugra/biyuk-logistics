@@ -6,7 +6,12 @@ const vehicleSelect = {
   id: true,
   plaka: true,
   yil: true,
-  kapasite: true,
+  maksimumAgirlikKg: true,
+  maksimumHacimM3: true,
+  kasaTipi: true,
+  uzunlukCm: true,
+  genislikCm: true,
+  yukseklikCm: true,
   aracBilgisi: {
     select: {
       marka: true,
@@ -24,7 +29,12 @@ export type CreateVehicleRecordInput = {
   aracKutuphaneId: number;
   plaka: string;
   yil: number;
-  kapasite: number;
+  maksimumAgirlikKg: number;
+  maksimumHacimM3: number;
+  kasaTipi: string;
+  uzunlukCm?: number;
+  genislikCm?: number;
+  yukseklikCm?: number;
 };
 
 export type UpdateVehicleRecordInput = Omit<CreateVehicleRecordInput, "sahipId">;
@@ -40,7 +50,12 @@ export type StoredVehicleRecord = {
   marka: string;
   model: string;
   yil: number;
-  kapasite: number;
+  maksimumAgirlikKg: number;
+  maksimumHacimM3: number | null;
+  kasaTipi: string;
+  uzunlukCm: number | null;
+  genislikCm: number | null;
+  yukseklikCm: number | null;
 };
 
 @Injectable()
@@ -96,7 +111,12 @@ export class VehiclesRepository {
         aracKutuphaneId: input.aracKutuphaneId,
         plaka: input.plaka,
         yil: input.yil,
-        kapasite: new Prisma.Decimal(input.kapasite),
+        maksimumAgirlikKg: new Prisma.Decimal(input.maksimumAgirlikKg),
+        maksimumHacimM3: new Prisma.Decimal(input.maksimumHacimM3),
+        kasaTipi: input.kasaTipi,
+        uzunlukCm: input.uzunlukCm,
+        genislikCm: input.genislikCm,
+        yukseklikCm: input.yukseklikCm,
       },
       select: vehicleSelect,
     });
@@ -134,7 +154,12 @@ export class VehiclesRepository {
         aracKutuphaneId: input.aracKutuphaneId,
         plaka: input.plaka,
         yil: input.yil,
-        kapasite: new Prisma.Decimal(input.kapasite),
+        maksimumAgirlikKg: new Prisma.Decimal(input.maksimumAgirlikKg),
+        maksimumHacimM3: new Prisma.Decimal(input.maksimumHacimM3),
+        kasaTipi: input.kasaTipi,
+        uzunlukCm: input.uzunlukCm,
+        genislikCm: input.genislikCm,
+        yukseklikCm: input.yukseklikCm,
       },
     });
 
@@ -221,7 +246,12 @@ export class VehiclesRepository {
       marka: vehicle.aracBilgisi.marka,
       model: vehicle.aracBilgisi.model,
       yil: vehicle.yil,
-      kapasite: vehicle.kapasite.toNumber(),
+      maksimumAgirlikKg: vehicle.maksimumAgirlikKg.toNumber(),
+      maksimumHacimM3: vehicle.maksimumHacimM3?.toNumber() ?? null,
+      kasaTipi: vehicle.kasaTipi,
+      uzunlukCm: vehicle.uzunlukCm,
+      genislikCm: vehicle.genislikCm,
+      yukseklikCm: vehicle.yukseklikCm,
     };
   }
 }

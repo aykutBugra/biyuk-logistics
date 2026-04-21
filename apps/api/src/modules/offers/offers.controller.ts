@@ -7,6 +7,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import { ROLE_NAMES } from "../../common/constants/role-names";
@@ -17,10 +18,12 @@ import { RolesGuard } from "../../common/guards/roles.guard";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { CreateOfferDto } from "./dto/create-offer.dto";
 import { IncomingOfferListItemResponseDto } from "./dto/incoming-offer-list-item-response.dto";
+import { MyIncomingOfferListItemResponseDto } from "./dto/my-incoming-offer-list-item-response.dto";
 import { MyOfferListItemResponseDto } from "./dto/my-offer-list-item-response.dto";
 import { OfferResponseDto } from "./dto/offer-response.dto";
 import { OpenRequestDetailResponseDto } from "./dto/open-request-detail-response.dto";
 import { OpenRequestListItemResponseDto } from "./dto/open-request-list-item-response.dto";
+import { OpenRequestQueryDto } from "./dto/open-request-query.dto";
 import { OffersService } from "./offers.service";
 
 @Controller("offers")
@@ -31,9 +34,10 @@ export class OffersController {
   @Get("open-requests")
   @Roles(ROLE_NAMES.NAKLIYECI)
   getOpenRequests(
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Query() query: OpenRequestQueryDto
   ): Promise<OpenRequestListItemResponseDto[]> {
-    return this.offersService.getOpenRequests(currentUser);
+    return this.offersService.getOpenRequests(currentUser, query);
   }
 
   @Get("open-requests/:requestId")
@@ -82,6 +86,14 @@ export class OffersController {
     @CurrentUser() currentUser: AuthenticatedUser
   ): Promise<MyOfferListItemResponseDto[]> {
     return this.offersService.getMine(currentUser);
+  }
+
+  @Get("incoming/my")
+  @Roles(ROLE_NAMES.MUSTERI)
+  getMyIncoming(
+    @CurrentUser() currentUser: AuthenticatedUser
+  ): Promise<MyIncomingOfferListItemResponseDto[]> {
+    return this.offersService.getMyIncoming(currentUser);
   }
 
   @Get("requests/:requestId/incoming")

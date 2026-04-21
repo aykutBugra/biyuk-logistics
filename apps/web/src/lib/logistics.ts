@@ -1,0 +1,102 @@
+export const CARGO_TYPE_OPTIONS = [
+  { value: "GENEL", label: "Genel yuk" },
+  { value: "PALETLI", label: "Paletli" },
+  { value: "KOLI", label: "Koli" },
+  { value: "MOBILYA", label: "Mobilya" },
+  { value: "BEYAZ_ESYA", label: "Beyaz esya" },
+  { value: "INSAAT_MALZEMESI", label: "Insaat malzemesi" },
+  { value: "DIGER", label: "Diger" },
+] as const;
+
+export const VEHICLE_BODY_TYPE_OPTIONS = [
+  { value: "PANELVAN", label: "Panelvan" },
+  { value: "KAPALI_KASA", label: "Kapali kasa" },
+  { value: "ACIK_KASA", label: "Acik kasa" },
+  { value: "TENTELI", label: "Tenteli" },
+  { value: "FRIGORIFIK", label: "Frigorifik" },
+  { value: "DORSE", label: "Dorse" },
+  { value: "DIGER", label: "Diger" },
+] as const;
+
+const cargoTypeLabels = Object.fromEntries(
+  CARGO_TYPE_OPTIONS.map((option) => [option.value, option.label])
+) as Record<string, string>;
+
+const vehicleBodyTypeLabels = Object.fromEntries(
+  VEHICLE_BODY_TYPE_OPTIONS.map((option) => [option.value, option.label])
+) as Record<string, string>;
+
+export function getCargoTypeLabel(value: string | null | undefined): string {
+  if (!value) {
+    return "Belirtilmedi";
+  }
+
+  return cargoTypeLabels[value] ?? value;
+}
+
+export function getVehicleBodyTypeLabel(
+  value: string | null | undefined
+): string {
+  if (!value) {
+    return "Belirtilmedi";
+  }
+
+  return vehicleBodyTypeLabels[value] ?? value;
+}
+
+export function formatLocationLabel(
+  konumMetni: string | null | undefined,
+  sehir: string
+): string {
+  return konumMetni?.trim() || sehir;
+}
+
+export function formatWeightKg(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "Belirtilmedi";
+  }
+
+  return `${new Intl.NumberFormat("tr-TR", {
+    maximumFractionDigits: 2,
+  }).format(value)} kg`;
+}
+
+export function formatVolumeM3(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "Belirtilmedi";
+  }
+
+  return `${new Intl.NumberFormat("tr-TR", {
+    maximumFractionDigits: 2,
+  }).format(value)} m3`;
+}
+
+export function formatDimensionsCm(values: {
+  uzunlukCm?: number | null;
+  genislikCm?: number | null;
+  yukseklikCm?: number | null;
+}): string {
+  if (!values.uzunlukCm || !values.genislikCm || !values.yukseklikCm) {
+    return "Belirtilmedi";
+  }
+
+  return `${values.uzunlukCm} x ${values.genislikCm} x ${values.yukseklikCm} cm`;
+}
+
+export function hasActiveFilters(values: Record<string, unknown>): boolean {
+  return Object.values(values).some((value) => {
+    if (typeof value === "boolean") {
+      return value;
+    }
+
+    if (typeof value === "number") {
+      return true;
+    }
+
+    if (typeof value === "string") {
+      return value.trim().length > 0;
+    }
+
+    return false;
+  });
+}

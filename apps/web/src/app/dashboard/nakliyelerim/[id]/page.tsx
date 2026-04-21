@@ -15,6 +15,12 @@ import {
 } from "@/lib/api/jobs";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
+import {
+  formatLocationLabel,
+  formatVolumeM3,
+  formatWeightKg,
+  getCargoTypeLabel,
+} from "@/lib/logistics";
 import { emitNotificationsChanged } from "@/lib/notifications/notification-events";
 
 function formatCurrency(value: number): string {
@@ -225,10 +231,7 @@ export default function CarrierJobDetailPage() {
   }
 
   return (
-    <CarrierVehiclesShell
-      title="Nakliye detayi"
-      description="Bu ekrandan resmi is kaydinin durumunu takip et ve gerekli aksiyonlari ver."
-    >
+    <CarrierVehiclesShell title="Nakliye detayi">
       {isLoading ? (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
           Nakliye detayi yukleniyor...
@@ -255,11 +258,33 @@ export default function CarrierJobDetailPage() {
                   <span>Istek #{job.requestId}</span>
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {job.baslangicSehri} {"->"} {job.varisSehri}
+                  {formatLocationLabel(job.baslangicKonumMetni, job.baslangicSehri)}{" "}
+                  {"->"} {formatLocationLabel(job.varisKonumMetni, job.varisSehri)}
                 </h2>
                 <p className="text-sm text-gray-500">
                   Musteri: {job.customer.name} (@{job.customer.username})
                 </p>
+                <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {getCargoTypeLabel(job.yukTipi)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {formatWeightKg(job.agirlikKg)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {formatVolumeM3(job.hacimM3)}
+                  </span>
+                  {job.tekTasimaIstiyor ? (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">
+                      Tek tasima
+                    </span>
+                  ) : null}
+                  {job.tasimaTarihi ? (
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                      {job.tasimaTarihi}
+                    </span>
+                  ) : null}
+                </div>
               </div>
 
               <div className="flex flex-col items-start gap-3 md:items-end">
@@ -334,6 +359,28 @@ export default function CarrierJobDetailPage() {
 
           <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
             <h3 className="text-lg font-bold text-gray-900">Yuk ozeti</h3>
+            <dl className="mt-4 grid gap-3 text-sm text-gray-600 md:grid-cols-2">
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-gray-900">Yuk tipi</dt>
+                <dd>{getCargoTypeLabel(job.yukTipi)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-gray-900">Agirlik</dt>
+                <dd>{formatWeightKg(job.agirlikKg)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-gray-900">Hacim</dt>
+                <dd>{formatVolumeM3(job.hacimM3)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-gray-900">Tasima tarihi</dt>
+                <dd>{job.tasimaTarihi ?? "Belirtilmedi"}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 md:col-span-2">
+                <dt className="font-medium text-gray-900">Tasima tercihi</dt>
+                <dd>{job.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}</dd>
+              </div>
+            </dl>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-600">
               {job.yukDetay}
             </p>
@@ -345,23 +392,23 @@ export default function CarrierJobDetailPage() {
               <dl className="mt-4 space-y-3 text-sm text-gray-600">
                 <div className="flex items-center justify-between gap-4">
                   <dt className="font-medium text-gray-900">Baslangic</dt>
+                  <dd className="text-right">
+                    {formatLocationLabel(job.baslangicKonumMetni, job.baslangicSehri)}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="font-medium text-gray-900">Baslangic sehri</dt>
                   <dd>{job.baslangicSehri}</dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Baslangic koordinat</dt>
-                  <dd>
-                    {job.baslangicEnlem}, {job.baslangicBoylam}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
                   <dt className="font-medium text-gray-900">Varis</dt>
-                  <dd>{job.varisSehri}</dd>
+                  <dd className="text-right">
+                    {formatLocationLabel(job.varisKonumMetni, job.varisSehri)}
+                  </dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Varis koordinat</dt>
-                  <dd>
-                    {job.varisEnlem}, {job.varisBoylam}
-                  </dd>
+                  <dt className="font-medium text-gray-900">Varis sehri</dt>
+                  <dd>{job.varisSehri}</dd>
                 </div>
               </dl>
             </div>

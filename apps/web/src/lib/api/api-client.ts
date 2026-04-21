@@ -1,9 +1,24 @@
+"use client";
+
+import {
+  clearStoredAuth,
+  getStoredAuth,
+  setStoredAuth,
+  type StoredAuth,
+} from "@/lib/auth/auth-storage";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
 type ApiFetchOptions = RequestInit & {
   accessToken?: string;
 };
+
+type ErrorPayload = {
+  message?: string | string[];
+};
+
+let refreshRequestPromise: Promise<string | null> | null = null;
 
 export class ApiClientError extends Error {
   status: number;
@@ -17,54 +32,135 @@ export class ApiClientError extends Error {
   }
 }
 
-export async function apiFetch<T>(
-  path: string,
-  options: ApiFetchOptions = {}
-): Promise<T> {
-  const { accessToken, headers, ...init } = options;
+function resolveErrorMessage(status: number, statusText: string, body: string): string {
+  const fallbackMessage = `API request failed: ${status} ${statusText}`;
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...headers,
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    let message = `API request failed: ${response.status} ${response.statusText}`;
-
-    if (errorBody) {
-      try {
-        const parsed = JSON.parse(errorBody) as { message?: string | string[] };
-
-        if (Array.isArray(parsed.message)) {
-          message = parsed.message.join(" ");
-        } else if (typeof parsed.message === "string") {
-          message = parsed.message;
-        }
-      } catch {
-        message = `${message} ${errorBody}`;
-      }
-    }
-
-    throw new ApiClientError(response.status, message, errorBody);
+  if (!body) {
+    return fallbackMessage;
   }
 
+  try {
+    const parsed = JSON.parse(body) as ErrorPayload;
 
+    if (Array.isArray(parsed.message)) {
+      return parsed.message.join(" ");
+    }
 
+    if (typeof parsed.message === "string") {
+      return parsed.message;
+    }
+  } catch {
+    return `${fallbackMessage} ${body}`;
+  }
+
+  return fallbackMessage;
+}
+
+async function parseApiResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new ApiClientError(
+      response.status,
+      resolveErrorMessage(response.status, response.statusText, errorBody),
+      errorBody
+    );
+  }
 
   if (response.status === 204) {
     return undefined as unknown as T;
   }
 
-
-
-
-
-  
   return response.json() as Promise<T>;
+}
+
+async function performFetch<T>(
+  path: string,
+  options: ApiFetchOptions,
+  accessTokenOverride?: string
+): Promise<T> {
+  const { accessToken, headers, ...init } = options;
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(accessTokenOverride ?? accessToken
+        ? { Authorization: `Bearer ${accessTokenOverride ?? accessToken}` }
+        : {}),
+      ...headers,
+    },
+    cache: "no-store",
+  });
+
+  return parseApiResponse<T>(response);
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  const storedAuth = getStoredAuth();
+
+  if (!storedAuth?.refreshToken) {
+    clearStoredAuth();
+    return null;
+  }
+
+  if (refreshRequestPromise) {
+    return refreshRequestPromise;
+  }
+
+  refreshRequestPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          refreshToken: storedAuth.refreshToken,
+        }),
+        cache: "no-store",
+      });
+
+      const refreshedAuth = await parseApiResponse<StoredAuth>(response);
+      const nextAuth: StoredAuth = {
+        ...storedAuth,
+        ...refreshedAuth,
+        user: refreshedAuth.user ?? storedAuth.user,
+      };
+
+      setStoredAuth(nextAuth);
+      return nextAuth.accessToken;
+    } catch {
+      clearStoredAuth();
+      return null;
+    } finally {
+      refreshRequestPromise = null;
+    }
+  })();
+
+  return refreshRequestPromise;
+}
+
+export async function apiFetch<T>(
+  path: string,
+  options: ApiFetchOptions = {}
+): Promise<T> {
+  try {
+    return await performFetch<T>(path, options);
+  } catch (error) {
+    if (
+      !(error instanceof ApiClientError) ||
+      error.status !== 401 ||
+      !options.accessToken ||
+      path === "/auth/refresh"
+    ) {
+      throw error;
+    }
+
+    const refreshedAccessToken = await refreshAccessToken();
+
+    if (!refreshedAccessToken) {
+      throw error;
+    }
+
+    return performFetch<T>(path, options, refreshedAccessToken);
+  }
 }

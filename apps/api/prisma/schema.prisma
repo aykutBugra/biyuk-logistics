@@ -92,9 +92,14 @@ model Arac {
   sahip             Kullanici       @relation(fields: [sahipId], references: [id])
   aracKutuphaneId   Int
   aracBilgisi       AracKutuphanesi @relation(fields: [aracKutuphaneId], references: [id])
-  plaka             String          @db.VarChar(20)
+  plaka             String          @db.VarChar(20) 
   yil               Int
-  kapasite          Decimal         @db.Decimal(10, 2)
+  maksimumAgirlikKg Decimal         @db.Decimal(10, 2)
+  maksimumHacimM3   Decimal?
+  kasaTipi          String          @default("DIGER") @db.VarChar(50)
+  uzunlukCm         Int?
+  genislikCm        Int?
+  yukseklikCm       Int?
   silmeTarihi       DateTime?
   
   teklifler         Teklif[]
@@ -104,23 +109,38 @@ model Arac {
 
 
 model Istek {
-  id              Int       @id @default(autoincrement())
-  musteriId       Int
-  musteri         Kullanici @relation(fields: [musteriId], references: [id])
-  baslangicSehri  String    @db.VarChar(100)
-  varisSehri      String    @db.VarChar(100)
-  baslangicEnlem  Decimal   @db.Decimal(9, 6)
-  baslangicBoylam Decimal   @db.Decimal(9, 6)
-  varisEnlem      Decimal   @db.Decimal(9, 6)
-  varisBoylam     Decimal   @db.Decimal(9, 6)
-  yukDetay        String    @db.VarChar(500)
-  olusturmaTarihi DateTime  @default(now())
-  silmeTarihi     DateTime?
-  durumId         Int
-  durum           Durum     @relation(fields: [durumId], references: [id])
+  id                        Int       @id @default(autoincrement())
+  musteriId                 Int
+  musteri                   Kullanici @relation(fields: [musteriId], references: [id])
+  baslangicSehri            String    @db.VarChar(100)
+  varisSehri                String    @db.VarChar(100)
+  baslangicKonumMetni       String?   @db.VarChar(255)
+  varisKonumMetni           String?   @db.VarChar(255)
+  baslangicProvider         String?   @db.VarChar(50)
+  varisProvider             String?   @db.VarChar(50)
+  baslangicPlaceId          String?   @db.VarChar(255)
+  varisPlaceId              String?   @db.VarChar(255)
+  normalizeBaslangicSehir   String?   @db.VarChar(100)
+  normalizeVarisSehir       String?   @db.VarChar(100)
+  normalizeBaslangicIlce    String?   @db.VarChar(100)
+  normalizeVarisIlce        String?   @db.VarChar(100)
+  baslangicEnlem            Decimal   @db.Decimal(9, 6)
+  baslangicBoylam           Decimal   @db.Decimal(9, 6)
+  varisEnlem                Decimal   @db.Decimal(9, 6)
+  varisBoylam               Decimal   @db.Decimal(9, 6)
+  tekTasimaIstiyor          Boolean   @default(false)
+  agirlikKg                 Decimal?
+  hacimM3                   Decimal?
+  yukTipi                   String    @default("GENEL") @db.VarChar(50)
+  tasimaTarihi              String?   @db.VarChar(10)
+  yukDetay                  String    @db.VarChar(500)
+  olusturmaTarihi           DateTime  @default(now())
+  silmeTarihi               DateTime?
+  durumId                   Int
+  durum                     Durum     @relation(fields: [durumId], references: [id])
 
-  teklifler       Teklif[]
-  nakliye         Nakliye?
+  teklifler                 Teklif[]
+  nakliye                   Nakliye?
 }
 
 model Teklif {

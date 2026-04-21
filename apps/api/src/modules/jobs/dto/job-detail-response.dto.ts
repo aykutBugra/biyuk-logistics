@@ -10,10 +10,17 @@ export class JobDetailResponseDto {
   teslimTarihi!: Date | null;
   baslangicSehri!: string;
   varisSehri!: string;
+  baslangicKonumMetni!: string | null;
+  varisKonumMetni!: string | null;
   baslangicEnlem!: number;
   baslangicBoylam!: number;
   varisEnlem!: number;
   varisBoylam!: number;
+  tekTasimaIstiyor!: boolean;
+  agirlikKg!: number | null;
+  hacimM3!: number | null;
+  yukTipi!: string;
+  tasimaTarihi!: string | null;
   yukDetay!: string;
   carrier!: {
     id: number;
