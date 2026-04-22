@@ -30,6 +30,8 @@ export class GoogleRouteEngine implements RouteEngine {
       this.configService.get<string>("maps.defaultLanguageCode") ?? "tr";
 
 
+
+
     //fetch API'si kullanarak Google Routes API'ye bir POST isteği gönderir. 
     // İstek gövdesi, başlangıç noktası, varış noktası ve ara noktaları 
     // içeren JSON formatında hazırlanır. Ayrıca, istek başlıklarında API
@@ -39,11 +41,11 @@ export class GoogleRouteEngine implements RouteEngine {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",
+        "X-Goog-Api-Key": apiKey, //.env içinde tanımlı api key i kullanır
+        "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",  //sadece gerekli alanları döndürür.
       },
       body: JSON.stringify({
-        origin: {
+        origin: { //başlangıç canonical konum bilgisi
           location: {
             latLng: {
               latitude: origin.lat,
@@ -51,7 +53,7 @@ export class GoogleRouteEngine implements RouteEngine {
             },
           },
         },
-        destination: {
+        destination: {  //varış canonical konum bilgisi
           location: {
             latLng: {
               latitude: destination.lat,
@@ -59,7 +61,7 @@ export class GoogleRouteEngine implements RouteEngine {
             },
           },
         },
-        intermediates: waypoints.map((waypoint) => ({
+        intermediates: waypoints.map((waypoint) => ({ //gelecekte ara durak için uygun alan
           location: {
             latLng: {
               latitude: waypoint.lat,
@@ -67,26 +69,38 @@ export class GoogleRouteEngine implements RouteEngine {
             },
           },
         })),
-        travelMode: "DRIVE",
+        travelMode: "DRIVE",  //arac rotası ister
         languageCode: defaultLanguageCode,
       }),
     });
+
+
+
+
+
 
     if (!response.ok) {
       throw new BadGatewayException("Rota metrikleri su anda hesaplanamiyor.");
     }
 
     const payload = (await response.json()) as GoogleRoutesResponse;
-    const route = payload.routes?.[0];
+
+
+
+
+
+
+
+    const route = payload.routes?.[0];  //ilk rotayı alır, çünkü genellikle en iyi sonucu verir.
     const durationSeconds = route?.duration
-      ? this.parseDurationSeconds(route.duration)
+      ? this.parseDurationSeconds(route.duration)   //google in duration formatını saniyeye çevirir
       : null;
 
     if (
-      typeof route?.distanceMeters !== "number" ||
-      !Number.isFinite(route.distanceMeters) ||
+      typeof route?.distanceMeters !== "number" ||   //mesafe sayısal değilse kabul etmez
+      !Number.isFinite(route.distanceMeters) ||      //mesafe negatifse kabul etmez
       route.distanceMeters < 0 ||
-      durationSeconds === null
+      durationSeconds === null      //süre geçerli formatta değilse kabul etmez
     ) {
       throw new BadGatewayException("Rota metrikleri dogrulanamadi.");
     }
@@ -96,6 +110,13 @@ export class GoogleRouteEngine implements RouteEngine {
       durationSeconds,
     };
   }
+
+
+
+
+
+
+
 
   private parseDurationSeconds(duration: string): number | null {
     const normalizedDuration = duration.trim();

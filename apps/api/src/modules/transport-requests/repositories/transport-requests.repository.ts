@@ -212,8 +212,8 @@ export class TransportRequestsRepository {
         baslangicBoylam: new Prisma.Decimal(input.baslangicBoylam),
         varisEnlem: new Prisma.Decimal(input.varisEnlem),
         varisBoylam: new Prisma.Decimal(input.varisBoylam),
-        rotaMesafeMetre: input.rotaMesafeMetre,
-        rotaSureSaniye: input.rotaSureSaniye,
+        rotaMesafeMetre: input.rotaMesafeMetre,                     //service katmanında hesaplanan metre bilgisi db ye yazılır
+        rotaSureSaniye: input.rotaSureSaniye,                       //service katmanında hesaplanan sğre bilgisi db ye yazılır
         tekTasimaIstiyor: input.tekTasimaIstiyor,
         agirlikKg: new Prisma.Decimal(input.agirlikKg),
         hacimM3: new Prisma.Decimal(input.hacimM3),

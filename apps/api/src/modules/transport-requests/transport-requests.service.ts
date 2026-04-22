@@ -60,14 +60,22 @@ export class TransportRequestsService {
     this.assertCustomerRole(currentUser);
 
     const initialStatusId = await this.requireInitialStatusId();
-    const routeFields = await this.resolveRouteFields(
-      createTransportRequestDto.baslangicKonum,
+
+
+
+
+
+
+
+
+    const routeFields = await this.resolveRouteFields(  //canonaical location bilgilerini alma ve rota 
+      createTransportRequestDto.baslangicKonum,         //metriklerini hesaplama işlemi
       createTransportRequestDto.varisKonum
     );
 
     const transportRequest = await this.transportRequestsRepository.create({
       musteriId: currentUser.id,
-      ...routeFields,
+      ...routeFields,   //hesaplanan alanları repository create inputuna yayar
       tekTasimaIstiyor: createTransportRequestDto.tekTasimaIstiyor,
       agirlikKg: createTransportRequestDto.agirlikKg,
       hacimM3: createTransportRequestDto.hacimM3,
@@ -76,6 +84,16 @@ export class TransportRequestsService {
       yukDetay: createTransportRequestDto.yukDetay,
       durumId: initialStatusId,
     });
+
+
+
+
+
+
+
+
+
+
 
     return this.toDetailResponse(transportRequest, currentUser);
   }
@@ -135,15 +153,26 @@ export class TransportRequestsService {
       );
     }
 
+
+
+
+    //shouldrecalculateRoute işlevi, başlangıç veya varış konumlarında 
+    //değişiklik olup olmadığını kontrol eder ve rota metriklerinin 
+    //yeniden hesaplanması gerekip gerekmediğine karar verir.
     const routeFields = this.shouldRecalculateRoute(
       existingTransportRequest,
       updateTransportRequestDto
     )
-      ? await this.resolveRouteFields(
+      ? await this.resolveRouteFields(  //konum değiştiyse route yeniden hesaplar
           updateTransportRequestDto.baslangicKonum,
           updateTransportRequestDto.varisKonum
         )
+        //konum değişmediyse mevcut rota alanlarını korur
       : this.getStoredRouteFields(existingTransportRequest);
+
+
+
+
 
     const transportRequest =
       await this.transportRequestsRepository.updateByIdAndCustomerId(
@@ -311,6 +340,16 @@ export class TransportRequestsService {
     };
   }
 
+
+
+
+
+
+
+
+  //shouldRecalculateRoute provider ve placeId alanlarını karşılaştırarak 
+  //başlangıç veya varış konumlarında değişiklik olup olmadığını kontrol 
+  //eder.
   private shouldRecalculateRoute(
     transportRequest: StoredTransportRequestRecord,
     updateTransportRequestDto: UpdateTransportRequestDto
@@ -331,6 +370,12 @@ export class TransportRequestsService {
     );
   }
 
+
+
+
+
+
+
   private hasLocationSelectionChanged(
     currentProvider: string | null,
     currentPlaceId: string | null,
@@ -344,12 +389,22 @@ export class TransportRequestsService {
     );
   }
 
+
+
+
+
+
+
+
+
+  //resolveRouteFields işlevi, verilen başlangıç ve varış konumlarına 
+  //göre canonical location bilgilerini alır ve rota metriklerini hesaplar.
   private async resolveRouteFields(
     baslangicKonum: CreateTransportRequestDto["baslangicKonum"],
     varisKonum: CreateTransportRequestDto["varisKonum"]
   ): Promise<TransportRequestRouteFields> {
     const [resolvedBaslangicKonum, resolvedVarisKonum] = await Promise.all([
-      this.locationsService.resolveCanonicalLocation(
+      this.locationsService.resolveCanonicalLocation(   //placeId'ye karşılık gelen canonical location bilgisini alma
         baslangicKonum.provider,
         baslangicKonum.placeId,
         baslangicKonum.sessionToken
@@ -370,7 +425,9 @@ export class TransportRequestsService {
       );
     }
 
-    const routeMetrics = await this.locationsService.getRouteMetrics(
+    //iki canonical nokta arası gerçek yol mesafesini alır ve tahmini sürüş süresini 
+    //saniye cinsinden hesaplar.
+    const routeMetrics = await this.locationsService.getRouteMetrics( 
       resolvedBaslangicKonum.provider,
       {
         lat: resolvedBaslangicKonum.lat,
@@ -399,10 +456,28 @@ export class TransportRequestsService {
       baslangicBoylam: resolvedBaslangicKonum.lng,
       varisEnlem: resolvedVarisKonum.lat,
       varisBoylam: resolvedVarisKonum.lng,
-      rotaMesafeMetre: routeMetrics.distanceMeters,
-      rotaSureSaniye: routeMetrics.durationSeconds,
+      rotaMesafeMetre: routeMetrics.distanceMeters,   //metre cinsinden sonucu döndürür
+      rotaSureSaniye: routeMetrics.durationSeconds,   //saniye cinsinden sonucu döndürür
     };
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   private getStoredRouteFields(
     transportRequest: StoredTransportRequestRecord

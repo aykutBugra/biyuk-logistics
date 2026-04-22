@@ -222,8 +222,8 @@ export class OffersRepository {
         varisSehri: true,
         baslangicKonumMetni: true,
         varisKonumMetni: true,
-        rotaMesafeMetre: true,
-        rotaSureSaniye: true,
+        rotaMesafeMetre: true,        //yeni
+        rotaSureSaniye: true,         //yeni
         tekTasimaIstiyor: true,
         agirlikKg: true,
         hacimM3: true,
@@ -264,8 +264,8 @@ export class OffersRepository {
       varisSehri: request.varisSehri,
       baslangicKonumMetni: request.baslangicKonumMetni,
       varisKonumMetni: request.varisKonumMetni,
-      rotaMesafeMetre: request.rotaMesafeMetre,
-      rotaSureSaniye: request.rotaSureSaniye,
+      rotaMesafeMetre: request.rotaMesafeMetre,       //yeni
+      rotaSureSaniye: request.rotaSureSaniye,         //yeni
       tekTasimaIstiyor: request.tekTasimaIstiyor,
       agirlikKg: request.agirlikKg?.toNumber() ?? null,
       hacimM3: request.hacimM3?.toNumber() ?? null,
