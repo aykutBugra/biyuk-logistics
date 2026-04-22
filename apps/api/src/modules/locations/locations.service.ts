@@ -30,8 +30,14 @@ export class LocationsService {
     return this.locationProvider.getPlaceDetails(placeId, sessionToken);
   }
 
+
+
+  
+  //route-engine.contract.ts dosyasında tanımlanan RouteEngine arayüzüne uygun olarak,
+  // rota motoru sağlayıcısının getRouteMetrics işlevini çağırarak, 
+  // başlangıç noktası, varış noktası ve isteğe bağlı ara noktalar için rota metriklerini döndürür.
   async getRouteMetrics(
-    provider: string,
+    provider: string,   
     origin: RoutePoint,
     destination: RoutePoint,
     waypoints?: RoutePoint[]
@@ -39,6 +45,10 @@ export class LocationsService {
     this.assertProvider(provider, this.routeEngine.providerName);
     return this.routeEngine.getRouteMetrics(origin, destination, waypoints);
   }
+
+
+
+
 
   private assertProvider(selectedProvider: string, configuredProvider: string) {
     if (selectedProvider.trim().toLowerCase() === configuredProvider.trim().toLowerCase()) {

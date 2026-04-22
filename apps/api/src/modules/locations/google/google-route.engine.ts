@@ -28,7 +28,14 @@ export class GoogleRouteEngine implements RouteEngine {
     const apiKey = this.requireGoogleApiKey();
     const defaultLanguageCode =
       this.configService.get<string>("maps.defaultLanguageCode") ?? "tr";
+
+
+    //fetch API'si kullanarak Google Routes API'ye bir POST isteği gönderir. 
+    // İstek gövdesi, başlangıç noktası, varış noktası ve ara noktaları 
+    // içeren JSON formatında hazırlanır. Ayrıca, istek başlıklarında API
+    //  anahtarı ve istenen alanlar belirtilir.
     const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+        //computeRoutes kusbakışı yerine gerçek yol torasını döndürür, bu yüzden daha doğru metrikler sağlar.
       method: "POST",
       headers: {
         "Content-Type": "application/json",

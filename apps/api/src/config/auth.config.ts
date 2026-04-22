@@ -6,5 +6,5 @@ export default registerAs("auth", () => ({
   accessSecret: process.env.JWT_ACCESS_SECRET ?? "dev-access-secret",
   accessTtl: (process.env.JWT_ACCESS_TTL ?? "15m") as JwtTtlValue,
   refreshSecret: process.env.JWT_REFRESH_SECRET ?? "dev-refresh-secret",
-  refreshTtl: (process.env.JWT_REFRESH_TTL ?? "7d") as JwtTtlValue,
+  refreshTtl: (process.env.JWT_REFRESH_TTL ?? "60m") as JwtTtlValue,
 }));
