@@ -8,6 +8,9 @@ CREATE UNIQUE INDEX "Arac_plaka_active_unique"
 ON "Arac" ("plaka")
 WHERE "silmeTarihi" IS NULL;
 
+--plaka aktif kayıtlar arasında unique olacak şekilde bir index oluşturulur. 
+--Böylece silinmiş kayıtlar arasında aynı plakaya sahip araçlar olabilir, ancak
+-- aktif kayıtlar arasında aynı plakaya sahip araçlar olamaz.
 
 
 -- AlterTable

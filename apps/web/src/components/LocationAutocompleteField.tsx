@@ -70,7 +70,7 @@ export default function LocationAutocompleteField({
 
     const trimmed = query.trim();
 
-    if (trimmed.length < 2 || trimmed === value?.konumMetni) {
+    if (trimmed.length < 3 || trimmed === value?.konumMetni) {
       setSuggestions([]);
       setIsLoading(false);
       setErrorMessage(null);

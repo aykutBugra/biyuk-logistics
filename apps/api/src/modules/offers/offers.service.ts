@@ -449,6 +449,8 @@ export class OffersService {
       varisSehri: request.varisSehri,
       baslangicKonumMetni: request.baslangicKonumMetni,
       varisKonumMetni: request.varisKonumMetni,
+      rotaMesafeMetre: request.rotaMesafeMetre,
+      rotaSureSaniye: request.rotaSureSaniye,
       tekTasimaIstiyor: request.tekTasimaIstiyor,
       agirlikKg: request.agirlikKg,
       hacimM3: request.hacimM3,

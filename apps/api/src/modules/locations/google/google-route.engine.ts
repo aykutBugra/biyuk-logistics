@@ -71,17 +71,39 @@ export class GoogleRouteEngine implements RouteEngine {
 
     const payload = (await response.json()) as GoogleRoutesResponse;
     const route = payload.routes?.[0];
+    const durationSeconds = route?.duration
+      ? this.parseDurationSeconds(route.duration)
+      : null;
 
-    if (!route?.distanceMeters || !route.duration) {
+    if (
+      typeof route?.distanceMeters !== "number" ||
+      !Number.isFinite(route.distanceMeters) ||
+      route.distanceMeters < 0 ||
+      durationSeconds === null
+    ) {
       throw new BadGatewayException("Rota metrikleri dogrulanamadi.");
     }
 
-    const durationSeconds = Number.parseInt(route.duration.replace("s", ""), 10);
-
     return {
       distanceMeters: route.distanceMeters,
-      durationSeconds: Number.isNaN(durationSeconds) ? 0 : durationSeconds,
+      durationSeconds,
     };
+  }
+
+  private parseDurationSeconds(duration: string): number | null {
+    const normalizedDuration = duration.trim();
+
+    if (!normalizedDuration.endsWith("s")) {
+      return null;
+    }
+
+    const parsedSeconds = Number.parseFloat(normalizedDuration.slice(0, -1));
+
+    if (!Number.isFinite(parsedSeconds) || parsedSeconds < 0) {
+      return null;
+    }
+
+    return Math.round(parsedSeconds);
   }
 
   private requireGoogleApiKey(): string {

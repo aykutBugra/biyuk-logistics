@@ -21,6 +21,8 @@ const transportRequestSelect = {
   baslangicBoylam: true,
   varisEnlem: true,
   varisBoylam: true,
+  rotaMesafeMetre: true,
+  rotaSureSaniye: true,
   tekTasimaIstiyor: true,
   agirlikKg: true,
   hacimM3: true,
@@ -83,20 +85,22 @@ export type CreateTransportRequestRecordInput = {
   musteriId: number;
   baslangicSehri: string;
   varisSehri: string;
-  baslangicKonumMetni: string;
-  varisKonumMetni: string;
-  baslangicProvider: string;
-  varisProvider: string;
-  baslangicPlaceId: string;
-  varisPlaceId: string;
-  normalizeBaslangicSehir: string;
-  normalizeVarisSehir: string;
+  baslangicKonumMetni: string | null;
+  varisKonumMetni: string | null;
+  baslangicProvider: string | null;
+  varisProvider: string | null;
+  baslangicPlaceId: string | null;
+  varisPlaceId: string | null;
+  normalizeBaslangicSehir: string | null;
+  normalizeVarisSehir: string | null;
   normalizeBaslangicIlce: string | null;
   normalizeVarisIlce: string | null;
   baslangicEnlem: number;
   baslangicBoylam: number;
   varisEnlem: number;
   varisBoylam: number;
+  rotaMesafeMetre: number | null;
+  rotaSureSaniye: number | null;
   tekTasimaIstiyor: boolean;
   agirlikKg: number;
   hacimM3: number;
@@ -145,6 +149,8 @@ export type StoredTransportRequestRecord = {
   baslangicBoylam: number;
   varisEnlem: number;
   varisBoylam: number;
+  rotaMesafeMetre: number | null;
+  rotaSureSaniye: number | null;
   tekTasimaIstiyor: boolean;
   agirlikKg: number | null;
   hacimM3: number | null;
@@ -206,6 +212,8 @@ export class TransportRequestsRepository {
         baslangicBoylam: new Prisma.Decimal(input.baslangicBoylam),
         varisEnlem: new Prisma.Decimal(input.varisEnlem),
         varisBoylam: new Prisma.Decimal(input.varisBoylam),
+        rotaMesafeMetre: input.rotaMesafeMetre,
+        rotaSureSaniye: input.rotaSureSaniye,
         tekTasimaIstiyor: input.tekTasimaIstiyor,
         agirlikKg: new Prisma.Decimal(input.agirlikKg),
         hacimM3: new Prisma.Decimal(input.hacimM3),
@@ -248,6 +256,8 @@ export class TransportRequestsRepository {
         baslangicBoylam: new Prisma.Decimal(input.baslangicBoylam),
         varisEnlem: new Prisma.Decimal(input.varisEnlem),
         varisBoylam: new Prisma.Decimal(input.varisBoylam),
+        rotaMesafeMetre: input.rotaMesafeMetre,
+        rotaSureSaniye: input.rotaSureSaniye,
         tekTasimaIstiyor: input.tekTasimaIstiyor,
         agirlikKg: new Prisma.Decimal(input.agirlikKg),
         hacimM3: new Prisma.Decimal(input.hacimM3),
@@ -340,6 +350,8 @@ export class TransportRequestsRepository {
       baslangicBoylam: transportRequest.baslangicBoylam.toNumber(),
       varisEnlem: transportRequest.varisEnlem.toNumber(),
       varisBoylam: transportRequest.varisBoylam.toNumber(),
+      rotaMesafeMetre: transportRequest.rotaMesafeMetre,
+      rotaSureSaniye: transportRequest.rotaSureSaniye,
       tekTasimaIstiyor: transportRequest.tekTasimaIstiyor,
       agirlikKg: transportRequest.agirlikKg?.toNumber() ?? null,
       hacimM3: transportRequest.hacimM3?.toNumber() ?? null,

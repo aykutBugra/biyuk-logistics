@@ -18,6 +18,8 @@ export type OpenRequestListItemRecord = {
   varisSehri: string;
   baslangicKonumMetni: string | null;
   varisKonumMetni: string | null;
+  rotaMesafeMetre: number | null;
+  rotaSureSaniye: number | null;
   tekTasimaIstiyor: boolean;
   agirlikKg: number | null;
   hacimM3: number | null;
@@ -220,6 +222,8 @@ export class OffersRepository {
         varisSehri: true,
         baslangicKonumMetni: true,
         varisKonumMetni: true,
+        rotaMesafeMetre: true,
+        rotaSureSaniye: true,
         tekTasimaIstiyor: true,
         agirlikKg: true,
         hacimM3: true,
@@ -260,6 +264,8 @@ export class OffersRepository {
       varisSehri: request.varisSehri,
       baslangicKonumMetni: request.baslangicKonumMetni,
       varisKonumMetni: request.varisKonumMetni,
+      rotaMesafeMetre: request.rotaMesafeMetre,
+      rotaSureSaniye: request.rotaSureSaniye,
       tekTasimaIstiyor: request.tekTasimaIstiyor,
       agirlikKg: request.agirlikKg?.toNumber() ?? null,
       hacimM3: request.hacimM3?.toNumber() ?? null,
@@ -303,6 +309,8 @@ export class OffersRepository {
         varisSehri: true,
         baslangicKonumMetni: true,
         varisKonumMetni: true,
+        rotaMesafeMetre: true,
+        rotaSureSaniye: true,
         baslangicProvider: true,
         varisProvider: true,
         baslangicPlaceId: true,
@@ -359,6 +367,8 @@ export class OffersRepository {
       varisSehri: request.varisSehri,
       baslangicKonumMetni: request.baslangicKonumMetni,
       varisKonumMetni: request.varisKonumMetni,
+      rotaMesafeMetre: request.rotaMesafeMetre,
+      rotaSureSaniye: request.rotaSureSaniye,
       baslangicProvider: request.baslangicProvider,
       varisProvider: request.varisProvider,
       baslangicPlaceId: request.baslangicPlaceId,

@@ -25,6 +25,27 @@ const INITIAL_TRANSPORT_REQUEST_STATUS = {
   durumAdi: "OLUSTURULDU",
 } as const;
 
+type TransportRequestRouteFields = {
+  baslangicSehri: string;
+  varisSehri: string;
+  baslangicKonumMetni: string | null;
+  varisKonumMetni: string | null;
+  baslangicProvider: string | null;
+  varisProvider: string | null;
+  baslangicPlaceId: string | null;
+  varisPlaceId: string | null;
+  normalizeBaslangicSehir: string | null;
+  normalizeVarisSehir: string | null;
+  normalizeBaslangicIlce: string | null;
+  normalizeVarisIlce: string | null;
+  baslangicEnlem: number;
+  baslangicBoylam: number;
+  varisEnlem: number;
+  varisBoylam: number;
+  rotaMesafeMetre: number | null;
+  rotaSureSaniye: number | null;
+};
+
 @Injectable()
 export class TransportRequestsService {
   constructor(
@@ -39,36 +60,14 @@ export class TransportRequestsService {
     this.assertCustomerRole(currentUser);
 
     const initialStatusId = await this.requireInitialStatusId();
-    const [baslangicKonum, varisKonum] = await Promise.all([
-      this.locationsService.resolveCanonicalLocation(
-        createTransportRequestDto.baslangicKonum.provider,
-        createTransportRequestDto.baslangicKonum.placeId,
-        createTransportRequestDto.baslangicKonum.sessionToken
-      ),
-      this.locationsService.resolveCanonicalLocation(
-        createTransportRequestDto.varisKonum.provider,
-        createTransportRequestDto.varisKonum.placeId,
-        createTransportRequestDto.varisKonum.sessionToken
-      ),
-    ]);
+    const routeFields = await this.resolveRouteFields(
+      createTransportRequestDto.baslangicKonum,
+      createTransportRequestDto.varisKonum
+    );
+
     const transportRequest = await this.transportRequestsRepository.create({
       musteriId: currentUser.id,
-      baslangicSehri: baslangicKonum.sehir,
-      varisSehri: varisKonum.sehir,
-      baslangicKonumMetni: baslangicKonum.konumMetni,
-      varisKonumMetni: varisKonum.konumMetni,
-      baslangicProvider: baslangicKonum.provider,
-      varisProvider: varisKonum.provider,
-      baslangicPlaceId: baslangicKonum.placeId,
-      varisPlaceId: varisKonum.placeId,
-      normalizeBaslangicSehir: baslangicKonum.sehir,
-      normalizeVarisSehir: varisKonum.sehir,
-      normalizeBaslangicIlce: baslangicKonum.ilce,
-      normalizeVarisIlce: varisKonum.ilce,
-      baslangicEnlem: baslangicKonum.lat,
-      baslangicBoylam: baslangicKonum.lng,
-      varisEnlem: varisKonum.lat,
-      varisBoylam: varisKonum.lng,
+      ...routeFields,
       tekTasimaIstiyor: createTransportRequestDto.tekTasimaIstiyor,
       agirlikKg: createTransportRequestDto.agirlikKg,
       hacimM3: createTransportRequestDto.hacimM3,
@@ -136,40 +135,22 @@ export class TransportRequestsService {
       );
     }
 
-    const [baslangicKonum, varisKonum] = await Promise.all([
-      this.locationsService.resolveCanonicalLocation(
-        updateTransportRequestDto.baslangicKonum.provider,
-        updateTransportRequestDto.baslangicKonum.placeId,
-        updateTransportRequestDto.baslangicKonum.sessionToken
-      ),
-      this.locationsService.resolveCanonicalLocation(
-        updateTransportRequestDto.varisKonum.provider,
-        updateTransportRequestDto.varisKonum.placeId,
-        updateTransportRequestDto.varisKonum.sessionToken
-      ),
-    ]);
+    const routeFields = this.shouldRecalculateRoute(
+      existingTransportRequest,
+      updateTransportRequestDto
+    )
+      ? await this.resolveRouteFields(
+          updateTransportRequestDto.baslangicKonum,
+          updateTransportRequestDto.varisKonum
+        )
+      : this.getStoredRouteFields(existingTransportRequest);
 
     const transportRequest =
       await this.transportRequestsRepository.updateByIdAndCustomerId(
         id,
         currentUser.id,
         {
-          baslangicSehri: baslangicKonum.sehir,
-          varisSehri: varisKonum.sehir,
-          baslangicKonumMetni: baslangicKonum.konumMetni,
-          varisKonumMetni: varisKonum.konumMetni,
-          baslangicProvider: baslangicKonum.provider,
-          varisProvider: varisKonum.provider,
-          baslangicPlaceId: baslangicKonum.placeId,
-          varisPlaceId: varisKonum.placeId,
-          normalizeBaslangicSehir: baslangicKonum.sehir,
-          normalizeVarisSehir: varisKonum.sehir,
-          normalizeBaslangicIlce: baslangicKonum.ilce,
-          normalizeVarisIlce: varisKonum.ilce,
-          baslangicEnlem: baslangicKonum.lat,
-          baslangicBoylam: baslangicKonum.lng,
-          varisEnlem: varisKonum.lat,
-          varisBoylam: varisKonum.lng,
+          ...routeFields,
           tekTasimaIstiyor: updateTransportRequestDto.tekTasimaIstiyor,
           agirlikKg: updateTransportRequestDto.agirlikKg,
           hacimM3: updateTransportRequestDto.hacimM3,
@@ -264,6 +245,8 @@ export class TransportRequestsService {
       varisSehri: transportRequest.varisSehri,
       baslangicKonumMetni: transportRequest.baslangicKonumMetni,
       varisKonumMetni: transportRequest.varisKonumMetni,
+      rotaMesafeMetre: transportRequest.rotaMesafeMetre,
+      rotaSureSaniye: transportRequest.rotaSureSaniye,
       tekTasimaIstiyor: transportRequest.tekTasimaIstiyor,
       agirlikKg: transportRequest.agirlikKg,
       hacimM3: transportRequest.hacimM3,
@@ -325,6 +308,124 @@ export class TransportRequestsService {
         durumTuru: job.durumTuru,
         durumAdi: job.durumAdi,
       }),
+    };
+  }
+
+  private shouldRecalculateRoute(
+    transportRequest: StoredTransportRequestRecord,
+    updateTransportRequestDto: UpdateTransportRequestDto
+  ): boolean {
+    return (
+      this.hasLocationSelectionChanged(
+        transportRequest.baslangicProvider,
+        transportRequest.baslangicPlaceId,
+        updateTransportRequestDto.baslangicKonum.provider,
+        updateTransportRequestDto.baslangicKonum.placeId
+      ) ||
+      this.hasLocationSelectionChanged(
+        transportRequest.varisProvider,
+        transportRequest.varisPlaceId,
+        updateTransportRequestDto.varisKonum.provider,
+        updateTransportRequestDto.varisKonum.placeId
+      )
+    );
+  }
+
+  private hasLocationSelectionChanged(
+    currentProvider: string | null,
+    currentPlaceId: string | null,
+    nextProvider: string,
+    nextPlaceId: string
+  ): boolean {
+    return (
+      currentProvider?.trim().toLowerCase() !==
+        nextProvider.trim().toLowerCase() ||
+      currentPlaceId?.trim() !== nextPlaceId.trim()
+    );
+  }
+
+  private async resolveRouteFields(
+    baslangicKonum: CreateTransportRequestDto["baslangicKonum"],
+    varisKonum: CreateTransportRequestDto["varisKonum"]
+  ): Promise<TransportRequestRouteFields> {
+    const [resolvedBaslangicKonum, resolvedVarisKonum] = await Promise.all([
+      this.locationsService.resolveCanonicalLocation(
+        baslangicKonum.provider,
+        baslangicKonum.placeId,
+        baslangicKonum.sessionToken
+      ),
+      this.locationsService.resolveCanonicalLocation(
+        varisKonum.provider,
+        varisKonum.placeId,
+        varisKonum.sessionToken
+      ),
+    ]);
+
+    if (
+      resolvedBaslangicKonum.provider.trim().toLowerCase() !==
+      resolvedVarisKonum.provider.trim().toLowerCase()
+    ) {
+      throw new InternalServerErrorException(
+        "Transport request locations must resolve with the same route provider."
+      );
+    }
+
+    const routeMetrics = await this.locationsService.getRouteMetrics(
+      resolvedBaslangicKonum.provider,
+      {
+        lat: resolvedBaslangicKonum.lat,
+        lng: resolvedBaslangicKonum.lng,
+      },
+      {
+        lat: resolvedVarisKonum.lat,
+        lng: resolvedVarisKonum.lng,
+      }
+    );
+
+    return {
+      baslangicSehri: resolvedBaslangicKonum.sehir,
+      varisSehri: resolvedVarisKonum.sehir,
+      baslangicKonumMetni: resolvedBaslangicKonum.konumMetni,
+      varisKonumMetni: resolvedVarisKonum.konumMetni,
+      baslangicProvider: resolvedBaslangicKonum.provider,
+      varisProvider: resolvedVarisKonum.provider,
+      baslangicPlaceId: resolvedBaslangicKonum.placeId,
+      varisPlaceId: resolvedVarisKonum.placeId,
+      normalizeBaslangicSehir: resolvedBaslangicKonum.sehir,
+      normalizeVarisSehir: resolvedVarisKonum.sehir,
+      normalizeBaslangicIlce: resolvedBaslangicKonum.ilce,
+      normalizeVarisIlce: resolvedVarisKonum.ilce,
+      baslangicEnlem: resolvedBaslangicKonum.lat,
+      baslangicBoylam: resolvedBaslangicKonum.lng,
+      varisEnlem: resolvedVarisKonum.lat,
+      varisBoylam: resolvedVarisKonum.lng,
+      rotaMesafeMetre: routeMetrics.distanceMeters,
+      rotaSureSaniye: routeMetrics.durationSeconds,
+    };
+  }
+
+  private getStoredRouteFields(
+    transportRequest: StoredTransportRequestRecord
+  ): TransportRequestRouteFields {
+    return {
+      baslangicSehri: transportRequest.baslangicSehri,
+      varisSehri: transportRequest.varisSehri,
+      baslangicKonumMetni: transportRequest.baslangicKonumMetni,
+      varisKonumMetni: transportRequest.varisKonumMetni,
+      baslangicProvider: transportRequest.baslangicProvider,
+      varisProvider: transportRequest.varisProvider,
+      baslangicPlaceId: transportRequest.baslangicPlaceId,
+      varisPlaceId: transportRequest.varisPlaceId,
+      normalizeBaslangicSehir: transportRequest.normalizeBaslangicSehir,
+      normalizeVarisSehir: transportRequest.normalizeVarisSehir,
+      normalizeBaslangicIlce: transportRequest.normalizeBaslangicIlce,
+      normalizeVarisIlce: transportRequest.normalizeVarisIlce,
+      baslangicEnlem: transportRequest.baslangicEnlem,
+      baslangicBoylam: transportRequest.baslangicBoylam,
+      varisEnlem: transportRequest.varisEnlem,
+      varisBoylam: transportRequest.varisBoylam,
+      rotaMesafeMetre: transportRequest.rotaMesafeMetre,
+      rotaSureSaniye: transportRequest.rotaSureSaniye,
     };
   }
 }

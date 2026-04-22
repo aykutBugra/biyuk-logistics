@@ -8,7 +8,7 @@ export class LocationAutocompleteQueryDto {
   @Transform(trimString)
   @IsString()
   @IsNotEmpty()
-  @MinLength(3)
+  @MinLength(3, { message: "Konum aramasi icin en az 3 karakter girilmelidir." })
   @MaxLength(120)
   q!: string;
 

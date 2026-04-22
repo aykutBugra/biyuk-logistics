@@ -1,5 +1,7 @@
 import { registerAs } from "@nestjs/config";
 
+
+//Bu dosya, haritalar (maps) ile ilgili yapılandırma ayarlarını tanımlamak için kullanılır.
 export default registerAs("maps", () => ({
   provider: (process.env.MAP_PROVIDER ?? "google").trim().toLowerCase(),
   routeEngine: (process.env.ROUTE_ENGINE ?? "google").trim().toLowerCase(),

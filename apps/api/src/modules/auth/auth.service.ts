@@ -42,6 +42,9 @@ type NormalizedRegisterInput = {  //NormalizedRegisterInput, kayıt işlemi sır
   initialVehicle: VehicleDraft | null;
 };
 
+
+//AuthService kendi içinde new UsersService() veya new RolesService() gibi işlemler yapmaz, bunun yerine
+//bu servisleri constructor aracılığıyla alır. 
 @Injectable()
 export class AuthService {    //AuthService, kimlik doğrulama işlemlerini gerçekleştiren bir hizmettir
   constructor(

@@ -4,6 +4,8 @@ export class OpenRequestListItemResponseDto {
   varisSehri!: string;
   baslangicKonumMetni!: string | null;
   varisKonumMetni!: string | null;
+  rotaMesafeMetre!: number | null;
+  rotaSureSaniye!: number | null;
   tekTasimaIstiyor!: boolean;
   agirlikKg!: number | null;
   hacimM3!: number | null;

@@ -128,6 +128,8 @@ model Istek {
   baslangicBoylam           Decimal   @db.Decimal(9, 6)
   varisEnlem                Decimal   @db.Decimal(9, 6)
   varisBoylam               Decimal   @db.Decimal(9, 6)
+  rotaMesafeMetre           Int?
+  rotaSureSaniye            Int?
   tekTasimaIstiyor          Boolean   @default(false)
   agirlikKg                 Decimal?
   hacimM3                   Decimal?
