@@ -20,13 +20,13 @@ function ActionLink({ href, label, variant }: HomeAction) {
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition ${
+      className={
         variant === "primary"
-          ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+          ? "app-button-primary"
           : variant === "secondary"
-            ? "border border-blue-200 bg-white text-blue-700 hover:bg-blue-50"
-            : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
-      }`}
+            ? "app-button-secondary"
+            : "app-button-ghost"
+      }
     >
       {label}
     </Link>
@@ -49,16 +49,17 @@ export default function HomeCustomerActions() {
   }, []);
 
   if (!isReady) {
-    return <div className="h-64 rounded-3xl border border-slate-200 bg-white shadow-sm" />;
+    return <div className="app-surface h-64 rounded-[2rem]" />;
   }
 
   const isCarrier = storedAuthHasRole(auth, STORED_ROLE_NAMES.NAKLIYECI);
   const isCustomer = storedAuthHasRole(auth, STORED_ROLE_NAMES.MUSTERI);
+  const hasDualBusinessRoles = isCarrier && isCustomer;
 
   if (!isCarrier && !isCustomer) {
     return (
       <div className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="app-surface-strong rounded-[2rem] p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">
             Musteri girisi
           </p>
@@ -75,7 +76,7 @@ export default function HomeCustomerActions() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="app-surface-strong rounded-[2rem] p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">
             Nakliyeci girisi
           </p>
@@ -99,9 +100,47 @@ export default function HomeCustomerActions() {
     );
   }
 
+  if (hasDualBusinessRoles) {
+    return (
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="app-surface-strong rounded-[2rem] p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-amber-700">
+            Musteri workspace
+          </p>
+          <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+            Istek ve teklif tarafina gec
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Yonetmek istedigin baglami sec. Musteri modunda isteklerini ve gelen
+            tekliflerini one cikarirsin.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <ActionLink href="/dashboard" label="Workspace sec" variant="primary" />
+          </div>
+        </div>
+
+        <div className="app-surface-strong rounded-[2rem] p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-700">
+            Nakliyeci workspace
+          </p>
+          <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+            Kesif ve operasyon tarafina gec
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Nakliyeci modunda acik istekler, rotalar, araclar ve nakliye
+            operasyonu one cikar.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <ActionLink href="/dashboard" label="Workspace sec" variant="secondary" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isCarrier) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="app-surface-strong rounded-[2rem] p-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">
@@ -150,7 +189,7 @@ export default function HomeCustomerActions() {
   }
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="app-surface-strong rounded-[2rem] p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-2xl space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">

@@ -1,6 +1,7 @@
 import { apiFetch } from "./api-client";
 
 export type OpenOfferRequestFilters = {
+  carrierRouteId?: number;
   baslangicSehir?: string;
   varisSehir?: string;
   tekTasimaIstiyor?: boolean;
@@ -12,12 +13,23 @@ export type OpenOfferRequestFilters = {
   tasimaTarihi?: string;
 };
 
+export type OpenOfferRequestRouteCompatibility = {
+  carrierRouteId: number;
+  extraMesafeMetre: number;
+  extraSureSaniye: number;
+  uygunlukEtiketi: "UYGUN" | "SINIRDA" | "UYGUN_DEGIL";
+};
+
 export type OpenOfferRequestListItem = {
   id: number;
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
   varisKonumMetni: string | null;
+  baslangicEnlem: number;
+  baslangicBoylam: number;
+  varisEnlem: number;
+  varisBoylam: number;
   rotaMesafeMetre: number | null;
   rotaSureSaniye: number | null;
   tekTasimaIstiyor: boolean;
@@ -29,6 +41,7 @@ export type OpenOfferRequestListItem = {
   olusturmaTarihi: string;
   durum: string;
   alreadyOffered: boolean;
+  rotaUyumu: OpenOfferRequestRouteCompatibility | null;
 };
 
 export type OpenOfferRequestDetail = OpenOfferRequestListItem & {
@@ -40,10 +53,6 @@ export type OpenOfferRequestDetail = OpenOfferRequestListItem & {
   normalizeVarisSehir: string | null;
   normalizeBaslangicIlce: string | null;
   normalizeVarisIlce: string | null;
-  baslangicEnlem: number;
-  baslangicBoylam: number;
-  varisEnlem: number;
-  varisBoylam: number;
   hasActiveVehicle: boolean;
   hasExistingOffer: boolean;
 };
@@ -104,6 +113,10 @@ export type MyIncomingOfferItem = {
 function buildSearchParams(filters: OpenOfferRequestFilters = {}): string {
   const searchParams = new URLSearchParams();
 
+  if (typeof filters.carrierRouteId === "number") {
+    searchParams.set("carrierRouteId", String(filters.carrierRouteId));
+  }
+
   if (filters.baslangicSehir) {
     searchParams.set("baslangicSehir", filters.baslangicSehir);
   }
@@ -158,8 +171,22 @@ export function getOpenOfferRequests(
   });
 }
 
-export function getOpenOfferRequestDetail(requestId: number, accessToken: string) {
-  return apiFetch<OpenOfferRequestDetail>(`/offers/open-requests/${requestId}`, {
+export function getOpenOfferRequestDetail(
+  requestId: number,
+  accessToken: string,
+  carrierRouteId?: number
+) {
+  const searchParams = new URLSearchParams();
+
+  if (typeof carrierRouteId === "number") {
+    searchParams.set("carrierRouteId", String(carrierRouteId));
+  }
+
+  const path = searchParams.toString()
+    ? `/offers/open-requests/${requestId}?${searchParams.toString()}`
+    : `/offers/open-requests/${requestId}`;
+
+  return apiFetch<OpenOfferRequestDetail>(path, {
     method: "GET",
     accessToken,
   });

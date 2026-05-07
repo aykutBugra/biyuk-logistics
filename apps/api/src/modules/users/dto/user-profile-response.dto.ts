@@ -1,5 +1,8 @@
 //users module'ünün DTO'su. Kullanıcı profili bilgilerini döndürmek için kullanılır.
-import type { RoleName } from "../../../common/constants/role-names";
+import type {
+  BusinessRoleName,
+  RoleName,
+} from "../../../common/constants/role-names";
 
 export class UserProfileResponseDto {
   id!: number;
@@ -8,5 +11,9 @@ export class UserProfileResponseDto {
   mail!: string;
   kullaniciAdi!: string;
   telefonNumarasi!: string | null;
+  customerIntroDismissedAt!: Date | null;
+  carrierIntroDismissedAt!: Date | null;
   roles!: RoleName[];
+  businessRoles!: BusinessRoleName[];
+  isAdmin!: boolean;
 }

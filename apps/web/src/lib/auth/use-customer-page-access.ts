@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   STORED_ROLE_NAMES,
   getStoredAuth,
+  setStoredDashboardWorkspaceMode,
   storedAuthHasRole,
   subscribeToAuthChanges,
   type StoredAuth,
@@ -41,7 +42,10 @@ export function useCustomerPageAccess(): CustomerPageAccess {
 
     if (!storedAuthHasRole(auth, STORED_ROLE_NAMES.MUSTERI)) {
       router.replace("/");
+      return;
     }
+
+    setStoredDashboardWorkspaceMode("customer");
   }, [auth, router]);
 
   if (auth === undefined) {

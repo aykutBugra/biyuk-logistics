@@ -1,11 +1,17 @@
+import { OpenRequestRouteCompatibilityResponseDto } from "./open-request-route-compatibility-response.dto";
+
 export class OpenRequestListItemResponseDto {
   id!: number;
   baslangicSehri!: string;
   varisSehri!: string;
   baslangicKonumMetni!: string | null;
   varisKonumMetni!: string | null;
-  rotaMesafeMetre!: number | null;    //görevi get post ve put işlemlerinde rota mesafe bilgisini tutar
-  rotaSureSaniye!: number | null;     //görevi get post ve put işlemlerinde rota süre bilgisini tutar
+  baslangicEnlem!: number;
+  baslangicBoylam!: number;
+  varisEnlem!: number;
+  varisBoylam!: number;
+  rotaMesafeMetre!: number | null;
+  rotaSureSaniye!: number | null;
   tekTasimaIstiyor!: boolean;
   agirlikKg!: number | null;
   hacimM3!: number | null;
@@ -15,4 +21,5 @@ export class OpenRequestListItemResponseDto {
   olusturmaTarihi!: Date;
   durum!: string;
   alreadyOffered!: boolean;
+  rotaUyumu!: OpenRequestRouteCompatibilityResponseDto | null;
 }

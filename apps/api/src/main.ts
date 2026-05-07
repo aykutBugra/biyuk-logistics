@@ -1,28 +1,33 @@
 import { ValidationPipe } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config"; //nest uygulamasını başlatmak için 
-import { NestFactory } from "@nestjs/core";     //gerekli modüller
+import { ConfigService } from "@nestjs/config";
+import { NestFactory } from "@nestjs/core";
+import * as classTransformer from "class-transformer";
+import * as classValidator from "class-validator";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);  //CORS açmak ve global pipe eklemek 
-  const configService = app.get(ConfigService);     //için Nest uygulamasını başlatır
+  const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
   const corsOrigins = configService.get<string[]>("app.corsOrigins") ?? [];
 
-  app.enableCors({            //CORS yapılandırması
+  app.enableCors({
     origin: corsOrigins.length > 0 ? corsOrigins : true,
     credentials: true,
   });
 
-  app.setGlobalPrefix("api/v1");  //Tüm API yollarına /api/v1 öneki ekler
+  app.setGlobalPrefix("api/v1");
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,    //Gelen verilerde tanımlanmamış özellikleri otomatik olarak kaldırır
+      whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
+      transformerPackage: classTransformer,
+      validatorPackage: classValidator,
     })
   );
-  const port = configService.get<number>("app.port") ?? 4000; 
-  await app.listen(port);  //Uygulamanın dinleyeceği portu yapılandırmadan alır, 
-}                           //yoksa varsayılan olarak 4000 kullanır
 
-void bootstrap(); //Bootstrap fonksiyonunu çağırarak uygulamayı başlatır
+  const port = configService.get<number>("app.port") ?? 4000;
+  await app.listen(port);
+}
+
+void bootstrap();

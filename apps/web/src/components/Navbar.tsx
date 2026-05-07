@@ -6,10 +6,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { ApiClientError } from "@/lib/api/api-client";
 import { getMyUnreadNotificationCount } from "@/lib/api/notifications";
 import {
-  STORED_ROLE_NAMES,
   clearStoredAuth,
+  getDashboardHref,
   getStoredAuth,
-  storedAuthHasRole,
   subscribeToAuthChanges,
   type StoredAuth,
 } from "@/lib/auth/auth-storage";
@@ -21,18 +20,6 @@ function getAuthLabel(auth: StoredAuth | null): string {
   }
 
   return auth.user.kullaniciAdi || auth.user.ad || "Merhaba";
-}
-
-function getDashboardHref(auth: StoredAuth | null): string {
-  if (storedAuthHasRole(auth, STORED_ROLE_NAMES.NAKLIYECI)) {
-    return "/dashboard/acik_istekler";
-  }
-
-  if (storedAuthHasRole(auth, STORED_ROLE_NAMES.MUSTERI)) {
-    return "/dashboard/isteklerim";
-  }
-
-  return "/";
 }
 
 function isActive(pathname: string, href: string): boolean {
@@ -68,11 +55,7 @@ export default function Navbar() {
   const hasUnreadNotifications = displayedUnreadNotificationCount > 0;
 
   useEffect(() => {
-    if (!isReady) {
-      return;
-    }
-
-    if (!auth?.accessToken) {
+    if (!isReady || !auth?.accessToken) {
       return;
     }
 
@@ -113,6 +96,10 @@ export default function Navbar() {
     };
   }, [auth, isReady, pathname]);
 
+  if (pathname.startsWith("/dashboard")) {
+    return null;
+  }
+
   const publicLinks = [
     { href: "/", label: "Ana Sayfa" },
     { href: "/hakkimizda", label: "Hakkimizda" },
@@ -130,15 +117,20 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 shadow-sm backdrop-blur">
+    <nav className="sticky top-0 z-50 border-b border-[var(--topbar-border)] bg-[var(--topbar-bg)] backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex min-h-16 items-center justify-between gap-4 py-3">
+        <div className="flex min-h-[var(--topbar-height)] items-center justify-between gap-4 py-3">
           <div className="flex items-center gap-6">
             <Link
               href="/"
-              className="text-2xl font-black tracking-tight text-slate-950 transition hover:text-blue-700"
+              className="flex items-center gap-3 text-slate-950 transition hover:opacity-90"
             >
-              Bi<span className="text-blue-600">’</span>yük
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-blue-200/80 bg-blue-50 text-sm font-black text-blue-700">
+                B
+              </span>
+              <span className="text-2xl font-black tracking-tight">
+                Bi<span className="text-blue-600">'</span>yuk
+              </span>
             </Link>
 
             <div className="hidden items-center gap-2 md:flex">
@@ -149,10 +141,10 @@ export default function Navbar() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`rounded-full px-3 py-2 text-sm font-semibold transition ${
+                    className={`rounded-full px-3.5 py-2 text-sm font-semibold transition ${
                       active
-                        ? "bg-slate-100 text-slate-950"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-slate-600 hover:bg-white/80 hover:text-slate-950"
                     }`}
                   >
                     {link.label}
@@ -169,25 +161,25 @@ export default function Navbar() {
               <>
                 <Link
                   href={notificationsHref}
-                  className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition ${
+                  className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition ${
                     isActive(pathname, notificationsHref)
                       ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                      : "text-slate-600 hover:bg-white/80 hover:text-slate-950"
                   }`}
                 >
                   <span>Bildirimler</span>
                   {hasUnreadNotifications ? (
-                      <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white">
+                    <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white">
                       {displayedUnreadNotificationCount}
                     </span>
                   ) : null}
                 </Link>
                 <Link
                   href={dashboardHref}
-                  className={`rounded-full px-3 py-2 text-sm font-semibold transition ${
+                  className={`rounded-full px-3.5 py-2 text-sm font-semibold transition ${
                     pathname.startsWith("/dashboard")
                       ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                      : "text-slate-600 hover:bg-white/80 hover:text-slate-950"
                   }`}
                 >
                   Panelim
@@ -198,23 +190,17 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="rounded-full px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
+                  className="rounded-full px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white/80 hover:text-slate-950"
                 >
                   Cikis Yap
                 </button>
               </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className="rounded-full px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
-                >
+                <Link href="/login" className="app-button-ghost px-4 py-2.5">
                   Giris Yap
                 </Link>
-                <Link
-                  href="/register"
-                  className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
-                >
+                <Link href="/register" className="app-button-primary px-5 py-2.5">
                   Kayit Ol
                 </Link>
               </>
@@ -224,7 +210,7 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => setIsMobileOpen((currentState) => !currentState)}
-            className="inline-flex items-center rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 md:hidden"
+            className="inline-flex items-center rounded-2xl border border-slate-200/80 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 md:hidden"
             aria-expanded={isMobileOpen}
             aria-label="Menuyu ac"
           >
@@ -233,7 +219,7 @@ export default function Navbar() {
         </div>
 
         {isMobileOpen ? (
-          <div className="space-y-3 border-t border-slate-200 py-4 md:hidden">
+          <div className="space-y-3 border-t border-slate-200/80 py-4 md:hidden">
             <div className="flex flex-col gap-2">
               {publicLinks.map((link) => {
                 const active = isActive(pathname, link.href);
@@ -245,8 +231,8 @@ export default function Navbar() {
                     onClick={handleMobileNavigate}
                     className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
                       active
-                        ? "bg-slate-100 text-slate-950"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                        ? "bg-blue-50 text-blue-700"
+                        : "bg-white/70 text-slate-600 hover:bg-white hover:text-slate-950"
                     }`}
                   >
                     {link.label}
@@ -257,11 +243,11 @@ export default function Navbar() {
 
             {isReady ? (
               auth ? (
-                <div className="space-y-2 border-t border-slate-200 pt-3">
+                <div className="space-y-2 border-t border-slate-200/80 pt-3">
                   <Link
                     href={notificationsHref}
                     onClick={handleMobileNavigate}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
+                    className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700"
                   >
                     <span>Bildirimler</span>
                     {hasUnreadNotifications ? (
@@ -283,24 +269,24 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-700"
+                    className="w-full rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3 text-left text-sm font-semibold text-slate-700"
                   >
                     Cikis Yap
                   </button>
                 </div>
               ) : (
-                <div className="space-y-2 border-t border-slate-200 pt-3">
+                <div className="space-y-2 border-t border-slate-200/80 pt-3">
                   <Link
                     href="/login"
                     onClick={handleMobileNavigate}
-                    className="block rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
+                    className="block rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700"
                   >
                     Giris Yap
                   </Link>
                   <Link
                     href="/register"
                     onClick={handleMobileNavigate}
-                    className="block rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white"
+                    className="app-button-primary block px-4 py-3 text-sm"
                   >
                     Kayit Ol
                   </Link>

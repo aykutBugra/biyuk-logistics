@@ -100,7 +100,7 @@ export default function CitySelectField({
           {selectedLabel || placeholder}
         </span>
         <span className="text-xs font-semibold text-slate-500">
-          {isOpen ? "Kapat" : "Sec"}
+          {isOpen ? "Kapat" : "Seç"}
         </span>
       </button>
 
@@ -111,18 +111,18 @@ export default function CitySelectField({
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="81 il icinde ara"
+              placeholder="81 il içinde ara"
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
             <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>{filteredOptions.length} sonuc</span>
+              <span>{filteredOptions.length} sonuç</span>
               {value ? (
                 <button
                   type="button"
                   onClick={handleClear}
                   className="font-semibold text-blue-700 transition hover:text-blue-800"
                 >
-                  Secimi temizle
+                  Seçimi temizle
                 </button>
               ) : null}
             </div>
@@ -150,14 +150,14 @@ export default function CitySelectField({
                   >
                     <span>{option.label}</span>
                     {isSelected ? (
-                      <span className="text-xs font-semibold">Secili</span>
+                      <span className="text-xs font-semibold">Seçili</span>
                     ) : null}
                   </button>
                 );
               })
             ) : (
               <div className="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-500">
-                Eslesen il bulunamadi.
+                Eşleşen il bulunamadı.
               </div>
             )}
           </div>

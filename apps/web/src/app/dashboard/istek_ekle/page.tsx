@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
 import InputField from "@/components/InputField";
 import LocationAutocompleteField from "@/components/LocationAutocompleteField";
+import VolumeEstimateAssistant from "@/components/VolumeEstimateAssistant";
 import { ApiClientError } from "@/lib/api/api-client";
 import type { SelectedLocation } from "@/lib/api/locations";
 import {
@@ -169,17 +170,30 @@ export default function CreateTransportRequestPage() {
             onChange={handleChange}
             disabled={isSubmitting}
           />
-          <InputField
-            name="hacimM3"
-            label="Hacim (m3)"
-            type="number"
-            min="0.01"
-            step="0.01"
-            placeholder="Orn: 12.5"
-            value={form.hacimM3}
-            onChange={handleChange}
-            disabled={isSubmitting}
-          />
+          <div className="space-y-3">
+            <InputField
+              name="hacimM3"
+              label="Hacim (m3)"
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="Orn: 12.5"
+              value={form.hacimM3}
+              onChange={handleChange}
+              disabled={isSubmitting}
+            />
+            <VolumeEstimateAssistant
+              accessToken={accessToken ?? ""}
+              disabled={isSubmitting}
+              yukTipi={form.yukTipi}
+              onApplyEstimate={(value) =>
+                setForm((currentForm) => ({
+                  ...currentForm,
+                  hacimM3: value,
+                }))
+              }
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700" htmlFor="yukTipi">
               Yuk tipi

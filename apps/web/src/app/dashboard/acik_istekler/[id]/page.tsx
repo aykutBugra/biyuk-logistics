@@ -1,24 +1,39 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import {
+  type ReadonlyURLSearchParams,
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
+import InlineHelpTrigger from "@/components/InlineHelpTrigger";
 import { ApiClientError } from "@/lib/api/api-client";
+import {
+  getCarrierRouteDetail,
+  type CarrierRouteDetail,
+} from "@/lib/api/carrier-routes";
 import {
   createOffer,
   getOpenOfferRequestDetail,
   type OpenOfferRequestDetail,
+  type OpenOfferRequestRouteCompatibility,
 } from "@/lib/api/offers";
 import { getMyVehicles, type VehicleListItem } from "@/lib/api/vehicles";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
 import {
   formatLocationLabel,
+  formatRouteDistanceKm,
+  formatRouteDuration,
   formatVolumeM3,
   formatWeightKg,
   getCargoTypeLabel,
 } from "@/lib/logistics";
+import { TeklifFiyatÖnerisiHesaplama } from "@/lib/pricing/offer-price-suggestion";
 
 type OfferForm = {
   aracId: string;
@@ -39,12 +54,97 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
-export default function OpenTransportRequestDetailPage() {
+function formatPlannedDate(value: string): string {
+  return new Intl.DateTimeFormat("tr-TR", {
+    dateStyle: "medium",
+  }).format(new Date(`${value}T00:00:00`));
+}
+
+function parsePositiveInteger(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function buildCarrierRouteSelectionPath(
+  pathname: string,
+  searchParams: ReadonlyURLSearchParams | null,
+  carrierRouteId: number | null
+): string {
+  const nextSearchParams = new URLSearchParams(searchParams?.toString() ?? "");
+
+  if (carrierRouteId === null) {
+    nextSearchParams.delete("carrierRouteId");
+  } else {
+    nextSearchParams.set("carrierRouteId", String(carrierRouteId));
+  }
+
+  const nextQuery = nextSearchParams.toString();
+  return nextQuery ? `${pathname}?${nextQuery}` : pathname;
+}
+
+function buildOpenRequestsListPath(carrierRouteId: number | null): string {
+  if (carrierRouteId === null) {
+    return "/dashboard/acik_istekler";
+  }
+
+  return `/dashboard/acik_istekler?carrierRouteId=${carrierRouteId}`;
+}
+
+function getRouteCompatibilityLabelText(
+  value: OpenOfferRequestRouteCompatibility["uygunlukEtiketi"]
+): string {
+  switch (value) {
+    case "UYGUN":
+      return "Uygun";
+    case "SINIRDA":
+      return "Sinirda";
+    case "UYGUN_DEGIL":
+      return "Uygun degil";
+    default:
+      return value;
+  }
+}
+
+function getRouteCompatibilityBadgeClassName(
+  value: OpenOfferRequestRouteCompatibility["uygunlukEtiketi"]
+): string {
+  switch (value) {
+    case "UYGUN":
+      return "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100";
+    case "SINIRDA":
+      return "rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100";
+    case "UYGUN_DEGIL":
+      return "rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-100";
+    default:
+      return "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700";
+  }
+}
+
+function OpenTransportRequestDetailPageFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+      <div className="font-medium text-gray-600">Yukleniyor...</div>
+    </div>
+  );
+}
+
+function OpenTransportRequestDetailPageContent() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { accessToken, status } = useCarrierPageAccess();
   const params = useParams<{ id: string }>();
   const requestId = Number(params.id);
+  const selectedCarrierRouteId = parsePositiveInteger(
+    searchParams?.get("carrierRouteId") ?? null
+  );
   const [request, setRequest] = useState<OpenOfferRequestDetail | null>(null);
+  const [selectedCarrierRoute, setSelectedCarrierRoute] =
+    useState<CarrierRouteDetail | null>(null);
   const [vehicles, setVehicles] = useState<VehicleListItem[]>([]);
   const [form, setForm] = useState<OfferForm>(initialForm);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -68,12 +168,25 @@ export default function OpenTransportRequestDetailPage() {
     let isMounted = true;
 
     const loadRequest = async () => {
+      let hasValidatedSelectedRoute = false;
+
       try {
         setIsLoading(true);
         setErrorMessage(null);
 
+        const carrierRouteResponse =
+          selectedCarrierRouteId !== null
+            ? await getCarrierRouteDetail(selectedCarrierRouteId, accessToken)
+            : null;
+
+        hasValidatedSelectedRoute = selectedCarrierRouteId !== null;
+
         const [requestResponse, vehicleResponse] = await Promise.all([
-          getOpenOfferRequestDetail(requestId, accessToken),
+          getOpenOfferRequestDetail(
+            requestId,
+            accessToken,
+            selectedCarrierRouteId ?? undefined
+          ),
           getMyVehicles(accessToken),
         ]);
 
@@ -82,6 +195,7 @@ export default function OpenTransportRequestDetailPage() {
         }
 
         setRequest(requestResponse);
+        setSelectedCarrierRoute(carrierRouteResponse);
         setVehicles(vehicleResponse);
         setForm((currentForm) => ({
           ...currentForm,
@@ -102,6 +216,31 @@ export default function OpenTransportRequestDetailPage() {
 
         if (error instanceof ApiClientError && error.status === 403) {
           router.replace("/");
+          return;
+        }
+
+        if (
+          error instanceof ApiClientError &&
+          error.status === 404 &&
+          selectedCarrierRouteId !== null
+        ) {
+          if (hasValidatedSelectedRoute) {
+            window.alert("Bu istek secili rota filtresine uymuyor.");
+            router.replace(buildOpenRequestsListPath(selectedCarrierRouteId));
+            return;
+          }
+
+          setSelectedCarrierRoute(null);
+          router.replace(buildCarrierRouteSelectionPath(pathname, searchParams, null));
+          return;
+        }
+
+        if (
+          error instanceof ApiClientError &&
+          error.status === 503 &&
+          selectedCarrierRouteId !== null
+        ) {
+          setErrorMessage("Secili rota filtresi su anda uygulanamiyor.");
           return;
         }
 
@@ -129,7 +268,15 @@ export default function OpenTransportRequestDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [accessToken, requestId, router, status]);
+  }, [
+    accessToken,
+    pathname,
+    requestId,
+    router,
+    searchParams,
+    selectedCarrierRouteId,
+    status,
+  ]);
 
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -188,19 +335,24 @@ export default function OpenTransportRequestDetailPage() {
 
       if (error instanceof ApiClientError && error.status === 404) {
         window.alert("Bu istek artik teklif vermeye uygun degil.");
-        router.replace("/dashboard/acik_istekler");
+        router.replace(buildOpenRequestsListPath(selectedCarrierRouteId));
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 409) {
-        if (error.message === "You have already created an open offer for this transport request.") {
+        if (
+          error.message ===
+          "You have already created an open offer for this transport request."
+        ) {
           window.alert("Bu istege zaten acik bir teklif verdin.");
           return;
         }
 
-        if (error.message === "This transport request is no longer open for offers.") {
+        if (
+          error.message === "This transport request is no longer open for offers."
+        ) {
           window.alert("Bu istek artik teklif kabul etmiyor.");
-          router.replace("/dashboard/acik_istekler");
+          router.replace(buildOpenRequestsListPath(selectedCarrierRouteId));
           return;
         }
 
@@ -223,16 +375,56 @@ export default function OpenTransportRequestDetailPage() {
     }
   };
 
+  const selectedVehicle =
+    vehicles.find((vehicle) => vehicle.id === Number(form.aracId)) ?? null;
+  const selectedVehicleCapacitySummary = selectedVehicle?.capacitySummary ?? null;
+  const needsVehicleForSuggestion = Boolean(
+    request?.tekTasimaIstiyor && !selectedVehicle
+  );
+  const teorikKalanAgirlikKg =
+    request && selectedVehicleCapacitySummary && request.agirlikKg !== null
+      ? selectedVehicleCapacitySummary.kalanAgirlikKg - request.agirlikKg
+      : null;
+  const teorikKalanHacimM3 =
+    request &&
+    selectedVehicleCapacitySummary &&
+    request.hacimM3 !== null &&
+    selectedVehicleCapacitySummary.kalanHacimM3 !== null
+      ? selectedVehicleCapacitySummary.kalanHacimM3 - request.hacimM3
+      : null;
+  const showsDedicatedIncomingWarning = Boolean(
+    request?.tekTasimaIstiyor &&
+      selectedVehicleCapacitySummary &&
+      selectedVehicleCapacitySummary.aktifRezervasyonSayisi > 0
+  );
+  const showsDedicatedExistingWarning = Boolean(
+    selectedVehicleCapacitySummary?.aktifTekTasimaRezervasyonuVar
+  );
+  const showsWeightOverflowWarning =
+    teorikKalanAgirlikKg !== null && teorikKalanAgirlikKg < 0;
+  const showsVolumeOverflowWarning =
+    teorikKalanHacimM3 !== null && teorikKalanHacimM3 < 0;
+
+  const priceSuggestion =
+    request && !needsVehicleForSuggestion
+      ? TeklifFiyatÖnerisiHesaplama({
+          rotaMesafeMetre: request.rotaMesafeMetre,
+          agirlikKg: request.agirlikKg,
+          hacimM3: request.hacimM3,
+          aracMaksimumHacimM3: selectedVehicle?.maksimumHacimM3 ?? null,
+          tekTasimaIstiyor: request.tekTasimaIstiyor,
+        })
+      : null;
+
   if (status !== "ready") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-        <div className="font-medium text-gray-600">Yukleniyor...</div>
-      </div>
-    );
+    return <OpenTransportRequestDetailPageFallback />;
   }
 
   return (
-    <CarrierVehiclesShell title="Istek detayi ve teklif">
+    <CarrierVehiclesShell
+      title="Istek detayi ve teklif"
+      headerActions={<InlineHelpTrigger helpKey="offer-create" />}
+    >
       {isLoading ? (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
           Istek detayi yukleniyor...
@@ -297,6 +489,66 @@ export default function OpenTransportRequestDetailPage() {
               </div>
             </div>
           </div>
+
+          {selectedCarrierRoute ? (
+            <div className="grid gap-4 xl:grid-cols-2">
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-950">Secili rota</h3>
+                <p className="mt-3 text-sm text-slate-700">
+                  {formatLocationLabel(
+                    selectedCarrierRoute.baslangicKonumMetni,
+                    selectedCarrierRoute.baslangicSehri
+                  )}{" "}
+                  {"->"}{" "}
+                  {formatLocationLabel(
+                    selectedCarrierRoute.varisKonumMetni,
+                    selectedCarrierRoute.varisSehri
+                  )}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
+                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
+                    {formatPlannedDate(selectedCarrierRoute.planlananTarih)}
+                  </span>
+                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
+                    {formatRouteDistanceKm(selectedCarrierRoute.rotaMesafeMetre)}
+                  </span>
+                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
+                    {formatRouteDuration(selectedCarrierRoute.rotaSureSaniye)}
+                  </span>
+                  {selectedCarrierRoute.maksimumSapmaKm !== null ? (
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
+                      Max sapma {selectedCarrierRoute.maksimumSapmaKm.toFixed(1)} km
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-950">Rota uyumu</h3>
+                {request.rotaUyumu ? (
+                  <div className="mt-4 space-y-3 text-sm text-slate-700">
+                    <span
+                      className={getRouteCompatibilityBadgeClassName(
+                        request.rotaUyumu.uygunlukEtiketi
+                      )}
+                    >
+                      {getRouteCompatibilityLabelText(
+                        request.rotaUyumu.uygunlukEtiketi
+                      )}
+                    </span>
+                    <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
+                        Ek {formatRouteDistanceKm(request.rotaUyumu.extraMesafeMetre)}
+                      </span>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
+                        Ek {formatRouteDuration(request.rotaUyumu.extraSureSaniye)}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           {!request.hasActiveVehicle ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
@@ -368,6 +620,28 @@ export default function OpenTransportRequestDetailPage() {
 
           <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
             <h3 className="text-lg font-bold text-gray-900">Teklif ver</h3>
+            {needsVehicleForSuggestion ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                Tek tasima isteginde onerilen fiyat icin once arac secmelisin.
+              </div>
+            ) : null}
+            {priceSuggestion ? (
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-950">
+                <p className="font-semibold">
+                  Onerilen fiyat: {priceSuggestion.onerilenFiyat} TRY
+                </p>
+                <p className="mt-1">Mesafe: {priceSuggestion.km.toFixed(1)} km</p>
+                <p className="mt-1">
+                  Faturalanan yuk: {priceSuggestion.faturalanabilirYukKg.toFixed(0)} kg
+                </p>
+                {request.tekTasimaIstiyor && selectedVehicle?.maksimumHacimM3 ? (
+                  <p className="mt-1">
+                    Tek tasima icin arac hacmi esas alindi:{" "}
+                    {selectedVehicle.maksimumHacimM3.toFixed(1)} m3
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <form className="mt-4 grid gap-4" onSubmit={handleSubmit}>
               <div className="grid gap-2">
                 <label className="text-sm font-semibold text-gray-900" htmlFor="aracId">
@@ -391,6 +665,142 @@ export default function OpenTransportRequestDetailPage() {
                   ))}
                 </select>
               </div>
+
+              {selectedVehicle && selectedVehicleCapacitySummary ? (
+                <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                      Arac kapasite ozeti
+                    </p>
+                    <div className="mt-3 space-y-2 text-sm text-slate-700">
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Toplam agirlik</span>
+                        <span className="font-semibold text-slate-950">
+                          {formatWeightKg(
+                            selectedVehicleCapacitySummary.toplamAgirlikKg
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Rezerve agirlik</span>
+                        <span className="font-semibold text-slate-950">
+                          {formatWeightKg(
+                            selectedVehicleCapacitySummary.rezerveAgirlikKg
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Kalan agirlik</span>
+                        <span className="font-semibold text-slate-950">
+                          {formatWeightKg(
+                            selectedVehicleCapacitySummary.kalanAgirlikKg
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Toplam hacim</span>
+                        <span className="font-semibold text-slate-950">
+                          {formatVolumeM3(
+                            selectedVehicleCapacitySummary.toplamHacimM3
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Rezerve hacim</span>
+                        <span className="font-semibold text-slate-950">
+                          {formatVolumeM3(
+                            selectedVehicleCapacitySummary.rezerveHacimM3
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Kalan hacim</span>
+                        <span className="font-semibold text-slate-950">
+                          {formatVolumeM3(
+                            selectedVehicleCapacitySummary.kalanHacimM3
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                      Bu yuk eklendiginde
+                    </p>
+                    <div className="mt-3 space-y-2 text-sm text-slate-700">
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Yuk agirligi</span>
+                        <span className="font-semibold text-slate-950">
+                          {formatWeightKg(request.agirlikKg)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Yuk hacmi</span>
+                        <span className="font-semibold text-slate-950">
+                          {formatVolumeM3(request.hacimM3)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Teorik sonrasi agirlik</span>
+                        <span className="font-semibold text-slate-950">
+                          {formatWeightKg(teorikKalanAgirlikKg)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Teorik sonrasi hacim</span>
+                        <span className="font-semibold text-slate-950">
+                          {formatVolumeM3(teorikKalanHacimM3)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 mb-6">
+                        <span>Aktif rezervasyon</span>
+                        <span className="font-semibold text-slate-950">
+                          {selectedVehicleCapacitySummary.aktifRezervasyonSayisi}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2 space-y-3">
+                    {showsWeightOverflowWarning ? (
+                      <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                        Bu aracta kayitli agirlik kapasitesi teorik olarak asiliyor.
+                      </div>
+                    ) : null}
+                    {showsVolumeOverflowWarning ? (
+                      <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                        Bu aracta kayitli hacim kapasitesi teorik olarak asiliyor.
+                      </div>
+                    ) : null}
+                    {showsDedicatedIncomingWarning ? (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        Bu yuk tek tasima istiyor; secilen aracta aktif rezervasyon
+                        varken operasyonel uyumu ayrica kontrol etmelisin.
+                      </div>
+                    ) : null}
+                    {showsDedicatedExistingWarning ? (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        Secilen aracta halihazirda tek tasima talebi olan aktif bir
+                        rezervasyon var.
+                      </div>
+                    ) : null}
+                    {selectedVehicleCapacitySummary.hesapEksigiVar ? (
+                      <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                        Kapasite ozeti yalnizca kayitli agirlik ve hacim verilerine
+                        gore hesaplanir; fiziksel sigma veya yerlesim garantisi vermez.
+                      </div>
+                    ) : null}
+                    {!selectedVehicleCapacitySummary.hesapEksigiVar ? (
+                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                        Bu ozet yalnizca kayitli agirlik ve hacim verilerine dayanir;
+                        fiziksel sigma, istif ve yukleme sekli ayrica kontrol
+                        edilmelidir.
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="grid gap-2">
                 <label className="text-sm font-semibold text-gray-900" htmlFor="fiyat">
@@ -449,5 +859,13 @@ export default function OpenTransportRequestDetailPage() {
         </div>
       ) : null}
     </CarrierVehiclesShell>
+  );
+}
+
+export default function OpenTransportRequestDetailPage() {
+  return (
+    <Suspense fallback={<OpenTransportRequestDetailPageFallback />}>
+      <OpenTransportRequestDetailPageContent />
+    </Suspense>
   );
 }

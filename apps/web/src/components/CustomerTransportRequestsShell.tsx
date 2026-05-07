@@ -1,62 +1,29 @@
 "use client";
 
 import type { ReactNode } from "react";
-import DashboardShellFrame from "@/components/DashboardShellFrame";
+import DashboardShell from "@/components/DashboardShell";
 
 type CustomerTransportRequestsShellProps = {
   title: string;
   description?: string;
   children: ReactNode;
+  headerActions?: ReactNode;
 };
 
 export default function CustomerTransportRequestsShell({
   title,
   description,
   children,
+  headerActions,
 }: CustomerTransportRequestsShellProps) {
   return (
-    <DashboardShellFrame
-      panelTitle="Musteri"
-      navGroups={[
-        {
-          title: "Hizli Eylemler",
-          items: [
-            {
-              href: "/dashboard/istek_ekle",
-              label: "Istek Ekle",
-            },
-            {
-              href: "/dashboard/isteklerim",
-              label: "Isteklerim",
-            },
-            {
-              href: "/dashboard/gelen_teklifler",
-              label: "Gelen Teklifler",
-            },
-          ],
-        },
-        {
-          title: "Hesabim",
-          items: [
-            {
-              href: "/dashboard/bildirimler",
-              label: "Bildirimler",
-            },
-            {
-              href: "/dashboard/puanlarim",
-              label: "Puanlarim",
-            },
-            {
-              href: "/dashboard/profil",
-              label: "Profil",
-            },
-          ],
-        },
-      ]}
+    <DashboardShell
       title={title}
       description={description}
+      workspaceHint="customer"
+      headerActions={headerActions}
     >
       {children}
-    </DashboardShellFrame>
+    </DashboardShell>
   );
 }

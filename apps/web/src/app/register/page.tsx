@@ -5,79 +5,103 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import InputField from "@/components/InputField";
+import VehicleFormFields from "@/components/VehicleFormFields";
 import { ApiClientError, apiFetch } from "@/lib/api/api-client";
 import {
   getStoredAuth,
   setStoredAuth,
+  setStoredDashboardWorkspaceMode,
   type StoredAuth,
 } from "@/lib/auth/auth-storage";
-import { VEHICLE_BODY_TYPE_OPTIONS } from "@/lib/logistics";
+import {
+  initialVehicleFormState,
+  toCreateVehicleInput,
+  type VehicleFormState,
+} from "@/lib/vehicles/vehicle-form";
 
 type RegisterRole = "MUSTERI" | "NAKLIYECI";
 
-type RegisterForm = {
+type AccountRegisterForm = {
   ad: string;
   soyad: string;
   telefonNumarasi: string;
   kullaniciAdi: string;
   mail: string;
   password: string;
-  marka: string;
-  model: string;
-  yil: string;
-  plaka: string;
-  maksimumAgirlikKg: string;
-  maksimumHacimM3: string;
-  kasaTipi: string;
-  uzunlukCm: string;
-  genislikCm: string;
-  yukseklikCm: string;
 };
 
-const initialForm: RegisterForm = {
+type RegisterErrorState =
+  | {
+      kind: "duplicate-email";
+      message: string;
+    }
+  | {
+      kind: "generic";
+      message: string;
+    }
+  | null;
+
+const initialAccountForm: AccountRegisterForm = {
   ad: "",
   soyad: "",
   telefonNumarasi: "",
   kullaniciAdi: "",
   mail: "",
   password: "",
-  marka: "",
-  model: "",
-  yil: "",
-  plaka: "",
-  maksimumAgirlikKg: "",
-  maksimumHacimM3: "",
-  kasaTipi: "DIGER",
-  uzunlukCm: "",
-  genislikCm: "",
-  yukseklikCm: "",
+};
+
+const roleDescriptions: Record<RegisterRole, string> = {
+  MUSTERI: "Tasima talebi ac, teklifleri topla ve karar ver.",
+  NAKLIYECI: "Ilk aracinla birlikte teklif ve operasyon akisina gir.",
 };
 
 export default function RegisterPage() {
   const router = useRouter();
   const [role, setRole] = useState<RegisterRole>("MUSTERI");
-  const [form, setForm] = useState<RegisterForm>(initialForm);
+  const [accountForm, setAccountForm] = useState<AccountRegisterForm>(initialAccountForm);
+  const [vehicleForm, setVehicleForm] = useState<VehicleFormState>(initialVehicleFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [errorState, setErrorState] = useState<RegisterErrorState>(null);
 
   useEffect(() => {
     if (getStoredAuth()) {
-      router.replace("/");
+      router.replace("/dashboard/profil");
       return;
     }
 
     setIsCheckingAuth(false);
   }, [router]);
 
-  const handleChange = (
+  const handleAccountChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+
+    setErrorState(null);
+    setAccountForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
+    }));
+  };
+
+  const handleVehicleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = event.target;
 
-    setForm((currentForm) => ({
+    setErrorState(null);
+    setVehicleForm((currentForm) => ({
       ...currentForm,
       [name]: value,
     }));
+  };
+
+  const handleRoleChange = (nextRole: RegisterRole) => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setErrorState(null);
+    setRole(nextRole);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -88,49 +112,67 @@ export default function RegisterPage() {
     }
 
     setIsSubmitting(true);
+    setErrorState(null);
 
     try {
       const response = await apiFetch<StoredAuth>("/auth/register", {
         method: "POST",
         body: JSON.stringify({
-          ad: form.ad,
-          soyad: form.soyad,
-          telefonNumarasi: form.telefonNumarasi.trim() || undefined,
-          kullaniciAdi: form.kullaniciAdi,
-          mail: form.mail,
-          password: form.password,
+          ad: accountForm.ad,
+          soyad: accountForm.soyad,
+          telefonNumarasi: accountForm.telefonNumarasi.trim() || undefined,
+          kullaniciAdi: accountForm.kullaniciAdi,
+          mail: accountForm.mail,
+          password: accountForm.password,
           role,
-          ...(role === "NAKLIYECI"
-            ? {
-                marka: form.marka,
-                model: form.model,
-                yil: Number(form.yil),
-                plaka: form.plaka,
-                maksimumAgirlikKg: Number(form.maksimumAgirlikKg),
-                maksimumHacimM3: Number(form.maksimumHacimM3),
-                kasaTipi: form.kasaTipi,
-                uzunlukCm: form.uzunlukCm ? Number(form.uzunlukCm) : undefined,
-                genislikCm: form.genislikCm ? Number(form.genislikCm) : undefined,
-                yukseklikCm: form.yukseklikCm ? Number(form.yukseklikCm) : undefined,
-              }
-            : {}),
+          ...(role === "NAKLIYECI" ? toCreateVehicleInput(vehicleForm) : {}),
         }),
       });
 
+      setStoredDashboardWorkspaceMode(role === "NAKLIYECI" ? "carrier" : "customer");
       setStoredAuth(response);
-      router.replace("/");
+      router.replace("/dashboard");
     } catch (error) {
       if (error instanceof ApiClientError) {
-        if (error.message === "Vehicle plate is already in use.") {
-          window.alert("Bu plaka zaten aktif bir araca ait.");
+        if (error.message === "Mail is already in use.") {
+          setErrorState({
+            kind: "duplicate-email",
+            message:
+              "Bu e-posta ile zaten bir hesabin var. Ikinci kez kayit olmak yerine giris yapip Profilim ekranindan nakliyeci rolunu ekleyebilirsin.",
+          });
           return;
         }
 
-        window.alert(error.message);
+        if (error.message === "Username is already in use.") {
+          setErrorState({
+            kind: "generic",
+            message: "Bu kullanici adi zaten kullaniliyor. Lutfen farkli bir kullanici adi sec.",
+          });
+          return;
+        }
+
+        if (error.message === "Vehicle plate is already in use.") {
+          setErrorState({
+            kind: "generic",
+            message: "Bu plaka zaten aktif bir araca ait.",
+          });
+          return;
+        }
+
+        setErrorState({
+          kind: "generic",
+          message: error.message,
+        });
       } else if (error instanceof Error) {
-        window.alert(error.message);
+        setErrorState({
+          kind: "generic",
+          message: error.message,
+        });
       } else {
-        window.alert("Kayit sirasinda beklenmeyen bir hata olustu.");
+        setErrorState({
+          kind: "generic",
+          message: "Kayit sirasinda beklenmeyen bir hata olustu.",
+        });
       }
     } finally {
       setIsSubmitting(false);
@@ -139,255 +181,195 @@ export default function RegisterPage() {
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-gray-600 font-medium">Yonlendiriliyor...</div>
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="app-surface rounded-3xl px-5 py-4 font-medium text-slate-600">
+          Yonlendiriliyor...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Bi’yük&apos;e Kayit Ol
-          </h2>
-        </div>
-        <div className="mt-20 grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => setRole("MUSTERI")}
-            disabled={isSubmitting}
-            className={`flex-1 rounded-lg border-2 py-2 font-bold transition-all disabled:opacity-60 ${
-              role === "MUSTERI"
-                ? "border-blue-600 bg-blue-600 text-white shadow-md"
-                : "border-blue-600 bg-white text-blue-600"
-            }`}
-          >
-            Musteri
-          </button>
-          <button
-            type="button"
-            onClick={() => setRole("NAKLIYECI")}
-            disabled={isSubmitting}
-            className={`flex-1 rounded-lg border-2 py-2 font-bold transition-all disabled:opacity-60 ${
-              role === "NAKLIYECI"
-                ? "border-blue-600 bg-blue-600 text-white shadow-md"
-                : "border-blue-600 bg-white text-blue-600"
-            }`}
-          >
-            Nakliyeci
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <div className="space-y-4 rounded-md shadow-sm">
-            <InputField
-              name="ad"
-              label="Ad"
-              type="text"
-              placeholder="Orn: Mehmet"
-              value={form.ad}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            <InputField
-              name="soyad"
-              label="Soyad"
-              type="text"
-              placeholder="Orn: Akcil"
-              value={form.soyad}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            <InputField
-              name="telefonNumarasi"
-              label="Telefon Numarasi"
-              type="tel"
-              placeholder="Orn: 555 123 45 67"
-              value={form.telefonNumarasi}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              required={false}
-            />
-            <InputField
-              name="kullaniciAdi"
-              label="Kullanici Adi"
-              type="text"
-              placeholder="Orn: mehmetakcil73"
-              autoComplete="username"
-              value={form.kullaniciAdi}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            <InputField
-              name="mail"
-              label="E-posta"
-              type="email"
-              placeholder="mehmet@example.com"
-              autoComplete="email"
-              value={form.mail}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            <InputField
-              name="password"
-              label="Sifre"
-              type="password"
-              placeholder="********"
-              autoComplete="new-password"
-              value={form.password}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            {role === "NAKLIYECI" ? (
-              <>
-                <div className="relative py-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 font-semibold tracking-wider text-gray-500">
-                      Ilk Arac Kaydi
-                    </span>
-                  </div>
-                </div>
-                <InputField
-                  name="marka"
-                  label="Marka"
-                  type="text"
-                  placeholder="Orn: Mercedes"
-                  value={form.marka}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                />
-                <InputField
-                  name="model"
-                  label="Model"
-                  type="text"
-                  placeholder="Orn: Actros"
-                  value={form.model}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                />
-                <InputField
-                  name="yil"
-                  label="Yil"
-                  type="number"
-                  min="1900"
-                  max={`${new Date().getFullYear() + 1}`}
-                  placeholder="Orn: 2020"
-                  value={form.yil}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                />
-                <InputField
-                  name="plaka"
-                  label="Plaka No"
-                  type="text"
-                  placeholder="34 ABC 123"
-                  value={form.plaka}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                />
-                <InputField
-                  name="maksimumAgirlikKg"
-                  label="Maksimum Agirlik (kg)"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Orn: 18000"
-                  value={form.maksimumAgirlikKg}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                />
-                <InputField
-                  name="maksimumHacimM3"
-                  label="Maksimum Hacim (m3)"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Orn: 45"
-                  value={form.maksimumHacimM3}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                />
-                <div>
-                  <label className="block text-sm font-medium text-gray-700" htmlFor="kasaTipi">
-                    Kasa Tipi
-                  </label>
-                  <select
-                    id="kasaTipi"
-                    name="kasaTipi"
-                    value={form.kasaTipi}
-                    onChange={handleChange}
-                    disabled={isSubmitting}
-                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
-                  >
-                    {VEHICLE_BODY_TYPE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <InputField
-                    name="uzunlukCm"
-                    label="Uzunluk (cm)"
-                    type="number"
-                    min="1"
-                    value={form.uzunlukCm}
-                    onChange={handleChange}
-                    disabled={isSubmitting}
-                    required={false}
-                  />
-                  <InputField
-                    name="genislikCm"
-                    label="Genislik (cm)"
-                    type="number"
-                    min="1"
-                    value={form.genislikCm}
-                    onChange={handleChange}
-                    disabled={isSubmitting}
-                    required={false}
-                  />
-                  <InputField
-                    name="yukseklikCm"
-                    label="Yukseklik (cm)"
-                    type="number"
-                    min="1"
-                    value={form.yukseklikCm}
-                    onChange={handleChange}
-                    disabled={isSubmitting}
-                    required={false}
-                  />
-                </div>
-                <p className="text-sm text-gray-500">
-                  Bu ilk arac kaydi, nakliyeci hesabin olusturulurken dogrudan
-                  kaydedilir.
-                </p>
-              </>
-            ) : null}
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="group relative flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-blue-400"
-            >
-              {isSubmitting ? "Kayit Olusturuluyor..." : "Hesap Olustur"}
-            </button>
-          </div>
-
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Zaten hesabin var mi?{" "}
-            <Link href="/login" className="text-sm font-bold text-blue-600 hover:underline">
-              Giris Yap
-            </Link>
+    <main className="px-4 py-10 md:py-14">
+      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(320px,0.82fr)_minmax(0,1.18fr)]">
+        <section className="app-hero-surface rounded-[2rem] p-8 text-white md:p-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-blue-100">
+            Bi'yuk
           </p>
-        </form>
+          <h1 className="mt-4 text-4xl font-black tracking-tight md:text-5xl">
+            Tek hesapla operasyon akisini kur.
+          </h1>
+          <p className="mt-5 max-w-xl text-base leading-7 text-blue-50/90">
+            Musteri olarak baslayabilir veya ilk aracinla dogrudan nakliyeci
+            akisina girebilirsin. Ileride ayni hesapta iki rolu de yonetirsin.
+          </p>
+
+          <div className="mt-8 space-y-3">
+            <div className="rounded-2xl border border-white/16 bg-white/10 px-4 py-3 text-sm leading-6 backdrop-blur">
+              Musteri hesabinda talep, teklif ve anlasilan is takibi acilir.
+            </div>
+            <div className="rounded-2xl border border-white/16 bg-white/10 px-4 py-3 text-sm leading-6 backdrop-blur">
+              Nakliyeci kaydi ilk aracinla birlikte rota, teklif ve operasyon
+              akislarini etkinlestirir.
+            </div>
+          </div>
+        </section>
+
+        <section className="app-surface-strong rounded-[2rem] p-8 md:p-10">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full border border-blue-200/80 bg-blue-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-700">
+              Kayit
+            </div>
+            <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950">
+              Hesabini olustur
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Once giris modunu sec, sonra temel hesap bilgilerini doldur.
+            </p>
+
+            <div className="mt-6 grid gap-3 md:grid-cols-2">
+              {(["MUSTERI", "NAKLIYECI"] as RegisterRole[]).map((option) => {
+                const isActive = role === option;
+
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => handleRoleChange(option)}
+                    disabled={isSubmitting}
+                    className={`rounded-[1.4rem] border px-5 py-4 text-left transition ${
+                      isActive
+                        ? "border-blue-300 bg-blue-50 text-blue-900 shadow-sm"
+                        : "border-slate-200 bg-white/70 text-slate-700 hover:bg-white"
+                    }`}
+                  >
+                    <p className="text-sm font-bold">
+                      {option === "MUSTERI" ? "Musteri" : "Nakliyeci"}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      {roleDescriptions[option]}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+              {errorState ? (
+                <div
+                  className={`rounded-2xl border p-4 text-sm ${
+                    errorState.kind === "duplicate-email"
+                      ? "border-amber-200 bg-amber-50 text-amber-800"
+                      : "border-red-200 bg-red-50 text-red-700"
+                  }`}
+                >
+                  <p>{errorState.message}</p>
+                  {errorState.kind === "duplicate-email" ? (
+                    <p className="mt-3">
+                      <Link href="/login" className="font-semibold text-blue-700 hover:underline">
+                        Giris yap
+                      </Link>{" "}
+                      ve sonra{" "}
+                      <span className="font-semibold">Profilim &gt; Nakliyeci rolunu ekle</span>{" "}
+                      akisini kullan.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <InputField
+                  name="ad"
+                  label="Ad"
+                  type="text"
+                  placeholder="Orn: Mehmet"
+                  value={accountForm.ad}
+                  onChange={handleAccountChange}
+                  disabled={isSubmitting}
+                />
+                <InputField
+                  name="soyad"
+                  label="Soyad"
+                  type="text"
+                  placeholder="Orn: Akcil"
+                  value={accountForm.soyad}
+                  onChange={handleAccountChange}
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <InputField
+                  name="telefonNumarasi"
+                  label="Telefon numarasi"
+                  type="tel"
+                  placeholder="Orn: 555 123 45 67"
+                  value={accountForm.telefonNumarasi}
+                  onChange={handleAccountChange}
+                  disabled={isSubmitting}
+                  required={false}
+                />
+                <InputField
+                  name="kullaniciAdi"
+                  label="Kullanici adi"
+                  type="text"
+                  placeholder="Orn: mehmetakcil73"
+                  autoComplete="username"
+                  value={accountForm.kullaniciAdi}
+                  onChange={handleAccountChange}
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <InputField
+                  name="mail"
+                  label="E-posta"
+                  type="email"
+                  placeholder="mehmet@example.com"
+                  autoComplete="email"
+                  value={accountForm.mail}
+                  onChange={handleAccountChange}
+                  disabled={isSubmitting}
+                />
+                <InputField
+                  name="password"
+                  label="Sifre"
+                  type="password"
+                  placeholder="********"
+                  autoComplete="new-password"
+                  value={accountForm.password}
+                  onChange={handleAccountChange}
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {role === "NAKLIYECI" ? (
+                <div className="rounded-[1.6rem] border border-slate-200 bg-white/70 p-5">
+                  <VehicleFormFields
+                    values={vehicleForm}
+                    onChange={handleVehicleChange}
+                    disabled={isSubmitting}
+                    sectionTitle="Ilk Arac Kaydi"
+                    sectionHint="Bu arac basariyla kaydedildiginde hesabin musteri + nakliyeci olarak acilir."
+                  />
+                </div>
+              ) : null}
+
+              <button type="submit" disabled={isSubmitting} className="app-button-primary w-full">
+                {isSubmitting ? "Kayit olusturuluyor..." : "Hesap olustur"}
+              </button>
+
+              <p className="text-sm text-slate-600">
+                Zaten hesabin var mi?{" "}
+                <Link href="/login" className="font-bold text-blue-700 hover:text-blue-800">
+                  Giris Yap
+                </Link>
+              </p>
+            </form>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

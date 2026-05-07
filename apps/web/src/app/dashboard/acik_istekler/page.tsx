@@ -1,16 +1,30 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import {
+  type ReadonlyURLSearchParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
 import CitySelectField from "@/components/CitySelectField";
-import CollectionToolbar from "@/components/CollectionToolbar";
+import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import EmptyStateCard from "@/components/EmptyStateCard";
-import StatusBadge from "@/components/StatusBadge";
+import InlineHelpTrigger from "@/components/InlineHelpTrigger";
+import MotionCollapse from "@/components/MotionCollapse";
+import OpenRequestCard from "@/components/OpenRequestCard";
+import OpenRequestsMapPanel from "@/components/OpenRequestsMapPanel";
 import SummaryStatCard from "@/components/SummaryStatCard";
 import { ApiClientError } from "@/lib/api/api-client";
+import {
+  getCarrierRouteDetail,
+  getMyCarrierRoutes,
+  type CarrierRouteDetail,
+  type CarrierRouteListItem,
+} from "@/lib/api/carrier-routes";
 import {
   getOpenOfferRequests,
   type OpenOfferRequestFilters,
@@ -21,9 +35,8 @@ import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
 import {
   CARGO_TYPE_OPTIONS,
   formatLocationLabel,
-  formatVolumeM3,
-  formatWeightKg,
-  getCargoTypeLabel,
+  formatRouteDistanceKm,
+  formatRouteDuration,
   hasActiveFilters,
 } from "@/lib/logistics";
 import { TURKEY_CITY_OPTIONS } from "@/lib/turkey-cities";
@@ -40,6 +53,25 @@ type DiscoveryFilterForm = {
   tasimaTarihi: string;
 };
 
+type OpenRequestsFilterRailProps = {
+  requestsCount: number;
+  selectedCarrierRouteId: number | null;
+  selectedCarrierRoute: CarrierRouteListItem | null;
+  routes: CarrierRouteListItem[];
+  isRoutesLoading: boolean;
+  routeErrorMessage: string | null;
+  filters: DiscoveryFilterForm;
+  filtersActive: boolean;
+  onFilterChange: (
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => void;
+  onApplyFilters: (event: FormEvent<HTMLFormElement>) => void;
+  onResetFilters: () => void;
+  onCarrierRouteChange: (event: ChangeEvent<HTMLSelectElement>) => void;
+  onBaslangicSehirChange: (value: string) => void;
+  onVarisSehirChange: (value: string) => void;
+};
+
 const initialFilters: DiscoveryFilterForm = {
   baslangicSehir: "",
   varisSehir: "",
@@ -52,15 +84,55 @@ const initialFilters: DiscoveryFilterForm = {
   tasimaTarihi: "",
 };
 
-function formatDate(value: string): string {
+function formatPlannedDate(value: string): string {
   return new Intl.DateTimeFormat("tr-TR", {
     dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  }).format(new Date(`${value}T00:00:00`));
 }
 
-function toApiFilters(values: DiscoveryFilterForm): OpenOfferRequestFilters {
+function parsePositiveInteger(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function buildCarrierRouteSelectionPath(
+  pathname: string,
+  searchParams: ReadonlyURLSearchParams | null,
+  carrierRouteId: number | null
+): string {
+  const nextSearchParams = new URLSearchParams(searchParams?.toString() ?? "");
+
+  if (carrierRouteId === null) {
+    nextSearchParams.delete("carrierRouteId");
+  } else {
+    nextSearchParams.set("carrierRouteId", String(carrierRouteId));
+  }
+
+  const nextQuery = nextSearchParams.toString();
+  return nextQuery ? `${pathname}?${nextQuery}` : pathname;
+}
+
+function buildRequestDetailHref(
+  requestId: number,
+  carrierRouteId: number | null
+): string {
+  if (carrierRouteId === null) {
+    return `/dashboard/acik_istekler/${requestId}`;
+  }
+
+  return `/dashboard/acik_istekler/${requestId}?carrierRouteId=${carrierRouteId}`;
+}
+
+function toApiFilters(
+  values: DiscoveryFilterForm,
+  carrierRouteId: number | null
+): OpenOfferRequestFilters {
   return {
+    carrierRouteId: carrierRouteId ?? undefined,
     baslangicSehir: values.baslangicSehir.trim() || undefined,
     varisSehir: values.varisSehir.trim() || undefined,
     tekTasimaIstiyor:
@@ -76,20 +148,468 @@ function toApiFilters(values: DiscoveryFilterForm): OpenOfferRequestFilters {
   };
 }
 
-export default function OpenTransportRequestsPage() {
+function OpenRequestsFilterRail({
+  requestsCount,
+  selectedCarrierRouteId,
+  selectedCarrierRoute,
+  routes,
+  isRoutesLoading,
+  routeErrorMessage,
+  filters,
+  filtersActive,
+  onFilterChange,
+  onApplyFilters,
+  onResetFilters,
+  onCarrierRouteChange,
+  onBaslangicSehirChange,
+  onVarisSehirChange,
+}: OpenRequestsFilterRailProps) {
+  return (
+    <aside className="space-y-4 lg:sticky lg:top-[calc(var(--topbar-height)+1rem)]">
+      <div className="app-surface rounded-[1.6rem] p-4 md:p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-base font-black tracking-tight text-slate-950">
+            Filtreler
+          </h2>
+          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+            {requestsCount} açık istek
+          </span>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+            {selectedCarrierRouteId !== null
+              ? "Rota seçili"
+              : filtersActive
+                ? "Filtreler aktif"
+                : "Tüm kayıtlar"}
+          </span>
+        </div>
+
+        <div className="mt-4 space-y-4">
+          <div className="space-y-3 rounded-[1.35rem] border border-slate-200 bg-white/80 p-4">
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                Rota seçimi
+              </p>
+              <label
+                className="text-sm font-medium text-slate-700"
+                htmlFor="carrierRouteId"
+              >
+                Kayıtlı rota
+              </label>
+            </div>
+            <select
+              id="carrierRouteId"
+              value={selectedCarrierRouteId ?? ""}
+              onChange={onCarrierRouteChange}
+              disabled={isRoutesLoading || Boolean(routeErrorMessage)}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+            >
+              <option value="">Rota seçmeden devam et</option>
+              {routes.map((route) => (
+                <option key={route.id} value={route.id}>
+                  {route.baslangicSehri} → {route.varisSehri} - {route.planlananTarih}
+                </option>
+              ))}
+            </select>
+
+            {isRoutesLoading ? (
+              <p className="text-sm text-slate-500">Rotalar yükleniyor...</p>
+            ) : null}
+
+            {!isRoutesLoading && routeErrorMessage ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {routeErrorMessage}
+              </div>
+            ) : null}
+
+            {!isRoutesLoading && !routeErrorMessage && routes.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                Henüz kayıtlı rota yok.{" "}
+                <Link
+                  href="/dashboard/rotalarim/yeni"
+                  className="font-semibold text-blue-700 hover:text-blue-800"
+                >
+                  Yeni rota tanımla
+                </Link>
+              </div>
+            ) : null}
+
+            {!isRoutesLoading && !routeErrorMessage && selectedCarrierRoute ? (
+              <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-slate-700">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-blue-600">
+                    Seçili rota
+                  </p>
+                  <p className="text-sm font-semibold text-slate-950">
+                    {formatLocationLabel(
+                      selectedCarrierRoute.baslangicKonumMetni,
+                      selectedCarrierRoute.baslangicSehri
+                    )}{" "}
+                    →{" "}
+                    {formatLocationLabel(
+                      selectedCarrierRoute.varisKonumMetni,
+                      selectedCarrierRoute.varisSehri
+                    )}
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-slate-700 ring-1 ring-blue-100">
+                      {formatPlannedDate(selectedCarrierRoute.planlananTarih)}
+                    </span>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-slate-700 ring-1 ring-blue-100">
+                      {formatRouteDistanceKm(selectedCarrierRoute.rotaMesafeMetre)}
+                    </span>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-slate-700 ring-1 ring-blue-100">
+                      {formatRouteDuration(selectedCarrierRoute.rotaSureSaniye)}
+                    </span>
+                    {selectedCarrierRoute.maksimumSapmaKm !== null ? (
+                      <span className="rounded-full bg-white px-2.5 py-1 text-slate-700 ring-1 ring-blue-100">
+                        Max sapma {selectedCarrierRoute.maksimumSapmaKm.toFixed(1)} km
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <form onSubmit={onApplyFilters} className="space-y-4">
+            <div className="space-y-3 rounded-[1.35rem] border border-slate-200 bg-white/80 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                Konum ve tarih
+              </p>
+              <div className="space-y-4">
+                <CitySelectField
+                  id="baslangicSehir"
+                  label="Başlangıç şehri"
+                  options={TURKEY_CITY_OPTIONS}
+                  placeholder="İl seç"
+                  value={filters.baslangicSehir}
+                  onChange={onBaslangicSehirChange}
+                />
+                <CitySelectField
+                  id="varisSehir"
+                  label="Varış şehri"
+                  options={TURKEY_CITY_OPTIONS}
+                  placeholder="İl seç"
+                  value={filters.varisSehir}
+                  onChange={onVarisSehirChange}
+                />
+                <div className="space-y-1">
+                  <label
+                    className="text-sm font-medium text-slate-700"
+                    htmlFor="tasimaTarihi"
+                  >
+                    Taşıma tarihi
+                  </label>
+                  <input
+                    id="tasimaTarihi"
+                    name="tasimaTarihi"
+                    type="date"
+                    value={filters.tasimaTarihi}
+                    onChange={onFilterChange}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-[1.35rem] border border-slate-200 bg-white/80 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                Yük özellikleri
+              </p>
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label
+                    className="text-sm font-medium text-slate-700"
+                    htmlFor="yukTipi"
+                  >
+                    Yük tipi
+                  </label>
+                  <select
+                    id="yukTipi"
+                    name="yukTipi"
+                    value={filters.yukTipi}
+                    onChange={onFilterChange}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">Tüm tipler</option>
+                    {CARGO_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label
+                    className="text-sm font-medium text-slate-700"
+                    htmlFor="tekTasimaIstiyor"
+                  >
+                    Tek taşıma
+                  </label>
+                  <select
+                    id="tekTasimaIstiyor"
+                    name="tekTasimaIstiyor"
+                    value={filters.tekTasimaIstiyor}
+                    onChange={onFilterChange}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="all">Hepsi</option>
+                    <option value="true">Sadece tek taşıma</option>
+                    <option value="false">Paylaşımlı olabilir</option>
+                  </select>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label
+                      className="text-sm font-medium text-slate-700"
+                      htmlFor="minAgirlikKg"
+                    >
+                      Min ağırlık (kg)
+                    </label>
+                    <input
+                      id="minAgirlikKg"
+                      name="minAgirlikKg"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={filters.minAgirlikKg}
+                      onChange={onFilterChange}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label
+                      className="text-sm font-medium text-slate-700"
+                      htmlFor="maxAgirlikKg"
+                    >
+                      Max ağırlık (kg)
+                    </label>
+                    <input
+                      id="maxAgirlikKg"
+                      name="maxAgirlikKg"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={filters.maxAgirlikKg}
+                      onChange={onFilterChange}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label
+                      className="text-sm font-medium text-slate-700"
+                      htmlFor="minHacimM3"
+                    >
+                      Min hacim (m3)
+                    </label>
+                    <input
+                      id="minHacimM3"
+                      name="minHacimM3"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={filters.minHacimM3}
+                      onChange={onFilterChange}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label
+                      className="text-sm font-medium text-slate-700"
+                      htmlFor="maxHacimM3"
+                    >
+                      Max hacim (m3)
+                    </label>
+                    <input
+                      id="maxHacimM3"
+                      name="maxHacimM3"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={filters.maxHacimM3}
+                      onChange={onFilterChange}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button type="submit" className="app-button-primary text-sm">
+                Filtreleri uygula
+              </button>
+              <button
+                type="button"
+                onClick={onResetFilters}
+                className="app-button-secondary text-sm"
+              >
+                Temizle
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function OpenTransportRequestsPageFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+      <div className="font-medium text-gray-600">Yükleniyor...</div>
+    </div>
+  );
+}
+
+function OpenTransportRequestsPageContent() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { accessToken, status } = useCarrierPageAccess();
+  const selectedCarrierRouteId = parsePositiveInteger(
+    searchParams?.get("carrierRouteId") ?? null
+  );
+  const requestCardRefs = useRef(new Map<number, HTMLDivElement | null>());
   const [filters, setFilters] = useState<DiscoveryFilterForm>(initialFilters);
   const [appliedFilters, setAppliedFilters] =
     useState<DiscoveryFilterForm>(initialFilters);
   const [requests, setRequests] = useState<OpenOfferRequestListItem[]>([]);
+  const [routes, setRoutes] = useState<CarrierRouteListItem[]>([]);
+  const [selectedCarrierRouteDetail, setSelectedCarrierRouteDetail] =
+    useState<CarrierRouteDetail | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [routeErrorMessage, setRouteErrorMessage] = useState<string | null>(null);
+  const [isRequestsLoading, setIsRequestsLoading] = useState(true);
+  const [isRoutesLoading, setIsRoutesLoading] = useState(true);
+  const [isMapVisible, setIsMapVisible] = useState(false);
+  const [hasMountedMap, setHasMountedMap] = useState(false);
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
-        setIsLoading(true);
+        setIsRoutesLoading(true);
+      }
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadRoutes = async () => {
+      try {
+        setIsRoutesLoading(true);
+        setRouteErrorMessage(null);
+        const response = await getMyCarrierRoutes(accessToken);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setRoutes(response);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        if (error instanceof ApiClientError && error.status === 401) {
+          clearStoredAuth();
+          router.replace("/login");
+          return;
+        }
+
+        if (error instanceof ApiClientError && error.status === 403) {
+          router.replace("/");
+          return;
+        }
+
+        setRouteErrorMessage(
+          error instanceof ApiClientError
+            ? error.message
+            : "Rota listesi yüklenirken beklenmeyen bir hata oluştu."
+        );
+      } finally {
+        if (!isMounted) {
+          return;
+        }
+
+        setIsRoutesLoading(false);
+      }
+    };
+
+    void loadRoutes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [accessToken, router, status]);
+
+  useEffect(() => {
+    if (status !== "ready" || !accessToken || selectedCarrierRouteId === null) {
+      setSelectedCarrierRouteDetail(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadSelectedCarrierRouteDetail = async () => {
+      try {
+        const response = await getCarrierRouteDetail(
+          selectedCarrierRouteId,
+          accessToken
+        );
+
+        if (!isMounted) {
+          return;
+        }
+
+        setSelectedCarrierRouteDetail(response);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setSelectedCarrierRouteDetail(null);
+
+        if (error instanceof ApiClientError && error.status === 401) {
+          clearStoredAuth();
+          router.replace("/login");
+          return;
+        }
+
+        if (error instanceof ApiClientError && error.status === 403) {
+          router.replace("/");
+          return;
+        }
+
+        if (error instanceof ApiClientError && error.status === 404) {
+          router.replace(
+            buildCarrierRouteSelectionPath(pathname, searchParams, null)
+          );
+        }
+      }
+    };
+
+    void loadSelectedCarrierRouteDetail();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    accessToken,
+    pathname,
+    router,
+    searchParams,
+    selectedCarrierRouteId,
+    status,
+  ]);
+
+  useEffect(() => {
+    if (status !== "ready" || !accessToken) {
+      if (status === "checking") {
+        setIsRequestsLoading(true);
       }
       return;
     }
@@ -98,11 +618,12 @@ export default function OpenTransportRequestsPage() {
 
     const loadRequests = async () => {
       try {
-        setIsLoading(true);
+        setIsRequestsLoading(true);
         setErrorMessage(null);
+
         const response = await getOpenOfferRequests(
           accessToken,
-          toApiFilters(appliedFilters)
+          toApiFilters(appliedFilters, selectedCarrierRouteId)
         );
 
         if (!isMounted) {
@@ -126,17 +647,37 @@ export default function OpenTransportRequestsPage() {
           return;
         }
 
+        if (
+          error instanceof ApiClientError &&
+          error.status === 404 &&
+          selectedCarrierRouteId !== null
+        ) {
+          router.replace(
+            buildCarrierRouteSelectionPath(pathname, searchParams, null)
+          );
+          return;
+        }
+
+        if (
+          error instanceof ApiClientError &&
+          error.status === 503 &&
+          selectedCarrierRouteId !== null
+        ) {
+          setErrorMessage("Seçili rota filtresi şu anda uygulanamıyor.");
+          return;
+        }
+
         setErrorMessage(
           error instanceof ApiClientError
             ? error.message
-            : "Acik istekler yuklenirken beklenmeyen bir hata olustu."
+            : "Açık istekler yüklenirken beklenmeyen bir hata oluştu."
         );
       } finally {
         if (!isMounted) {
           return;
         }
 
-        setIsLoading(false);
+        setIsRequestsLoading(false);
       }
     };
 
@@ -145,7 +686,29 @@ export default function OpenTransportRequestsPage() {
     return () => {
       isMounted = false;
     };
-  }, [accessToken, appliedFilters, router, status]);
+  }, [
+    accessToken,
+    appliedFilters,
+    pathname,
+    router,
+    searchParams,
+    selectedCarrierRouteId,
+    status,
+  ]);
+
+  useEffect(() => {
+    if (selectedRequestId === null) {
+      return;
+    }
+
+    const requestStillVisible = requests.some(
+      (request) => request.id === selectedRequestId
+    );
+
+    if (!requestStillVisible) {
+      setSelectedRequestId(null);
+    }
+  }, [requests, selectedRequestId]);
 
   const handleFilterChange = (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -154,6 +717,16 @@ export default function OpenTransportRequestsPage() {
     setFilters((currentFilters) => ({
       ...currentFilters,
       [name]: value,
+    }));
+  };
+
+  const handleCityFilterChange = (
+    field: "baslangicSehir" | "varisSehir",
+    value: string
+  ) => {
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [field]: value,
     }));
   };
 
@@ -167,15 +740,38 @@ export default function OpenTransportRequestsPage() {
     setAppliedFilters(initialFilters);
   };
 
-  if (status !== "ready") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-        <div className="font-medium text-gray-600">Yukleniyor...</div>
-      </div>
+  const handleCarrierRouteChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextCarrierRouteId = parsePositiveInteger(event.target.value);
+    setSelectedRequestId(null);
+
+    router.replace(
+      buildCarrierRouteSelectionPath(pathname, searchParams, nextCarrierRouteId)
     );
+  };
+
+  const handleRequestCardClick = (requestId: number) => {
+    setSelectedRequestId(requestId);
+  };
+
+  const handleRequestMarkerSelect = (requestId: number) => {
+    setSelectedRequestId(requestId);
+
+    const requestCardElement = requestCardRefs.current.get(requestId);
+    requestCardElement?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  };
+
+  if (status !== "ready") {
+    return <OpenTransportRequestsPageFallback />;
   }
 
-  const alreadyOfferedCount = requests.filter((request) => request.alreadyOffered).length;
+  const selectedCarrierRoute =
+    routes.find((route) => route.id === selectedCarrierRouteId) ?? null;
+  const alreadyOfferedCount = requests.filter(
+    (request) => request.alreadyOffered
+  ).length;
   const freshOpportunityCount = requests.length - alreadyOfferedCount;
   const filtersActive = hasActiveFilters({
     ...appliedFilters,
@@ -186,283 +782,178 @@ export default function OpenTransportRequestsPage() {
   });
 
   return (
-    <CarrierVehiclesShell title="Acik istekler">
-      {isLoading ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Acik istekler yukleniyor...
-        </div>
-      ) : null}
+    <CarrierVehiclesShell
+      title="Açık İstekler"
+      description="Uygun taşıma taleplerini keşfet."
+      headerActions={<InlineHelpTrigger helpKey="open-requests" />}
+      headerVariant="compact"
+    >
+      {isRequestsLoading ? <DashboardPageSkeleton /> : null}
 
-      {!isLoading && errorMessage ? (
+      {!isRequestsLoading && errorMessage ? (
         <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage ? (
+      {!errorMessage ? (
         <>
-          <div className="grid gap-4 md:grid-cols-3">
-            <SummaryStatCard label="Acik istek" value={requests.length} />
-            <SummaryStatCard label="Yeni firsat" value={freshOpportunityCount} />
-            <SummaryStatCard label="Takip ettigin" value={alreadyOfferedCount} />
+          <div className="grid gap-3 md:grid-cols-3 mb-6">
+            <SummaryStatCard label="Açık İstek" value={requests.length} density="compact" />
+            <SummaryStatCard
+              label="Yeni Fırsat"
+              value={freshOpportunityCount}
+              density="compact"
+            />
+            <SummaryStatCard
+              label="Takip Ettiğin"
+              value={alreadyOfferedCount}
+              density="compact"
+            />
           </div>
 
-          <CollectionToolbar
-            title="Filtreler"
-            countLabel={`${requests.length} acik istek`}
-            hint={filtersActive ? "Filtreler aktif" : "Tum kayitlar"}
-          />
+          {!isRequestsLoading ? (
+            <div className="grid gap-5 lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start">
+              <OpenRequestsFilterRail
+                requestsCount={requests.length}
+                selectedCarrierRouteId={selectedCarrierRouteId}
+                selectedCarrierRoute={selectedCarrierRoute}
+                routes={routes}
+                isRoutesLoading={isRoutesLoading}
+                routeErrorMessage={routeErrorMessage}
+                filters={filters}
+                filtersActive={filtersActive}
+                onFilterChange={handleFilterChange}
+                onApplyFilters={handleApplyFilters}
+                onResetFilters={handleResetFilters}
+                onCarrierRouteChange={handleCarrierRouteChange}
+                onBaslangicSehirChange={(value) =>
+                  handleCityFilterChange("baslangicSehir", value)
+                }
+                onVarisSehirChange={(value) =>
+                  handleCityFilterChange("varisSehir", value)
+                }
+              />
 
-          <form
-            onSubmit={handleApplyFilters}
-            className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 xl:grid-cols-4"
-          >
-            <CitySelectField
-              id="baslangicSehir"
-              label="Baslangic sehri"
-              options={TURKEY_CITY_OPTIONS}
-              placeholder="Il sec"
-              value={filters.baslangicSehir}
-              onChange={(value) =>
-                setFilters((currentFilters) => ({
-                  ...currentFilters,
-                  baslangicSehir: value,
-                }))
-              }
-            />
-            <CitySelectField
-              id="varisSehir"
-              label="Varis sehri"
-              options={TURKEY_CITY_OPTIONS}
-              placeholder="Il sec"
-              value={filters.varisSehir}
-              onChange={(value) =>
-                setFilters((currentFilters) => ({
-                  ...currentFilters,
-                  varisSehir: value,
-                }))
-              }
-            />
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700" htmlFor="tekTasimaIstiyor">
-                Tek tasima
-              </label>
-              <select
-                id="tekTasimaIstiyor"
-                name="tekTasimaIstiyor"
-                value={filters.tekTasimaIstiyor}
-                onChange={handleFilterChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="all">Hepsi</option>
-                <option value="true">Sadece tek tasima</option>
-                <option value="false">Paylasimli olabilir</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700" htmlFor="yukTipi">
-                Yuk tipi
-              </label>
-              <select
-                id="yukTipi"
-                name="yukTipi"
-                value={filters.yukTipi}
-                onChange={handleFilterChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="">Tum tipler</option>
-                {CARGO_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700" htmlFor="minAgirlikKg">
-                Min agirlik (kg)
-              </label>
-              <input
-                id="minAgirlikKg"
-                name="minAgirlikKg"
-                type="number"
-                min="0"
-                step="0.01"
-                value={filters.minAgirlikKg}
-                onChange={handleFilterChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700" htmlFor="maxAgirlikKg">
-                Max agirlik (kg)
-              </label>
-              <input
-                id="maxAgirlikKg"
-                name="maxAgirlikKg"
-                type="number"
-                min="0"
-                step="0.01"
-                value={filters.maxAgirlikKg}
-                onChange={handleFilterChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700" htmlFor="minHacimM3">
-                Min hacim (m3)
-              </label>
-              <input
-                id="minHacimM3"
-                name="minHacimM3"
-                type="number"
-                min="0"
-                step="0.01"
-                value={filters.minHacimM3}
-                onChange={handleFilterChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700" htmlFor="maxHacimM3">
-                Max hacim (m3)
-              </label>
-              <input
-                id="maxHacimM3"
-                name="maxHacimM3"
-                type="number"
-                min="0"
-                step="0.01"
-                value={filters.maxHacimM3}
-                onChange={handleFilterChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700" htmlFor="tasimaTarihi">
-                Tasima tarihi
-              </label>
-              <input
-                id="tasimaTarihi"
-                name="tasimaTarihi"
-                type="date"
-                value={filters.tasimaTarihi}
-                onChange={handleFilterChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-            <div className="flex items-end gap-2 xl:col-span-3">
-              <button
-                type="submit"
-                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-              >
-                Filtreleri uygula
-              </button>
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Temizle
-              </button>
-            </div>
-          </form>
-        </>
-      ) : null}
-
-      {!isLoading && !errorMessage && requests.length === 0 ? (
-        <EmptyStateCard
-          title="Uygun istek bulunmuyor"
-          description={
-            filtersActive
-              ? "Bu filtrelerle eslesen bir tasima talebi yok. Filtreleri gevsetip tekrar deneyebilirsin."
-              : "Su anda teklif vermeye acik bir tasima talebi yok. Yeni kayitlar geldiginde burada gorunecek."
-          }
-        />
-      ) : null}
-
-      {!isLoading && !errorMessage && requests.length > 0 ? (
-        <div className="grid gap-4">
-          {requests.map((request) => (
-            <div
-              key={request.id}
-              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-200"
-            >
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                    <StatusBadge status={request.durum} />
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      Istek #{request.id}
-                    </span>
-                    {request.alreadyOffered ? (
-                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
-                        Teklif verdin
+              <div className="space-y-4">
+                <div className="app-surface rounded-[1.5rem] p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-black tracking-tight text-slate-950">
+                        Harita
+                      </p>
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                        Alış
                       </span>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                      {formatLocationLabel(
-                        request.baslangicKonumMetni,
-                        request.baslangicSehri
-                      )}{" "}
-                      {"->"}{" "}
-                      {formatLocationLabel(
-                        request.varisKonumMetni,
-                        request.varisSehri
-                      )}
-                    </h2>
-                    <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                        {getCargoTypeLabel(request.yukTipi)}
+                      <span className="rounded-full bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700 ring-1 ring-orange-100">
+                        Teslim
                       </span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                        {formatWeightKg(request.agirlikKg)}
-                      </span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                        {formatVolumeM3(request.hacimM3)}
-                      </span>
-                      {request.tekTasimaIstiyor ? (
-                        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700 ring-1 ring-amber-100">
-                          Tek tasima
-                        </span>
-                      ) : null}
-                      {request.tasimaTarihi ? (
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                          {request.tasimaTarihi}
+                      {selectedCarrierRouteDetail ? (
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+                          Rota
                         </span>
                       ) : null}
                     </div>
-                  </div>
 
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                      Yuk ozeti
-                    </p>
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 line-clamp-3">
-                      {request.yukDetay}
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setIsMapVisible((currentValue) => {
+                          const nextValue = !currentValue;
+
+                          if (nextValue) {
+                            setHasMountedMap(true);
+                          }
+
+                          return nextValue;
+                        })
+                      }
+                      className="app-button-secondary text-sm"
+                    >
+                      {isMapVisible ? "Haritayı Gizle" : "Haritayı Göster"}
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex min-w-[220px] flex-col gap-4 lg:items-end">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    {formatDate(request.olusturmaTarihi)}
-                  </p>
-                  <Link
-                    href={`/dashboard/acik_istekler/${request.id}`}
-                    className="inline-flex items-center justify-center rounded-2xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
-                  >
-                    Detay ve Teklif
-                  </Link>
-                </div>
+                {hasMountedMap ? (
+                  <MotionCollapse isOpen={isMapVisible}>
+                    <OpenRequestsMapPanel
+                      requests={requests}
+                      selectedCarrierRoute={selectedCarrierRouteDetail}
+                      selectedRequestId={selectedRequestId}
+                      onRequestSelect={handleRequestMarkerSelect}
+                      hideHeader
+                      isVisible={isMapVisible}
+                    />
+                  </MotionCollapse>
+                ) : null}
+
+                {requests.length === 0 ? (
+                  <EmptyStateCard
+                    title="Uygun istek bulunmuyor"
+                    description={
+                      selectedCarrierRouteId !== null
+                        ? "Seçili rota ve mevcut filtrelerle eşleşen istek bulunmuyor."
+                        : filtersActive
+                          ? "Bu filtrelerle eşleşen bir taşıma talebi yok."
+                          : "Şu anda teklif vermeye açık bir taşıma talebi yok."
+                    }
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-base font-black tracking-tight text-slate-950">
+                          İstekler
+                        </h2>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                          {requests.length} kayıt
+                        </span>
+                      </div>
+                      {selectedCarrierRouteId !== null ? (
+                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                          Rota filtresi aktif
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="grid gap-4">
+                      {requests.map((request) => (
+                        <OpenRequestCard
+                          key={request.id}
+                          request={request}
+                          isSelected={request.id === selectedRequestId}
+                          detailHref={buildRequestDetailHref(
+                            request.id,
+                            selectedCarrierRouteId
+                          )}
+                          selectedCarrierRouteId={selectedCarrierRouteId}
+                          onCardClick={handleRequestCardClick}
+                          cardRef={(node) => {
+                            if (node) {
+                              requestCardRefs.current.set(request.id, node);
+                            } else {
+                              requestCardRefs.current.delete(request.id);
+                            }
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          ))}
-        </div>
+          ) : null}
+        </>
       ) : null}
     </CarrierVehiclesShell>
+  );
+}
+
+export default function OpenTransportRequestsPage() {
+  return (
+    <Suspense fallback={<OpenTransportRequestsPageFallback />}>
+      <OpenTransportRequestsPageContent />
+    </Suspense>
   );
 }

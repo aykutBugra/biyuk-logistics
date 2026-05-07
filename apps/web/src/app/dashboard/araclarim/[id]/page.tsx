@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
+import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   deleteVehicle,
@@ -143,101 +144,157 @@ export default function VehicleDetailPage() {
 
   if (status !== "ready") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-        <div className="font-medium text-gray-600">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <p className="font-medium text-slate-500">Yukleniyor...</p>
       </div>
     );
   }
 
   return (
     <CarrierVehiclesShell title="Arac detayi">
-      {isLoading ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
-          Arac detayi yukleniyor...
-        </div>
-      ) : null}
+      {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900">Kayit goruntulenemedi</h2>
-          <p className="mt-2 text-sm text-gray-600">{errorMessage}</p>
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
+          <h2 className="text-base font-bold text-red-800">Kayit goruntulenemedi</h2>
+          <p className="mt-1">{errorMessage}</p>
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && vehicle ? (
         <div className="grid gap-6">
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          {/* Identity header */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
                     {vehicle.plaka}
                   </span>
-                  <span>#{vehicle.id}</span>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
+                    #{vehicle.id}
+                  </span>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {vehicle.marka} {"->"} {vehicle.model}
+                <h2 className="text-2xl font-black tracking-tight text-slate-950">
+                  {vehicle.marka} {vehicle.model}
                 </h2>
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                    {getVehicleBodyTypeLabel(vehicle.kasaTipi)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                    {vehicle.yil} model
+                  </span>
+                </div>
               </div>
 
-              <div className="flex flex-col items-start gap-3 md:items-end">
-                <div className="text-sm text-gray-500">{vehicle.yil} model</div>
-                <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={`/dashboard/araclarim/${vehicle.id}/duzenle`}
-                    className="inline-flex items-center justify-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-                  >
-                    Araci Duzenle
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="inline-flex items-center justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isDeleting ? "Siliniyor..." : "Araci Sil"}
-                  </button>
-                </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={`/dashboard/araclarim/${vehicle.id}/duzenle`}
+                  className="inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+                >
+                  Araci Duzenle
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete()}
+                  disabled={isDeleting}
+                  className="text-sm font-semibold text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isDeleting ? "Siliniyor..." : "Araci Sil"}
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-900">Arac bilgileri</h3>
-            <dl className="mt-4 space-y-3 text-sm text-gray-600">
+          {/* Vehicle specs */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-900">Arac bilgileri</h3>
+            <dl className="mt-4 space-y-3 text-sm text-slate-600">
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Marka</dt>
+                <dt className="font-medium text-slate-900">Marka</dt>
                 <dd>{vehicle.marka}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Model</dt>
+                <dt className="font-medium text-slate-900">Model</dt>
                 <dd>{vehicle.model}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Plaka</dt>
+                <dt className="font-medium text-slate-900">Plaka</dt>
                 <dd>{vehicle.plaka}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Yil</dt>
+                <dt className="font-medium text-slate-900">Yil</dt>
                 <dd>{vehicle.yil}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Kasa tipi</dt>
+                <dt className="font-medium text-slate-900">Kasa tipi</dt>
                 <dd>{getVehicleBodyTypeLabel(vehicle.kasaTipi)}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Maksimum agirlik</dt>
+                <dt className="font-medium text-slate-900">Maksimum agirlik</dt>
                 <dd>{formatWeightKg(vehicle.maksimumAgirlikKg)}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Maksimum hacim</dt>
+                <dt className="font-medium text-slate-900">Maksimum hacim</dt>
                 <dd>{formatVolumeM3(vehicle.maksimumHacimM3)}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Yukleme alani</dt>
+                <dt className="font-medium text-slate-900">Yukleme alani</dt>
                 <dd>{formatDimensionsCm(vehicle)}</dd>
               </div>
             </dl>
+          </div>
+
+          {/* Capacity summary */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-900">Kapasite ozeti</h3>
+            <dl className="mt-4 space-y-3 text-sm text-slate-600">
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-slate-900">Toplam agirlik</dt>
+                <dd>{formatWeightKg(vehicle.capacitySummary.toplamAgirlikKg)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-slate-900">Rezerve agirlik</dt>
+                <dd>{formatWeightKg(vehicle.capacitySummary.rezerveAgirlikKg)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-slate-900">Kalan agirlik</dt>
+                <dd>{formatWeightKg(vehicle.capacitySummary.kalanAgirlikKg)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-slate-900">Toplam hacim</dt>
+                <dd>{formatVolumeM3(vehicle.capacitySummary.toplamHacimM3)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-slate-900">Rezerve hacim</dt>
+                <dd>{formatVolumeM3(vehicle.capacitySummary.rezerveHacimM3)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-slate-900">Kalan hacim</dt>
+                <dd>{formatVolumeM3(vehicle.capacitySummary.kalanHacimM3)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-slate-900">Aktif rezervasyon</dt>
+                <dd>{vehicle.capacitySummary.aktifRezervasyonSayisi}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="font-medium text-slate-900">
+                  Aktif tek tasima rezervasyonu
+                </dt>
+                <dd>
+                  {vehicle.capacitySummary.aktifTekTasimaRezervasyonuVar
+                    ? "Var"
+                    : "Yok"}
+                </dd>
+              </div>
+            </dl>
+
+            {vehicle.capacitySummary.hesapEksigiVar ? (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                Kapasite ozeti eksik kayitlar nedeniyle kesin yorum degildir.
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

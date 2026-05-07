@@ -3,6 +3,7 @@ import { RatingContextResponseDto } from "../../ratings/dto/rating-context-respo
 export class JobDetailResponseDto {
   id!: number;
   requestId!: number;
+  participantSide!: "customer" | "carrier";
   durum!: string;
   anlasilanFiyat!: number;
   olusturmaTarihi!: Date;

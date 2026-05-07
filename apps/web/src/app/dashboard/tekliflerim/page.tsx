@@ -3,21 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
+import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import EmptyStateCard from "@/components/EmptyStateCard";
-import StatusBadge from "@/components/StatusBadge";
+import InlineHelpTrigger from "@/components/InlineHelpTrigger";
+import MyOfferCard from "@/components/MyOfferCard";
 import SummaryStatCard from "@/components/SummaryStatCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import { getMyOffers, type OfferItem } from "@/lib/api/offers";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("tr-TR", {
-    style: "currency",
-    currency: "TRY",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 export default function MyOffersPage() {
   const router = useRouter();
@@ -87,7 +81,7 @@ export default function MyOffersPage() {
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-        <div className="font-medium text-slate-600">Yukleniyor...</div>
+        <p className="font-medium text-slate-500">Yukleniyor...</p>
       </div>
     );
   }
@@ -100,23 +94,23 @@ export default function MyOffersPage() {
   ).length;
 
   return (
-    <CarrierVehiclesShell title="Tekliflerim">
-      {isLoading ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Teklifler yukleniyor...
-        </div>
-      ) : null}
+    <CarrierVehiclesShell
+      title="Tekliflerim"
+      description="Verdigin teklifleri, her birinin mevcut durumunu ve musteri yanitlarini buradan takip et."
+      headerActions={<InlineHelpTrigger helpKey="my-offers" />}
+    >
+      {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && offers.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3 mb-6">
           <SummaryStatCard label="Toplam teklif" value={offers.length} />
-          <SummaryStatCard label="Acik teklif" value={openOfferCount} />
+          <SummaryStatCard label="Beklemede" value={openOfferCount} />
           <SummaryStatCard label="Kabul edilen" value={acceptedOfferCount} />
         </div>
       ) : null}
@@ -124,7 +118,7 @@ export default function MyOffersPage() {
       {!isLoading && !errorMessage && offers.length === 0 ? (
         <EmptyStateCard
           title="Henuz teklif yok"
-          description="Ilk teklifini verdiginde burada goreceksin."
+          description="Acik istekleri inceleyip ilk teklifini verdiginde burada goreceksin."
           actionHref="/dashboard/acik_istekler"
           actionLabel="Acik istekleri incele"
         />
@@ -133,44 +127,7 @@ export default function MyOffersPage() {
       {!isLoading && !errorMessage && offers.length > 0 ? (
         <div className="grid gap-4">
           {offers.map((offer) => (
-            <div
-              key={offer.id}
-              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-200"
-            >
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                    <StatusBadge status={offer.durum} />
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      Teklif #{offer.id}
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      Istek #{offer.requestId}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                      {offer.baslangicSehri} {"->"} {offer.varisSehri}
-                    </h2>
-                    <p className="text-sm leading-6 text-slate-600">
-                      {offer.aracPlaka
-                        ? `Secilen arac: ${offer.aracPlaka}`
-                        : "Arac bilgisi bulunamadi."}
-                    </p>
-                    <p className="max-w-3xl text-sm leading-6 text-slate-500 line-clamp-3">
-                      {offer.not ?? "Teklif notu eklenmedi."}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-start gap-3 lg:min-w-[200px] lg:items-end">
-                  <p className="text-2xl font-black tracking-tight text-emerald-700">
-                    {formatCurrency(offer.fiyat)}
-                  </p>
-                </div>
-              </div>
-            </div>
+            <MyOfferCard key={offer.id} offer={offer} />
           ))}
         </div>
       ) : null}

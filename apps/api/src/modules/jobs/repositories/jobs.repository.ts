@@ -161,12 +161,6 @@ export type CompleteJobResult =
       reason: "job_not_started" | "request_not_agreed";
     };
 
-class JobCompletionStateError extends Error {
-  constructor(readonly reason: "job_not_started" | "request_not_agreed") {
-    super(reason);
-  }
-}
-
 @Injectable()
 export class JobsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -279,52 +273,54 @@ export class JobsRepository {
   async completeByIdAndCarrierId(
     input: CompleteJobInput
   ): Promise<CompleteJobResult> {
-    try {
-      return await this.prisma.client.$transaction(async (tx) => {
-        const completedJob = await tx.nakliye.updateMany({
-          where: {
-            id: input.jobId,
-            nakliyeciId: input.carrierId,
-            durumId: input.startedStatusId,
-          },
-          data: {
-            durumId: input.completedJobStatusId,
-            teslimTarihi: new Date(),
-          },
-        });
+    return this.prisma.client.$transaction((tx) =>
+      this.completeByIdAndCarrierIdInTransaction(tx, input)
+    );
+  }
 
-        if (completedJob.count === 0) {
-          throw new JobCompletionStateError("job_not_started");
-        }
+  async completeByIdAndCarrierIdInTransaction(
+    tx: Prisma.TransactionClient,
+    input: CompleteJobInput
+  ): Promise<CompleteJobResult> {
+    const completedJob = await tx.nakliye.updateMany({
+      where: {
+        id: input.jobId,
+        nakliyeciId: input.carrierId,
+        durumId: input.startedStatusId,
+      },
+      data: {
+        durumId: input.completedJobStatusId,
+        teslimTarihi: new Date(),
+      },
+    });
 
-        const completedRequest = await tx.istek.updateMany({
-          where: {
-            id: input.requestId,
-            durumId: input.agreedRequestStatusId,
-          },
-          data: {
-            durumId: input.completedRequestStatusId,
-          },
-        });
-
-        if (completedRequest.count === 0) {
-          throw new JobCompletionStateError("request_not_agreed");
-        }
-
-        return {
-          ok: true,
-        };
-      });
-    } catch (error) {
-      if (error instanceof JobCompletionStateError) {
-        return {
-          ok: false,
-          reason: error.reason,
-        };
-      }
-
-      throw error;
+    if (completedJob.count === 0) {
+      return {
+        ok: false,
+        reason: "job_not_started",
+      };
     }
+
+    const completedRequest = await tx.istek.updateMany({
+      where: {
+        id: input.requestId,
+        durumId: input.agreedRequestStatusId,
+      },
+      data: {
+        durumId: input.completedRequestStatusId,
+      },
+    });
+
+    if (completedRequest.count === 0) {
+      return {
+        ok: false,
+        reason: "request_not_agreed",
+      };
+    }
+
+    return {
+      ok: true,
+    };
   }
 
   private mapStoredJob(

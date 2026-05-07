@@ -9,10 +9,6 @@ export class OpenRequestDetailResponseDto extends OpenRequestListItemResponseDto
   normalizeVarisSehir!: string | null;
   normalizeBaslangicIlce!: string | null;
   normalizeVarisIlce!: string | null;
-  baslangicEnlem!: number;
-  baslangicBoylam!: number;
-  varisEnlem!: number;
-  varisBoylam!: number;
   hasActiveVehicle!: boolean;
   hasExistingOffer!: boolean;
 }

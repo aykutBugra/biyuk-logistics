@@ -20,6 +20,8 @@ export class GoogleRouteEngine implements RouteEngine {
 
   constructor(private readonly configService: ConfigService) {}
 
+  // Google Routes computeRoutes endpoint'ini kullanarak origin, destination ve
+  // gerekirse ara noktalar icin gercek yol mesafesi ve sure metrigini hesaplar.
   async getRouteMetrics(
     origin: RoutePoint,
     destination: RoutePoint,
@@ -29,78 +31,67 @@ export class GoogleRouteEngine implements RouteEngine {
     const defaultLanguageCode =
       this.configService.get<string>("maps.defaultLanguageCode") ?? "tr";
 
-
-
-
-    //fetch API'si kullanarak Google Routes API'ye bir POST isteği gönderir. 
-    // İstek gövdesi, başlangıç noktası, varış noktası ve ara noktaları 
-    // içeren JSON formatında hazırlanır. Ayrıca, istek başlıklarında API
-    //  anahtarı ve istenen alanlar belirtilir.
-    const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-        //computeRoutes kusbakışı yerine gerçek yol torasını döndürür, bu yüzden daha doğru metrikler sağlar.
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey, //.env içinde tanımlı api key i kullanır
-        "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",  //sadece gerekli alanları döndürür.
-      },
-      body: JSON.stringify({
-        origin: { //başlangıç canonical konum bilgisi
-          location: {
-            latLng: {
-              latitude: origin.lat,
-              longitude: origin.lng,
-            },
-          },
+    // Request gomdesi "start -> waypointler -> end" zincirini tarif eder.
+    // Route sapma evaluator'u burada pickup ve dropoff'u ara nokta olarak gonderir.
+    const response = await fetch(
+      "https://routes.googleapis.com/directions/v2:computeRoutes",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          // MVP'de geometry degil yalnizca mesafe ve sure gerektigi icin dar bir field mask kullanilir.
+          "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",
         },
-        destination: {  //varış canonical konum bilgisi
-          location: {
-            latLng: {
-              latitude: destination.lat,
-              longitude: destination.lng,
+        body: JSON.stringify({
+          origin: {
+            location: {
+              latLng: {
+                latitude: origin.lat,
+                longitude: origin.lng,
+              },
             },
           },
-        },
-        intermediates: waypoints.map((waypoint) => ({ //gelecekte ara durak için uygun alan
-          location: {
-            latLng: {
-              latitude: waypoint.lat,
-              longitude: waypoint.lng,
+          destination: {
+            location: {
+              latLng: {
+                latitude: destination.lat,
+                longitude: destination.lng,
+              },
             },
           },
-        })),
-        travelMode: "DRIVE",  //arac rotası ister
-        languageCode: defaultLanguageCode,
-      }),
-    });
+          intermediates: waypoints.map((waypoint) => ({
+            location: {
+              latLng: {
+                latitude: waypoint.lat,
+                longitude: waypoint.lng,
+              },
+            },
+          })),
+          travelMode: "DRIVE",
+          languageCode: defaultLanguageCode,
+        }),
+      }
+    );
 
-
-
-
-
-
+    // Upstream cevap vermezse evaluator bunu gecici route servis problemi olarak ele alir.
     if (!response.ok) {
       throw new BadGatewayException("Rota metrikleri su anda hesaplanamiyor.");
     }
 
     const payload = (await response.json()) as GoogleRoutesResponse;
-
-
-
-
-
-
-
-    const route = payload.routes?.[0];  //ilk rotayı alır, çünkü genellikle en iyi sonucu verir.
+    const route = payload.routes?.[0];
     const durationSeconds = route?.duration
-      ? this.parseDurationSeconds(route.duration)   //google in duration formatını saniyeye çevirir
+      ? this.parseDurationSeconds(route.duration)
       : null;
 
+    // Provider'dan gelen payload'da gerekli alanlar yoksa metrikleri guvenilir
+    // kabul etmeyip hesaplamayi gecersiz sayar.
     if (
-      typeof route?.distanceMeters !== "number" ||   //mesafe sayısal değilse kabul etmez
-      !Number.isFinite(route.distanceMeters) ||      //mesafe negatifse kabul etmez
+      typeof route?.distanceMeters !== "number" ||
+      !Number.isFinite(route.distanceMeters) ||
       route.distanceMeters < 0 ||
-      durationSeconds === null      //süre geçerli formatta değilse kabul etmez
+      durationSeconds === null
     ) {
       throw new BadGatewayException("Rota metrikleri dogrulanamadi.");
     }
@@ -111,13 +102,7 @@ export class GoogleRouteEngine implements RouteEngine {
     };
   }
 
-
-
-
-
-
-
-
+  // Google'in "123.4s" formatindaki sure degerini tam sayi saniyeye cevirir.
   private parseDurationSeconds(duration: string): number | null {
     const normalizedDuration = duration.trim();
 
@@ -134,6 +119,8 @@ export class GoogleRouteEngine implements RouteEngine {
     return Math.round(parsedSeconds);
   }
 
+  // Route engine'i sadece server-side Google key ile calistirir; key yoksa
+  // rota hesaplayan ust katmanlar sessiz bozulmasin diye acik hata verir.
   private requireGoogleApiKey(): string {
     const apiKey = this.configService.get<string>("maps.googleApiKey")?.trim();
 

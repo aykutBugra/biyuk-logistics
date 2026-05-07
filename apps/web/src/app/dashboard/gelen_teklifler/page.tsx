@@ -1,11 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
+import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import EmptyStateCard from "@/components/EmptyStateCard";
-import StatusBadge from "@/components/StatusBadge";
+import IncomingOfferCard from "@/components/IncomingOfferCard";
+import InlineHelpTrigger from "@/components/InlineHelpTrigger";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   acceptOffer,
@@ -15,20 +16,6 @@ import {
 } from "@/lib/api/offers";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCustomerPageAccess } from "@/lib/auth/use-customer-page-access";
-import {
-  formatLocationLabel,
-  formatVolumeM3,
-  formatWeightKg,
-  getCargoTypeLabel,
-} from "@/lib/logistics";
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("tr-TR", {
-    style: "currency",
-    currency: "TRY",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 export default function MyIncomingOffersPage() {
   const router = useRouter();
@@ -159,22 +146,26 @@ export default function MyIncomingOffersPage() {
 
   if (status !== "ready") {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 flex items-center justify-center">
-        <div className="font-medium text-slate-600">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <p className="font-medium text-slate-500">Yukleniyor...</p>
       </div>
     );
   }
 
+  const pendingCount = offers.filter(
+    (o) => o.durum.trim().toUpperCase() === "OLUSTURULDU"
+  ).length;
+
   return (
-    <CustomerTransportRequestsShell title="Gelen Teklifler">
-      {isLoading ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Gelen teklifler yukleniyor...
-        </div>
-      ) : null}
+    <CustomerTransportRequestsShell
+      title="Gelen Teklifler"
+      description="Nakliyecilerden gelen teklifleri incele ve karar ver."
+      headerActions={<InlineHelpTrigger helpKey="incoming-offers" />}
+    >
+      {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
@@ -182,7 +173,7 @@ export default function MyIncomingOffersPage() {
       {!isLoading && !errorMessage && offers.length === 0 ? (
         <EmptyStateCard
           title="Bekleyen teklif yok"
-          description="Yeni teklifler burada listelenecek."
+          description="Nakliyecilerden teklif geldiginde burada goreceksin. Teklif almak icin once tasima istegi olusturmani gerekiyor."
           actionHref="/dashboard/isteklerim"
           actionLabel="Isteklerime git"
         />
@@ -190,102 +181,21 @@ export default function MyIncomingOffersPage() {
 
       {!isLoading && !errorMessage && offers.length > 0 ? (
         <div className="grid gap-4">
+          {pendingCount > 0 ? (
+            <p className="text-sm font-medium text-slate-500">
+              {pendingCount} teklif karar bekleniyor.
+            </p>
+          ) : null}
+
           {offers.map((offer) => (
-            <article
+            <IncomingOfferCard
               key={offer.id}
-              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-200"
-            >
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                    <StatusBadge status={offer.durum} />
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      Teklif #{offer.id}
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      Istek #{offer.requestId}
-                    </span>
-                    {offer.aracPlaka ? (
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                        {offer.aracPlaka}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                      {formatLocationLabel(
-                        offer.baslangicKonumMetni,
-                        offer.baslangicSehri
-                      )}{" "}
-                      {"->"}{" "}
-                      {formatLocationLabel(offer.varisKonumMetni, offer.varisSehri)}
-                    </h2>
-                    <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                        {getCargoTypeLabel(offer.yukTipi)}
-                      </span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                        {formatWeightKg(offer.agirlikKg)}
-                      </span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                        {formatVolumeM3(offer.hacimM3)}
-                      </span>
-                      {offer.tekTasimaIstiyor ? (
-                        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700 ring-1 ring-amber-100">
-                          Tek tasima
-                        </span>
-                      ) : null}
-                      {offer.tasimaTarihi ? (
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                          {offer.tasimaTarihi}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold text-slate-900">
-                      {offer.carrierName}
-                    </p>
-                    <p className="text-sm text-slate-500">@{offer.carrierUsername}</p>
-                    <p className="max-w-3xl text-sm leading-6 text-slate-600">
-                      {offer.not ?? "Teklif notu eklenmedi."}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex min-w-[230px] flex-col items-start gap-3 lg:items-end">
-                  <p className="text-2xl font-black tracking-tight text-emerald-700">
-                    {formatCurrency(offer.fiyat)}
-                  </p>
-                  <div className="flex flex-wrap gap-2 lg:justify-end">
-                    <Link
-                      href={`/dashboard/isteklerim/${offer.requestId}`}
-                      className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                    >
-                      Istek Detayi
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => void handleOfferDecision(offer, "accept")}
-                      disabled={actingOfferId !== null}
-                      className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {actingOfferId === offer.id ? "Isleniyor..." : "Kabul Et"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleOfferDecision(offer, "reject")}
-                      disabled={actingOfferId !== null}
-                      className="inline-flex items-center justify-center rounded-2xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {actingOfferId === offer.id ? "Isleniyor..." : "Reddet"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </article>
+              offer={offer}
+              isProcessingThis={actingOfferId === offer.id}
+              isAnyProcessing={actingOfferId !== null}
+              onAccept={(o) => void handleOfferDecision(o, "accept")}
+              onReject={(o) => void handleOfferDecision(o, "reject")}
+            />
           ))}
         </div>
       ) : null}

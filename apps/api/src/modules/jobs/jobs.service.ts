@@ -7,7 +7,10 @@ import {
 } from "@nestjs/common";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { unwrapTransactionResult } from "../../common/utils/unwrap-transaction-result";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { NotificationsPublisher } from "../notifications/notifications.publisher";
+import { JobAudienceQueryDto, type JobAudience } from "./dto/job-audience-query.dto";
 import { JobDetailResponseDto } from "./dto/job-detail-response.dto";
 import { JobListItemResponseDto } from "./dto/job-list-item-response.dto";
 import {
@@ -16,6 +19,10 @@ import {
   type StoredJobRecord,
 } from "./repositories/jobs.repository";
 import { buildRatingContext } from "../ratings/rating-context.helpers";
+import {
+  VEHICLE_CAPACITY_RELEASE_REASONS,
+  VehicleCapacityService,
+} from "../vehicle-capacity/vehicle-capacity.service";
 
 const CREATED_JOB_STATUS = {
   durumTuru: "NAKLIYE",
@@ -46,30 +53,35 @@ const COMPLETED_REQUEST_STATUS = {
 export class JobsService {
   constructor(
     private readonly jobsRepository: JobsRepository,
-    private readonly notificationsPublisher: NotificationsPublisher
+    private readonly notificationsPublisher: NotificationsPublisher,
+    private readonly vehicleCapacityService: VehicleCapacityService,
+    private readonly prisma: PrismaService
   ) {}
 
-  async getMine(currentUser: AuthenticatedUser): Promise<JobListItemResponseDto[]> {
-    if (this.isCarrier(currentUser)) {
+  async getMine(
+    currentUser: AuthenticatedUser,
+    query: JobAudienceQueryDto
+  ): Promise<JobListItemResponseDto[]> {
+    const audience = this.resolveAudience(currentUser, query.as);
+
+    if (audience === "carrier") {
       const jobs = await this.jobsRepository.findManyByCarrierId(currentUser.id);
-      return jobs.map((job) => this.toListItemResponse(job));
+      return jobs.map((job) => this.toListItemResponse(job, audience));
     }
 
-    if (this.isCustomer(currentUser)) {
-      const jobs = await this.jobsRepository.findManyByCustomerId(currentUser.id);
-      return jobs.map((job) => this.toListItemResponse(job));
-    }
-
-    throw new ForbiddenException("Only customers and carriers can access jobs.");
+    const jobs = await this.jobsRepository.findManyByCustomerId(currentUser.id);
+    return jobs.map((job) => this.toListItemResponse(job, audience));
   }
 
   async getById(
     currentUser: AuthenticatedUser,
-    jobId: number
+    jobId: number,
+    query: JobAudienceQueryDto
   ): Promise<JobDetailResponseDto> {
-    const job = await this.findReadableJob(currentUser, jobId);
+    const audience = this.resolveAudience(currentUser, query.as);
+    const job = await this.findReadableJob(currentUser, jobId, audience);
 
-    return this.toDetailResponse(job, currentUser);
+    return this.toDetailResponse(job, currentUser, audience);
   }
 
   async startById(
@@ -83,6 +95,8 @@ export class JobsService {
     if (!job) {
       throw new NotFoundException("Shipment not found.");
     }
+
+    this.assertDistinctShipmentParticipants(job);
 
     if (!this.isJobCreated(job.durumTuru, job.durumAdi)) {
       throw new ConflictException("Shipment can no longer be started.");
@@ -125,13 +139,14 @@ export class JobsService {
       customerId: updatedJob.customerId,
       jobId: updatedJob.id,
       requestId: updatedJob.requestId,
+      actorUserId: currentUser.id,
       route: {
         baslangicSehri: updatedJob.baslangicSehri,
         varisSehri: updatedJob.varisSehri,
       },
     });
 
-    return this.toDetailResponse(updatedJob, currentUser);
+    return this.toDetailResponse(updatedJob, currentUser, "carrier");
   }
 
   async completeById(
@@ -145,6 +160,8 @@ export class JobsService {
     if (!job) {
       throw new NotFoundException("Shipment not found.");
     }
+
+    this.assertDistinctShipmentParticipants(job);
 
     if (!this.isJobStarted(job.durumTuru, job.durumAdi)) {
       throw new ConflictException("Shipment can no longer be completed.");
@@ -182,23 +199,31 @@ export class JobsService {
       ),
     ]);
 
-    const result = await this.jobsRepository.completeByIdAndCarrierId({
-      jobId,
-      carrierId: currentUser.id,
-      requestId: job.requestId,
-      startedStatusId,
-      completedJobStatusId,
-      agreedRequestStatusId,
-      completedRequestStatusId,
-    });
-
-    if (!result.ok) {
-      throw new ConflictException(
-        result.reason === "request_not_agreed"
-          ? "Shipment can no longer be completed because the related request is no longer in an agreed state."
-          : "Shipment can no longer be completed."
+    await this.prisma.client.$transaction(async (tx) => {
+      unwrapTransactionResult(
+        await this.jobsRepository.completeByIdAndCarrierIdInTransaction(tx, {
+          jobId,
+          carrierId: currentUser.id,
+          requestId: job.requestId,
+          startedStatusId,
+          completedJobStatusId,
+          agreedRequestStatusId,
+          completedRequestStatusId,
+        }),
+        (reason) =>
+          new ConflictException(
+            reason === "request_not_agreed"
+              ? "Shipment can no longer be completed because the related request is no longer in an agreed state."
+              : "Shipment can no longer be completed."
+          )
       );
-    }
+
+      await this.vehicleCapacityService.releaseReservationByShipmentId(
+        jobId,
+        VEHICLE_CAPACITY_RELEASE_REASONS.COMPLETED,
+        tx
+      );
+    });
 
     const updatedJob = await this.jobsRepository.findByIdAndCarrierId(
       jobId,
@@ -214,6 +239,7 @@ export class JobsService {
         customerId: updatedJob.customerId,
         jobId: updatedJob.id,
         requestId: updatedJob.requestId,
+        actorUserId: currentUser.id,
         route: {
           baslangicSehri: updatedJob.baslangicSehri,
           varisSehri: updatedJob.varisSehri,
@@ -222,17 +248,19 @@ export class JobsService {
       this.notificationsPublisher.publishRatingPending({
         userId: updatedJob.carrierId,
         jobId: updatedJob.id,
+        actorUserId: currentUser.id,
       }),
     ]);
 
-    return this.toDetailResponse(updatedJob, currentUser);
+    return this.toDetailResponse(updatedJob, currentUser, "carrier");
   }
 
   private async findReadableJob(
     currentUser: AuthenticatedUser,
-    jobId: number
+    jobId: number,
+    audience: JobAudience
   ): Promise<StoredJobDetailRecord> {
-    if (this.isCarrier(currentUser)) {
+    if (audience === "carrier") {
       const job = await this.jobsRepository.findByIdAndCarrierId(jobId, currentUser.id);
 
       if (!job) {
@@ -242,17 +270,13 @@ export class JobsService {
       return job;
     }
 
-    if (this.isCustomer(currentUser)) {
-      const job = await this.jobsRepository.findByIdAndCustomerId(jobId, currentUser.id);
+    const job = await this.jobsRepository.findByIdAndCustomerId(jobId, currentUser.id);
 
-      if (!job) {
-        throw new NotFoundException("Shipment not found.");
-      }
-
-      return job;
+    if (!job) {
+      throw new NotFoundException("Shipment not found.");
     }
 
-    throw new ForbiddenException("Only customers and carriers can access jobs.");
+    return job;
   }
 
   private async requireStatusId(
@@ -290,6 +314,54 @@ export class JobsService {
     throw new ForbiddenException("Only carriers can manage shipment lifecycle.");
   }
 
+  private resolveAudience(
+    currentUser: AuthenticatedUser,
+    requestedAudience?: JobAudience
+  ): JobAudience {
+    const hasCarrierRole = this.isCarrier(currentUser);
+    const hasCustomerRole = this.isCustomer(currentUser);
+
+    if (!hasCarrierRole && !hasCustomerRole) {
+      throw new ForbiddenException("Only customers and carriers can access jobs.");
+    }
+
+    if (requestedAudience === "carrier") {
+      if (!hasCarrierRole) {
+        throw new ForbiddenException("Carrier context is not available for the current user.");
+      }
+
+      return requestedAudience;
+    }
+
+    if (requestedAudience === "customer") {
+      if (!hasCustomerRole) {
+        throw new ForbiddenException("Customer context is not available for the current user.");
+      }
+
+      return requestedAudience;
+    }
+
+    if (hasCarrierRole && hasCustomerRole) {
+      throw new ConflictException(
+        "Dual-role users must specify ?as=customer or ?as=carrier for job reads."
+      );
+    }
+
+    return hasCarrierRole ? "carrier" : "customer";
+  }
+
+  private assertDistinctShipmentParticipants(
+    job: Pick<StoredJobDetailRecord, "carrierId" | "customerId">
+  ) {
+    if (job.carrierId !== job.customerId) {
+      return;
+    }
+
+    throw new ConflictException(
+      "Shipment lifecycle is blocked because the carrier and customer resolve to the same user."
+    );
+  }
+
   private isJobCreated(durumTuru: string, durumAdi: string): boolean {
     return (
       durumTuru.trim().toUpperCase() === CREATED_JOB_STATUS.durumTuru &&
@@ -311,10 +383,14 @@ export class JobsService {
     );
   }
 
-  private toListItemResponse(job: StoredJobRecord): JobListItemResponseDto {
+  private toListItemResponse(
+    job: StoredJobRecord,
+    audience: JobAudience
+  ): JobListItemResponseDto {
     return {
       id: job.id,
       requestId: job.requestId,
+      participantSide: audience,
       baslangicSehri: job.baslangicSehri,
       varisSehri: job.varisSehri,
       anlasilanFiyat: job.anlasilanFiyat,
@@ -331,13 +407,16 @@ export class JobsService {
 
   private toDetailResponse(
     job: StoredJobDetailRecord,
-    currentUser: AuthenticatedUser
+    currentUser: AuthenticatedUser,
+    audience: JobAudience
   ): JobDetailResponseDto {
-    const canManageLifecycle = this.isCarrier(currentUser) && job.carrierId === currentUser.id;
+    const canManageLifecycle =
+      audience === "carrier" && job.carrierId === currentUser.id;
 
     return {
       id: job.id,
       requestId: job.requestId,
+      participantSide: audience,
       durum: job.durumAdi,
       anlasilanFiyat: job.anlasilanFiyat,
       olusturmaTarihi: job.olusturmaTarihi,

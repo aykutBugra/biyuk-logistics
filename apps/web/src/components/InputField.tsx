@@ -17,10 +17,10 @@ export default function InputField({
   const inputId = id ?? name;
 
   return (
-    <div>
+    <div className="space-y-2">
       <label
         htmlFor={inputId}
-        className="block text-sm font-medium text-gray-700"
+        className="block text-sm font-semibold text-slate-700"
       >
         {label}
       </label>
@@ -30,7 +30,7 @@ export default function InputField({
         type={type}
         required={required}
         placeholder={placeholder}
-        className={`appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${className}`.trim()}
+        className={`app-input appearance-none text-base sm:text-sm ${className}`.trim()}
         {...inputProps}
       />
     </div>

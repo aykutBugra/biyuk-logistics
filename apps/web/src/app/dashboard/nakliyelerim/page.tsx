@@ -48,7 +48,7 @@ export default function MyJobsPage() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
-        const response = await getMyJobs(accessToken);
+        const response = await getMyJobs(accessToken, "carrier");
 
         if (!isMounted) {
           return;
@@ -124,7 +124,7 @@ export default function MyJobsPage() {
       ) : null}
 
       {!isLoading && !errorMessage && jobs.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3 mb-6">
           <SummaryStatCard label="Toplam nakliye" value={jobs.length} />
           <SummaryStatCard label="Aktif is" value={activeJobCount} />
           <SummaryStatCard label="Tamamlanan" value={completedJobCount} />

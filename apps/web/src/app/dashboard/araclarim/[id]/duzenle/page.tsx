@@ -4,7 +4,8 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
-import InputField from "@/components/InputField";
+import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
+import VehicleFormFields from "@/components/VehicleFormFields";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   getVehicleDetail,
@@ -13,22 +14,9 @@ import {
 } from "@/lib/api/vehicles";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
-import { VEHICLE_BODY_TYPE_OPTIONS } from "@/lib/logistics";
+import { type VehicleFormState } from "@/lib/vehicles/vehicle-form";
 
-type UpdateVehicleForm = {
-  marka: string;
-  model: string;
-  plaka: string;
-  yil: string;
-  maksimumAgirlikKg: string;
-  maksimumHacimM3: string;
-  kasaTipi: string;
-  uzunlukCm: string;
-  genislikCm: string;
-  yukseklikCm: string;
-};
-
-const initialForm: UpdateVehicleForm = {
+const emptyForm: VehicleFormState = {
   marka: "",
   model: "",
   plaka: "",
@@ -47,7 +35,7 @@ export default function EditVehiclePage() {
   const params = useParams<{ id: string }>();
   const vehicleId = Number(params.id);
 
-  const [form, setForm] = useState<UpdateVehicleForm>(initialForm);
+  const [form, setForm] = useState<VehicleFormState>(emptyForm);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -205,143 +193,42 @@ export default function EditVehiclePage() {
 
   if (status !== "ready") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-        <div className="font-medium text-gray-600">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <p className="font-medium text-slate-500">Yukleniyor...</p>
       </div>
     );
   }
 
   return (
-    <CarrierVehiclesShell title="Araci duzenle">
-      {isLoading ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
-          Arac bilgileri yukleniyor...
-        </div>
-      ) : null}
+    <CarrierVehiclesShell
+      title="Araci duzenle"
+      description="Arac bilgilerini guncelleyerek kaydet."
+    >
+      {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900">Kayit duzenlenemedi</h2>
-          <p className="mt-2 text-sm text-gray-600">{errorMessage}</p>
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
+          <h2 className="text-base font-bold text-red-800">Kayit duzenlenemedi</h2>
+          <p className="mt-1">{errorMessage}</p>
         </div>
       ) : null}
 
       {!isLoading && !errorMessage ? (
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+          className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
         >
-          <div className="grid gap-4 md:grid-cols-2">
-            <InputField
-              name="marka"
-              label="Marka"
-              value={form.marka}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            <InputField
-              name="model"
-              label="Model"
-              value={form.model}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            <InputField
-              name="plaka"
-              label="Plaka"
-              value={form.plaka}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            <InputField
-              name="yil"
-              label="Yil"
-              type="number"
-              min="1900"
-              max={`${new Date().getFullYear() + 1}`}
-              value={form.yil}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            <InputField
-              name="maksimumAgirlikKg"
-              label="Maksimum agirlik (kg)"
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={form.maksimumAgirlikKg}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            <InputField
-              name="maksimumHacimM3"
-              label="Maksimum hacim (m3)"
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={form.maksimumHacimM3}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-            <div>
-              <label className="block text-sm font-medium text-gray-700" htmlFor="kasaTipi">
-                Kasa tipi
-              </label>
-              <select
-                id="kasaTipi"
-                name="kasaTipi"
-                value={form.kasaTipi}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
-              >
-                {VEHICLE_BODY_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <VehicleFormFields
+            values={form}
+            onChange={handleChange}
+            disabled={isSubmitting}
+          />
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <InputField
-              name="uzunlukCm"
-              label="Uzunluk (cm)"
-              type="number"
-              min="1"
-              value={form.uzunlukCm}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              required={false}
-            />
-            <InputField
-              name="genislikCm"
-              label="Genislik (cm)"
-              type="number"
-              min="1"
-              value={form.genislikCm}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              required={false}
-            />
-            <InputField
-              name="yukseklikCm"
-              label="Yukseklik (cm)"
-              type="number"
-              min="1"
-              value={form.yukseklikCm}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              required={false}
-            />
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? "Arac guncelleniyor..." : "Degisiklikleri kaydet"}
             </button>

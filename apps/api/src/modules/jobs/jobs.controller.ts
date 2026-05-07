@@ -6,6 +6,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import { ROLE_NAMES } from "../../common/constants/role-names";
@@ -14,6 +15,7 @@ import { Roles } from "../../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { JobAudienceQueryDto } from "./dto/job-audience-query.dto";
 import { JobDetailResponseDto } from "./dto/job-detail-response.dto";
 import { JobListItemResponseDto } from "./dto/job-list-item-response.dto";
 import { JobsService } from "./jobs.service";
@@ -26,17 +28,19 @@ export class JobsController {
 
   @Get("my")
   getMine(
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Query() query: JobAudienceQueryDto
   ): Promise<JobListItemResponseDto[]> {
-    return this.jobsService.getMine(currentUser);
+    return this.jobsService.getMine(currentUser, query);
   }
 
   @Get(":jobId")
   getById(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Param("jobId", ParseIntPipe) jobId: number
+    @Param("jobId", ParseIntPipe) jobId: number,
+    @Query() query: JobAudienceQueryDto
   ): Promise<JobDetailResponseDto> {
-    return this.jobsService.getById(currentUser, jobId);
+    return this.jobsService.getById(currentUser, jobId, query);
   }
 
   @Post(":jobId/start")

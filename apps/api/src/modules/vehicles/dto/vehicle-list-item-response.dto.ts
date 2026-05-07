@@ -1,3 +1,5 @@
+import { VehicleCapacitySummaryResponseDto } from "./vehicle-capacity-summary-response.dto";
+
 export class VehicleListItemResponseDto {
   id!: number;
   plaka!: string;
@@ -10,4 +12,5 @@ export class VehicleListItemResponseDto {
   uzunlukCm!: number | null;
   genislikCm!: number | null;
   yukseklikCm!: number | null;
+  capacitySummary!: VehicleCapacitySummaryResponseDto;
 }

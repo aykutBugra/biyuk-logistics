@@ -6,10 +6,10 @@ import type { RouteMetrics, RoutePoint } from "./location.types";
 // ara noktalar için rota metriklerini alma işlevini içerir. Her rota motoru, bu 
 // arayüzü uygulayarak kendi özgü rota hesaplama algoritmalarını sunabilir.
 export interface RouteEngine {
-  readonly providerName: string;
-  getRouteMetrics(
-    origin: RoutePoint,
-    destination: RoutePoint,
-    waypoints?: RoutePoint[]
-  ): Promise<RouteMetrics>;
+  readonly providerName: string;  //provider engine adını söyler:google
+  getRouteMetrics(         //iki nokta arası rota metriklerini alma işlevi     
+    origin: RoutePoint,    //başlangıç noktası
+    destination: RoutePoint,//varış noktası
+    waypoints?: RoutePoint[]//isteğe bağlı ara noktalar henüz kullanılmıyor
+  ): Promise<RouteMetrics>; //distanceMeters ve durationSecconds içeren rota metriklerini döndürür
 }

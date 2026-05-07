@@ -11,9 +11,9 @@ http://localhost:3000/
 
 
 cd C:\Users\aykut\nakliye-app
-
 git status
 git add .
-git commit -m "Add recent transport, offer, and job lifecycle updates"
+git diff --cached --name-only
+git commit -m "Update route distance response and repository fixes"
 git pull --rebase origin main
 git push origin main

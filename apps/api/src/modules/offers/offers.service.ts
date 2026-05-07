@@ -4,18 +4,30 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { unwrapTransactionResult } from "../../common/utils/unwrap-transaction-result";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { normalizeCityFilter } from "../../common/utils/normalize-city-filter";
+import { OfferThreadsService } from "../offer-threads/offer-threads.service";
+import { CarrierRoutesService } from "../carrier-routes/carrier-routes.service";
 import { CreateOfferDto } from "./dto/create-offer.dto";
 import { IncomingOfferListItemResponseDto } from "./dto/incoming-offer-list-item-response.dto";
 import { MyIncomingOfferListItemResponseDto } from "./dto/my-incoming-offer-list-item-response.dto";
 import { MyOfferListItemResponseDto } from "./dto/my-offer-list-item-response.dto";
 import { OfferResponseDto } from "./dto/offer-response.dto";
 import { OpenRequestDetailResponseDto } from "./dto/open-request-detail-response.dto";
+import { OpenRequestDetailQueryDto } from "./dto/open-request-detail-query.dto";
 import { OpenRequestListItemResponseDto } from "./dto/open-request-list-item-response.dto";
 import { OpenRequestQueryDto } from "./dto/open-request-query.dto";
+import {
+  OpenRequestRouteAwareEvaluator,
+  type OpenRequestRouteFilterEvaluation,
+  type OpenRequestRouteCompatibilityResult,
+} from "./open-request-route-aware-evaluator.service";
 import {
   type IncomingOfferListItemRecord,
   type MyIncomingOfferListItemRecord,
@@ -27,6 +39,7 @@ import {
   OffersRepository,
 } from "./repositories/offers.repository";
 import { NotificationsPublisher } from "../notifications/notifications.publisher";
+import { VehicleCapacityService } from "../vehicle-capacity/vehicle-capacity.service";
 
 const OPEN_OFFER_STATUS = {
   durumTuru: "TEKLIF",
@@ -62,27 +75,93 @@ const INITIAL_SHIPMENT_STATUS = {
 export class OffersService {
   constructor(
     private readonly offersRepository: OffersRepository,
-    private readonly notificationsPublisher: NotificationsPublisher
+    private readonly notificationsPublisher: NotificationsPublisher,
+    private readonly carrierRoutesService: CarrierRoutesService,
+    private readonly openRequestRouteAwareEvaluator: OpenRequestRouteAwareEvaluator,
+    private readonly offerThreadsService: OfferThreadsService,
+    private readonly vehicleCapacityService: VehicleCapacityService,
+    private readonly prisma: PrismaService
   ) {}
 
+  // Acik istekler listesini once normal discovery filtreleriyle toplar, sonra
+  // secili route varsa evaluator sonucunda sadece MATCH olan kayitlari birakir.
   async getOpenRequests(
     currentUser: AuthenticatedUser,
     query: OpenRequestQueryDto
   ): Promise<OpenRequestListItemResponseDto[]> {
     this.assertCarrierRole(currentUser);
 
+    // Route filtresi yalnizca carrierRouteId secildiyse devreye girer; route secimi
+    // yoksa ekran klasik discovery havuzu ile calisir.
+    const selectedCarrierRoute =
+      typeof query.carrierRouteId === "number"
+        ? await this.carrierRoutesService.getMineById(
+            currentUser,
+            query.carrierRouteId
+          )
+        : null;
+
+    if (
+      selectedCarrierRoute &&
+      !this.openRequestRouteAwareEvaluator.isCarrierRouteReady(selectedCarrierRoute)
+    ) {
+      throw new ConflictException(
+        "Secili rota route filtre icin hazir degil."
+      );
+    }
+
+    // SQL tarafinda sadece temel discovery havuzu cekilir; rota sapma filtresi
+    // repository'de degil servis + evaluator katmaninda uygulanir.
     const requests = await this.offersRepository.findOpenRequestsForCarrier(
       currentUser.id,
       this.toOpenRequestFilters(query)
     );
 
-    return requests.map((request) => this.toOpenRequestListItemResponse(request));
+    let filteredRequests = requests;
+    const routeCompatibilities = new Map<number, OpenRequestRouteCompatibilityResult>();
+
+    if (selectedCarrierRoute) {
+      // Her request route evaluator'dan gecer; sadece MATCH olanlar listede kalir
+      // ve response'a rotaUyumu nesnesi baglanir.
+      const routeEvaluations =
+        await this.openRequestRouteAwareEvaluator.evaluateMany(
+          selectedCarrierRoute,
+          requests
+        );
+
+      if (this.hasUnavailableRouteService(routeEvaluations)) {
+        throw new ServiceUnavailableException(
+          "Secili rota filtresi su anda uygulanamiyor."
+        );
+      }
+
+      filteredRequests = requests.filter((request) => {
+        const evaluation = routeEvaluations.get(request.id);
+
+        if (!evaluation || evaluation.status !== "MATCH") {
+          return false;
+        }
+
+        routeCompatibilities.set(request.id, evaluation.compatibility);
+        return true;
+      });
+    }
+
+    return filteredRequests.map((request) =>
+      this.toOpenRequestListItemResponse(
+        request,
+        routeCompatibilities.get(request.id) ?? null
+      )
+    );
   }
 
   async getOpenRequestById(
     currentUser: AuthenticatedUser,
-    requestId: number
+    requestId: number,
+    query: OpenRequestDetailQueryDto
   ): Promise<OpenRequestDetailResponseDto> {
+    // Detail ekraninda da ayni route filtresi zorlanir; secili route'a uymayan bir
+    // request detay seviyesinde goruntulenemez.
     this.assertCarrierRole(currentUser);
 
     const request = await this.offersRepository.findOpenRequestByIdForCarrier(
@@ -97,9 +176,50 @@ export class OffersService {
     const hasActiveVehicle = await this.offersRepository.carrierHasActiveVehicle(
       currentUser.id
     );
+    const selectedCarrierRoute =
+      typeof query.carrierRouteId === "number"
+        ? await this.carrierRoutesService.getMineById(
+            currentUser,
+            query.carrierRouteId
+          )
+        : null;
+    let routeCompatibility: OpenRequestRouteCompatibilityResult | null = null;
+
+    if (selectedCarrierRoute) {
+      if (!this.openRequestRouteAwareEvaluator.isCarrierRouteReady(selectedCarrierRoute)) {
+        throw new ConflictException(
+          "Secili rota route filtre icin hazir degil."
+        );
+      }
+
+      // Detail seviyesinde evaluator tek kayit icin calisir ve sonucu 404, 409,
+      // 503 veya compatibility nesnesi olarak yorumlanir.
+      const routeEvaluation = await this.openRequestRouteAwareEvaluator.evaluateOne(
+        selectedCarrierRoute,
+        request
+      );
+
+      switch (routeEvaluation.status) {
+        case "MATCH":
+          routeCompatibility = routeEvaluation.compatibility;
+          break;
+        case "OUTSIDE_ROUTE_FILTER":
+          throw new NotFoundException(
+            "Bu istek secili rota filtresine uymuyor."
+          );
+        case "UNAVAILABLE_DATA":
+          throw new ConflictException(
+            "Bu istek secili rota filtresi icin degerlendirilemiyor."
+          );
+        case "UNAVAILABLE_ROUTE_SERVICE":
+          throw new ServiceUnavailableException(
+            "Secili rota filtresi su anda uygulanamiyor."
+          );
+      }
+    }
 
     return {
-      ...this.toOpenRequestDetailResponse(request),
+      ...this.toOpenRequestDetailResponse(request, routeCompatibility),
       hasActiveVehicle,
       hasExistingOffer: request.hasExistingOffer,
     };
@@ -163,19 +283,40 @@ export class OffersService {
       OPEN_OFFER_STATUS.durumAdi,
       "Offer initial status"
     );
-    const offer = await this.offersRepository.create({
-      istekId: requestId,
-      nakliyeciId: currentUser.id,
-      aracId: selectedVehicle.id,
-      fiyat: createOfferDto.fiyat,
-      not: createOfferDto.not?.trim() || null,
-      durumId: initialStatusId,
+    const offer = await this.prisma.client.$transaction(async (tx) => {
+      const createdOffer = await this.offersRepository.create(
+        {
+          istekId: requestId,
+          nakliyeciId: currentUser.id,
+          aracId: selectedVehicle.id,
+          fiyat: createOfferDto.fiyat,
+          not: createOfferDto.not?.trim() || null,
+          durumId: initialStatusId,
+        },
+        tx
+      );
+
+      // Her yeni offer için aynı transaction içinde tekil bir konuşma thread'i açılır.
+      // Böylece daha ilk andan itibaren pazarlık bağlamı request'e değil offer'a bağlanır.
+      await this.offerThreadsService.bootstrapThreadForOffer(
+        {
+          offerId: createdOffer.id,
+          requestId,
+          customerId: request.musteriId,
+          carrierId: currentUser.id,
+          teklifFiyati: createdOffer.fiyat,
+        },
+        tx
+      );
+
+      return createdOffer;
     });
 
     await this.notificationsPublisher.publishIncomingOffer({
       customerId: request.musteriId,
       offerId: offer.id,
       requestId,
+      actorUserId: currentUser.id,
       route: {
         baslangicSehri: offer.baslangicSehri,
         varisSehri: offer.varisSehri,
@@ -303,35 +444,87 @@ export class OffersService {
       ),
     ]);
 
-    const result = await this.offersRepository.acceptOffer({
-      offerId: offer.offerId,
-      requestId: offer.requestId,
-      openOfferStatusId,
-      acceptedOfferStatusId,
-      rejectedOfferStatusId,
-      openRequestStatusId,
-      agreedRequestStatusId,
-      initialShipmentStatusId,
-      carrierId: offer.carrierId,
-      aracId: offer.aracId,
-      fiyat: offer.fiyat,
-    });
+    let result;
 
-    if (result.ok) {
-      await this.notificationsPublisher.publishOfferAccepted({
-        carrierId: offer.carrierId,
-        offerId: offer.offerId,
-        requestId: offer.requestId,
-        jobId: result.jobId,
+    try {
+      result = await this.prisma.client.$transaction(async (tx) => {
+        const acceptance = unwrapTransactionResult(
+          await this.offersRepository.acceptOfferInTransaction(tx, {
+            offerId: offer.offerId,
+            requestId: offer.requestId,
+            openOfferStatusId,
+            acceptedOfferStatusId,
+            rejectedOfferStatusId,
+            openRequestStatusId,
+            agreedRequestStatusId,
+            initialShipmentStatusId,
+            carrierId: offer.carrierId,
+            aracId: offer.aracId!,
+            fiyat: offer.fiyat,
+          }),
+          (reason) =>
+            new ConflictException(
+              reason === "shipment_exists"
+                ? "A shipment has already been created for this transport request."
+                : "Offer can no longer be accepted."
+            )
+        );
+
+        // Kazanan offer kendi thread'ini kabul event'i ile kapatır; rakip açık thread'ler
+        // ise request artık müsait değil mantığıyla ayrı ayrı read-only kapanır.
+        await this.offerThreadsService.closeAcceptedOfferThread(
+          offer.offerId,
+          currentUser.id,
+          tx
+        );
+
+        if (acceptance.rejectedSiblingOffers.length > 0) {
+          await this.offerThreadsService.closeRequestUnavailableThreads(
+            acceptance.rejectedSiblingOffers.map(
+              (rejectedOffer) => rejectedOffer.offerId
+            ),
+            currentUser.id,
+            tx
+          );
+        }
+
+        await this.vehicleCapacityService.createReservationForShipment(
+          acceptance.reservationSnapshot,
+          tx
+        );
+
+        return acceptance;
       });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new ConflictException(
+          "A shipment has already been created for this transport request."
+        );
+      }
 
-      return;
+      throw error;
     }
 
-    throw new ConflictException(
-      result.reason === "shipment_exists"
-        ? "A shipment has already been created for this transport request."
-        : "Offer can no longer be accepted."
+    await this.notificationsPublisher.publishOfferAccepted({
+      carrierId: offer.carrierId,
+      offerId: offer.offerId,
+      requestId: offer.requestId,
+      jobId: result.jobId,
+      actorUserId: currentUser.id,
+    });
+
+    await Promise.all(
+      result.rejectedSiblingOffers.map((rejectedOffer) =>
+        this.notificationsPublisher.publishOfferRejected({
+          carrierId: rejectedOffer.carrierId,
+          offerId: rejectedOffer.offerId,
+          requestId: offer.requestId,
+          actorUserId: currentUser.id,
+        })
+      )
     );
   }
 
@@ -362,10 +555,25 @@ export class OffersService {
       "Offer rejected status"
     );
 
-    const wasRejected = await this.offersRepository.rejectOpenOfferById(
-      offer.offerId,
-      rejectedStatusId
-    );
+    const wasRejected = await this.prisma.client.$transaction(async (tx) => {
+      const rejected = await this.offersRepository.rejectOpenOfferById(
+        offer.offerId,
+        rejectedStatusId,
+        tx
+      );
+
+      if (!rejected) {
+        return false;
+      }
+
+      await this.offerThreadsService.closeRejectedOfferThread(
+        offer.offerId,
+        currentUser.id,
+        tx
+      );
+
+      return true;
+    });
 
     if (!wasRejected) {
       throw new ConflictException("Offer can no longer be rejected.");
@@ -375,6 +583,7 @@ export class OffersService {
       carrierId: offer.carrierId,
       offerId: offer.offerId,
       requestId: offer.requestId,
+      actorUserId: currentUser.id,
     });
   }
 
@@ -386,6 +595,12 @@ export class OffersService {
 
     if (!offer || offer.requestDeletedAt || offer.customerId !== currentUser.id) {
       throw new NotFoundException("Offer not found.");
+    }
+
+    if (offer.customerId === offer.carrierId) {
+      throw new ConflictException(
+        "Offer decisions are blocked because the transport request owner and offer carrier resolve to the same user."
+      );
     }
 
     return offer;
@@ -441,14 +656,21 @@ export class OffersService {
   }
 
   private toOpenRequestListItemResponse(
-    request: OpenRequestListItemRecord
+    request: OpenRequestListItemRecord,
+    rotaUyumu: OpenRequestRouteCompatibilityResult | null = null
   ): OpenRequestListItemResponseDto {
+    // Liste response'u, route filtresi uygulanmissa evaluator'dan gelen compatibility
+    // nesnesini de kartlarda gosterilecek sekilde disari tasir.
     return {
       id: request.id,
       baslangicSehri: request.baslangicSehri,
       varisSehri: request.varisSehri,
       baslangicKonumMetni: request.baslangicKonumMetni,
       varisKonumMetni: request.varisKonumMetni,
+      baslangicEnlem: request.baslangicEnlem,
+      baslangicBoylam: request.baslangicBoylam,
+      varisEnlem: request.varisEnlem,
+      varisBoylam: request.varisBoylam,
       rotaMesafeMetre: request.rotaMesafeMetre,
       rotaSureSaniye: request.rotaSureSaniye,
       tekTasimaIstiyor: request.tekTasimaIstiyor,
@@ -460,14 +682,18 @@ export class OffersService {
       olusturmaTarihi: request.olusturmaTarihi,
       durum: request.durumAdi,
       alreadyOffered: request.alreadyOffered,
+      rotaUyumu,
     };
   }
 
   private toOpenRequestDetailResponse(
-    request: OpenRequestDetailRecord
+    request: OpenRequestDetailRecord,
+    rotaUyumu: OpenRequestRouteCompatibilityResult | null = null
   ): OpenRequestDetailResponseDto {
+    // Detail response'u listeyle ayni rotaUyumu yapisini korur; detail'e ozel
+    // provider, placeId ve normalize alanlarini da ayni payload'a ekler.
     return {
-      ...this.toOpenRequestListItemResponse(request),
+      ...this.toOpenRequestListItemResponse(request, rotaUyumu),
       baslangicProvider: request.baslangicProvider,
       varisProvider: request.varisProvider,
       baslangicPlaceId: request.baslangicPlaceId,
@@ -476,16 +702,28 @@ export class OffersService {
       normalizeVarisSehir: request.normalizeVarisSehir,
       normalizeBaslangicIlce: request.normalizeBaslangicIlce,
       normalizeVarisIlce: request.normalizeVarisIlce,
-      baslangicEnlem: request.baslangicEnlem,
-      baslangicBoylam: request.baslangicBoylam,
-      varisEnlem: request.varisEnlem,
-      varisBoylam: request.varisBoylam,
       hasActiveVehicle: false,
       hasExistingOffer: request.hasExistingOffer,
     };
   }
 
+  private hasUnavailableRouteService(
+    evaluations: Map<number, OpenRequestRouteFilterEvaluation>
+  ): boolean {
+    // Liste evaluasyonlarinda tek bir route servis hatasi bile varsa bunu sayfa
+    // bazli gecici bir problem olarak ele alir.
+    for (const evaluation of evaluations.values()) {
+      if (evaluation.status === "UNAVAILABLE_ROUTE_SERVICE") {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private toOpenRequestFilters(query: OpenRequestQueryDto): OpenRequestFilters {
+    // Query param'dan gelen manuel filtreleri repository'nin anlayacagi discovery
+    // filtre nesnesine cevirir; route filtresi bu asamada eklenmez.
     return {
       baslangicSehir: normalizeCityFilter(query.baslangicSehir),
       varisSehir: normalizeCityFilter(query.varisSehir),

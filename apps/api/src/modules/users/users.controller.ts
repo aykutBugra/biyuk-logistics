@@ -1,4 +1,7 @@
 import { Controller, Get, UseGuards } from "@nestjs/common";
+import { ROLE_NAMES } from "../../common/constants/role-names";
+import { Roles } from "../../common/decorators/roles.decorator";
+import { RolesGuard } from "../../common/guards/roles.guard";
 
 //import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 // Query dekoratörünü ekliyoruz; URL'deki ?ad=aykut gibi veriyi almak 
@@ -24,7 +27,8 @@ export class UsersController {
 
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(ROLE_NAMES.ADMIN)
   getUsers(): Promise<UserProfileResponseDto[]> {
     return this.usersService.getAllActiveProfiles();
   }
@@ -39,7 +43,6 @@ export class UsersController {
 
 
 }
-
 
 
 

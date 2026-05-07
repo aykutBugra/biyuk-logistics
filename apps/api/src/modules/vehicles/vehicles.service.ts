@@ -8,8 +8,13 @@ import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import {
+  type VehicleCapacitySummary,
+  VehicleCapacityService,
+} from "../vehicle-capacity/vehicle-capacity.service";
 import { CreateVehicleDto } from "./dto/create-vehicle.dto";
 import { UpdateVehicleDto } from "./dto/update-vehicle.dto";
+import { VehicleCapacitySummaryResponseDto } from "./dto/vehicle-capacity-summary-response.dto";
 import { VehicleDetailResponseDto } from "./dto/vehicle-detail-response.dto";
 import { VehicleListItemResponseDto } from "./dto/vehicle-list-item-response.dto";
 import {
@@ -26,6 +31,7 @@ import {
 export class VehiclesService {
   constructor(
     private readonly vehiclesRepository: VehiclesRepository,
+    private readonly vehicleCapacityService: VehicleCapacityService,
     private readonly prisma: PrismaService
   ) {}
 
@@ -56,7 +62,13 @@ export class VehiclesService {
         yukseklikCm: normalizedVehicle.yukseklikCm,
       });
 
-      return this.toDetailResponse(vehicle);
+      const capacitySummaries =
+        await this.vehicleCapacityService.getCapacitySummaryMapForVehicles([vehicle]);
+
+      return this.toDetailResponse(
+        vehicle,
+        capacitySummaries.get(vehicle.id) ?? this.createEmptyCapacitySummary(vehicle)
+      );
     } catch (error) {
       this.rethrowUniquePlateAsConflict(error);
       throw error;
@@ -69,7 +81,15 @@ export class VehiclesService {
     this.assertCarrierRole(currentUser);
 
     const vehicles = await this.vehiclesRepository.findManyByOwnerId(currentUser.id);
-    return vehicles.map((vehicle) => this.toListItemResponse(vehicle));
+    const capacitySummaries =
+      await this.vehicleCapacityService.getCapacitySummaryMapForVehicles(vehicles);
+
+    return vehicles.map((vehicle) =>
+      this.toListItemResponse(
+        vehicle,
+        capacitySummaries.get(vehicle.id) ?? this.createEmptyCapacitySummary(vehicle)
+      )
+    );
   }
 
   async getMineById(
@@ -84,7 +104,13 @@ export class VehiclesService {
       throw new NotFoundException("Vehicle not found.");
     }
 
-    return this.toDetailResponse(vehicle);
+    const capacitySummaries =
+      await this.vehicleCapacityService.getCapacitySummaryMapForVehicles([vehicle]);
+
+    return this.toDetailResponse(
+      vehicle,
+      capacitySummaries.get(vehicle.id) ?? this.createEmptyCapacitySummary(vehicle)
+    );
   }
 
   async deleteById(
@@ -150,7 +176,16 @@ export class VehiclesService {
         throw new NotFoundException("Vehicle not found.");
       }
 
-      return this.toDetailResponse(updatedVehicle);
+      const capacitySummaries =
+        await this.vehicleCapacityService.getCapacitySummaryMapForVehicles([
+          updatedVehicle,
+        ]);
+
+      return this.toDetailResponse(
+        updatedVehicle,
+        capacitySummaries.get(updatedVehicle.id) ??
+          this.createEmptyCapacitySummary(updatedVehicle)
+      );
     } catch (error) {
       this.rethrowUniquePlateAsConflict(error);
       throw error;
@@ -182,7 +217,8 @@ export class VehiclesService {
   }
 
   private toListItemResponse(
-    vehicle: StoredVehicleRecord
+    vehicle: StoredVehicleRecord,
+    capacitySummary: VehicleCapacitySummary
   ): VehicleListItemResponseDto {
     return {
       id: vehicle.id,
@@ -196,12 +232,47 @@ export class VehiclesService {
       uzunlukCm: vehicle.uzunlukCm,
       genislikCm: vehicle.genislikCm,
       yukseklikCm: vehicle.yukseklikCm,
+      capacitySummary: this.toCapacitySummaryResponse(capacitySummary),
     };
   }
 
   private toDetailResponse(
-    vehicle: StoredVehicleRecord
+    vehicle: StoredVehicleRecord,
+    capacitySummary: VehicleCapacitySummary
   ): VehicleDetailResponseDto {
-    return this.toListItemResponse(vehicle);
+    return this.toListItemResponse(vehicle, capacitySummary);
+  }
+
+  private toCapacitySummaryResponse(
+    capacitySummary: VehicleCapacitySummary
+  ): VehicleCapacitySummaryResponseDto {
+    return {
+      toplamAgirlikKg: capacitySummary.toplamAgirlikKg,
+      toplamHacimM3: capacitySummary.toplamHacimM3,
+      rezerveAgirlikKg: capacitySummary.rezerveAgirlikKg,
+      rezerveHacimM3: capacitySummary.rezerveHacimM3,
+      kalanAgirlikKg: capacitySummary.kalanAgirlikKg,
+      kalanHacimM3: capacitySummary.kalanHacimM3,
+      aktifRezervasyonSayisi: capacitySummary.aktifRezervasyonSayisi,
+      aktifTekTasimaRezervasyonuVar:
+        capacitySummary.aktifTekTasimaRezervasyonuVar,
+      hesapEksigiVar: capacitySummary.hesapEksigiVar,
+    };
+  }
+
+  private createEmptyCapacitySummary(
+    vehicle: StoredVehicleRecord
+  ): VehicleCapacitySummary {
+    return {
+      toplamAgirlikKg: vehicle.maksimumAgirlikKg,
+      toplamHacimM3: vehicle.maksimumHacimM3,
+      rezerveAgirlikKg: 0,
+      rezerveHacimM3: 0,
+      kalanAgirlikKg: vehicle.maksimumAgirlikKg,
+      kalanHacimM3: vehicle.maksimumHacimM3,
+      aktifRezervasyonSayisi: 0,
+      aktifTekTasimaRezervasyonuVar: false,
+      hesapEksigiVar: vehicle.maksimumHacimM3 === null,
+    };
   }
 }

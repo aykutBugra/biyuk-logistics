@@ -1,6 +1,7 @@
 export class JobListItemResponseDto {
   id!: number;
   requestId!: number;
+  participantSide!: "customer" | "carrier";
   baslangicSehri!: string;
   varisSehri!: string;
   anlasilanFiyat!: number;

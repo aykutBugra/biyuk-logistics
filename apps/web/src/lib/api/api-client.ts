@@ -79,15 +79,24 @@ async function performFetch<T>(
   accessTokenOverride?: string
 ): Promise<T> {
   const { accessToken, headers, ...init } = options;
+  const requestHeaders = new Headers(headers);
+  const isFormDataRequest =
+    typeof FormData !== "undefined" && init.body instanceof FormData;
+
+  if (!isFormDataRequest && !requestHeaders.has("Content-Type")) {
+    requestHeaders.set("Content-Type", "application/json");
+  }
+
+  if (accessTokenOverride ?? accessToken) {
+    requestHeaders.set(
+      "Authorization",
+      `Bearer ${accessTokenOverride ?? accessToken}`
+    );
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(accessTokenOverride ?? accessToken
-        ? { Authorization: `Bearer ${accessTokenOverride ?? accessToken}` }
-        : {}),
-      ...headers,
-    },
+    headers: requestHeaders,
     cache: "no-store",
   });
 

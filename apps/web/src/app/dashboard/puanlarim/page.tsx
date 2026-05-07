@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
-import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
+import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
+import DashboardShell from "@/components/DashboardShell";
 import EmptyStateCard from "@/components/EmptyStateCard";
 import SummaryStatCard from "@/components/SummaryStatCard";
 import { ApiClientError } from "@/lib/api/api-client";
@@ -43,7 +43,7 @@ function SectionCard({
   items: RatingListItem[];
 }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-xl font-black tracking-tight text-slate-950">{title}</h2>
 
       {items.length === 0 ? (
@@ -71,7 +71,7 @@ function SectionCard({
 
                   <div>
                     <h3 className="text-lg font-bold text-slate-950">
-                      {item.baslangicSehri} {"->"} {item.varisSehri}
+                      {item.baslangicSehri} → {item.varisSehri}
                     </h3>
                     <p className="mt-2 text-sm text-slate-600">
                       @{item.counterpartyUsername} - {item.counterpartyName}
@@ -100,7 +100,8 @@ function SectionCard({
 }
 
 export default function RatingsPage() {
-  const { accessToken, auth, isCarrier, primaryRole, status } = useDashboardAccess();
+  const { accessToken, auth, primaryRole, status } =
+    useDashboardAccess("shared-business");
   const [givenRatings, setGivenRatings] = useState<RatingListItem[]>([]);
   const [receivedRatings, setReceivedRatings] = useState<RatingListItem[]>([]);
   const [summary, setSummary] = useState<MyRatingSummary | null>(null);
@@ -173,30 +174,28 @@ export default function RatingsPage() {
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-        <div className="font-medium text-slate-600">Yukleniyor...</div>
+        <p className="font-medium text-slate-500">Yukleniyor...</p>
       </div>
     );
   }
 
-  const Shell = isCarrier ? CarrierVehiclesShell : CustomerTransportRequestsShell;
   const totalRatingCount = givenRatings.length + receivedRatings.length;
 
   return (
-    <Shell title="Puanlarim">
-      {isLoading ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Puanlar yukleniyor...
-        </div>
-      ) : null}
+    <DashboardShell
+      title="Puanlarim"
+      description="Verdigin ve aldigin degerlendirmeleri aktif is baglamina gore tek yerde incele."
+    >
+      {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && summary ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
           <SummaryStatCard label="Verdigim puan" value={givenRatings.length} />
           <SummaryStatCard label="Aldigim puan" value={receivedRatings.length} />
           <SummaryStatCard
@@ -216,13 +215,17 @@ export default function RatingsPage() {
         <EmptyStateCard
           title="Henuz puan kaydi yok"
           description="Puanlarin burada listelenecek."
-          actionHref={primaryRole === "NAKLIYECI" ? "/dashboard/nakliyelerim" : "/dashboard/isteklerim"}
-          actionLabel={primaryRole === "NAKLIYECI" ? "Nakliyelerime git" : "Isteklerime git"}
+          actionHref={
+            primaryRole === "NAKLIYECI" ? "/dashboard/nakliyelerim" : "/dashboard/isteklerim"
+          }
+          actionLabel={
+            primaryRole === "NAKLIYECI" ? "Nakliyelerime git" : "Isteklerime git"
+          }
         />
       ) : null}
 
       {!isLoading && !errorMessage && totalRatingCount > 0 ? (
-        <div className="grid gap-6">
+        <div className="grid gap-6 ">
           <SectionCard
             title="Verdigim Puanlar"
             emptyCopy="Henuz karsi tarafa gonderdigin bir degerlendirme yok."
@@ -237,7 +240,7 @@ export default function RatingsPage() {
       ) : null}
 
       {!isLoading && !errorMessage && auth?.user ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mt-6">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
             Hesap ozetin
           </p>
@@ -247,6 +250,6 @@ export default function RatingsPage() {
           <p className="mt-1 text-sm text-slate-600">@{auth.user.kullaniciAdi}</p>
         </div>
       ) : null}
-    </Shell>
+    </DashboardShell>
   );
 }

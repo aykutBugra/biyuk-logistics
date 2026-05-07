@@ -71,6 +71,36 @@ export function formatVolumeM3(value: number | null | undefined): string {
   }).format(value)} m3`;
 }
 
+export function formatRouteDistanceKm(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "Belirtilmedi";
+  }
+
+  return `${new Intl.NumberFormat("tr-TR", {
+    maximumFractionDigits: 1,
+  }).format(value / 1000)} km`;
+}
+
+export function formatRouteDuration(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "Belirtilmedi";
+  }
+
+  const totalMinutes = Math.max(0, Math.round(value / 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${totalMinutes} dk`;
+  }
+
+  if (minutes === 0) {
+    return `${hours} sa`;
+  }
+
+  return `${hours} sa ${minutes} dk`;
+}
+
 export function formatDimensionsCm(values: {
   uzunlukCm?: number | null;
   genislikCm?: number | null;

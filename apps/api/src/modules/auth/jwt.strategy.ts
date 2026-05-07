@@ -1,9 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import type { RoleName } from "../../common/constants/role-names";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { UsersService } from "../users/users.service";
 
 type AccessTokenPayload = {
   sub: number;
@@ -14,21 +15,29 @@ type AccessTokenPayload = {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    private readonly usersService: UsersService
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey:
-        configService.get<string>("auth.accessSecret") ?? "dev-access-secret",
+      secretOrKey: configService.getOrThrow<string>("auth.accessSecret"),
     });
   }
 
-  validate(payload: AccessTokenPayload): AuthenticatedUser {
+  async validate(payload: AccessTokenPayload): Promise<AuthenticatedUser> {
+    const user = await this.usersService.findActiveById(payload.sub);
+
+    if (!user) {
+      throw new UnauthorizedException("Current user could not be resolved.");
+    }
+
     return {
-      id: payload.sub,
-      mail: payload.mail,
-      kullaniciAdi: payload.kullaniciAdi,
-      roles: Array.isArray(payload.roles) ? payload.roles : [],
+      id: user.id,
+      mail: user.mail,
+      kullaniciAdi: user.kullaniciAdi,
+      roles: user.roles,
     };
   }
 }

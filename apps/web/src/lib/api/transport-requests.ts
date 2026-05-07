@@ -21,8 +21,8 @@ export type TransportRequestListItem = {
   varisSehri: string;
   baslangicKonumMetni: string | null;
   varisKonumMetni: string | null;
-  rotaMesafeMetre: number | null;
-  rotaSureSaniye: number | null;
+  rotaMesafeMetre: number | null;     //frontend typescriptin bu alanları tanımasını sağlar
+  rotaSureSaniye: number | null;      //yeni
   tekTasimaIstiyor: boolean;
   agirlikKg: number | null;
   hacimM3: number | null;

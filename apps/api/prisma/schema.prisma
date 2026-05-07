@@ -41,6 +41,8 @@ model Kullanici {
   kullaniciAdi     String         @unique @db.VarChar(100)
   sifreHash        String
   telefonNumarasi  String?
+  customerIntroDismissedAt DateTime?
+  carrierIntroDismissedAt  DateTime?
   kayitTarihi      DateTime       @default(now())
   silmeTarihi      DateTime?
   
@@ -48,6 +50,10 @@ model Kullanici {
   istekler         Istek[]
   teklifler        Teklif[]
   araclar          Arac[]
+  carrierRoutes    CarrierRoute[]
+  offerThreadsAsCustomer OfferThread[] @relation("OfferThreadCustomer")
+  offerThreadsAsCarrier  OfferThread[] @relation("OfferThreadCarrier")
+  offerThreadMessages    OfferThreadMessage[] @relation("OfferThreadMessageSender")
   puanVerenler     Puanlama[]     @relation("PuanVeren")
   puanAlanlar      Puanlama[]     @relation("PuanAlan")
   nakliyeler       Nakliye[]
@@ -104,6 +110,41 @@ model Arac {
   
   teklifler         Teklif[]
   nakliyeler        Nakliye[]
+  capacityReservations VehicleCapacityReservation[]
+}
+
+model CarrierRoute {
+  id                      Int       @id @default(autoincrement())
+  nakliyeciId             Int
+  nakliyeci               Kullanici @relation(fields: [nakliyeciId], references: [id])
+  baslangicSehri          String    @db.VarChar(100)
+  varisSehri              String    @db.VarChar(100)
+  baslangicKonumMetni     String?   @db.VarChar(255)
+  varisKonumMetni         String?   @db.VarChar(255)
+  baslangicProvider       String?   @db.VarChar(50)
+  varisProvider           String?   @db.VarChar(50)
+  baslangicPlaceId        String?   @db.VarChar(255)
+  varisPlaceId            String?   @db.VarChar(255)
+  normalizeBaslangicSehir String?   @db.VarChar(100)
+  normalizeVarisSehir     String?   @db.VarChar(100)
+  normalizeBaslangicIlce  String?   @db.VarChar(100)
+  normalizeVarisIlce      String?   @db.VarChar(100)
+  baslangicEnlem          Decimal   @db.Decimal(9, 6)
+  baslangicBoylam         Decimal   @db.Decimal(9, 6)
+  varisEnlem              Decimal   @db.Decimal(9, 6)
+  varisBoylam             Decimal   @db.Decimal(9, 6)
+  rotaMesafeMetre         Int?
+  rotaSureSaniye          Int?
+  planlananTarih          String    @db.VarChar(10)
+  maksimumSapmaKm         Decimal?  @db.Decimal(10, 2)
+  olusturmaTarihi         DateTime  @default(now())
+  guncellemeTarihi        DateTime  @updatedAt
+  silmeTarihi             DateTime?
+
+  @@index([nakliyeciId, silmeTarihi])
+  @@index([planlananTarih])
+  @@index([normalizeBaslangicSehir])
+  @@index([normalizeVarisSehir])
 }
 
 
@@ -142,7 +183,9 @@ model Istek {
   durum                     Durum     @relation(fields: [durumId], references: [id])
 
   teklifler                 Teklif[]
+  offerThreads              OfferThread[]
   nakliye                   Nakliye?
+  capacityReservations      VehicleCapacityReservation[]
 }
 
 model Teklif {
@@ -157,6 +200,51 @@ model Teklif {
   not             String?   @db.VarChar(255)
   durumId         Int
   durum           Durum     @relation(fields: [durumId], references: [id])
+  offerThread     OfferThread?
+  capacityReservations VehicleCapacityReservation[]
+}
+
+model OfferThread {
+  id                        Int                 @id @default(autoincrement())
+  offerId                   Int                 @unique
+  offer                     Teklif              @relation(fields: [offerId], references: [id])
+  requestId                 Int
+  request                   Istek               @relation(fields: [requestId], references: [id])
+  customerId                Int
+  customer                  Kullanici           @relation("OfferThreadCustomer", fields: [customerId], references: [id])
+  carrierId                 Int
+  carrier                   Kullanici           @relation("OfferThreadCarrier", fields: [carrierId], references: [id])
+  customerLastReadMessageId Int?
+  customerLastReadMessage   OfferThreadMessage? @relation("OfferThreadCustomerLastRead", fields: [customerLastReadMessageId], references: [id])
+  carrierLastReadMessageId  Int?
+  carrierLastReadMessage    OfferThreadMessage? @relation("OfferThreadCarrierLastRead", fields: [carrierLastReadMessageId], references: [id])
+  closedAt                  DateTime?
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+
+  messages                  OfferThreadMessage[] @relation("OfferThreadMessages")
+
+  @@index([requestId])
+  @@index([customerId, closedAt])
+  @@index([carrierId, closedAt])
+}
+
+model OfferThreadMessage {
+  id                           Int           @id @default(autoincrement())
+  threadId                     Int
+  thread                       OfferThread   @relation("OfferThreadMessages", fields: [threadId], references: [id])
+  senderUserId                 Int?
+  sender                       Kullanici?    @relation("OfferThreadMessageSender", fields: [senderUserId], references: [id])
+  type                         String        @db.VarChar(50)
+  text                         String?       @db.VarChar(2000)
+  teklifFiyati                 Decimal?      @db.Decimal(12, 2)
+  systemEventCode              String?       @db.VarChar(100)
+  createdAt                    DateTime      @default(now())
+  threadsWhereCustomerLastRead OfferThread[] @relation("OfferThreadCustomerLastRead")
+  threadsWhereCarrierLastRead  OfferThread[] @relation("OfferThreadCarrierLastRead")
+
+  @@index([threadId, createdAt, id])
+  @@index([senderUserId])
 }
 
 model Nakliye {
@@ -175,6 +263,28 @@ model Nakliye {
   durum           Durum     @relation(fields: [durumId], references: [id])
 
   puanlar         Puanlama[]
+  capacityReservations VehicleCapacityReservation[]
+}
+
+model VehicleCapacityReservation {
+  id                Int       @id @default(autoincrement())
+  vehicleId         Int
+  vehicle           Arac      @relation(fields: [vehicleId], references: [id])
+  shipmentId        Int
+  shipment          Nakliye   @relation(fields: [shipmentId], references: [id])
+  requestId         Int
+  request           Istek     @relation(fields: [requestId], references: [id])
+  offerId           Int
+  offer             Teklif    @relation(fields: [offerId], references: [id])
+  reservedAgirlikKg Decimal?  @db.Decimal(10, 2)
+  reservedHacimM3   Decimal?  @db.Decimal(10, 2)
+  isDedicated       Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  releasedAt        DateTime?
+  releaseReason     String?   @db.VarChar(50)
+
+  @@index([shipmentId])
+  @@index([vehicleId, releasedAt])
 }
 
 model PuanTanimlari {

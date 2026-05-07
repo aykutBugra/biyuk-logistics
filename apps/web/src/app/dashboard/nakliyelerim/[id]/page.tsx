@@ -74,7 +74,7 @@ export default function CarrierJobDetailPage() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
-        const response = await getJobDetail(jobId, accessToken);
+        const response = await getJobDetail(jobId, accessToken, "carrier");
 
         if (!isMounted) {
           return;
@@ -330,7 +330,7 @@ export default function CarrierJobDetailPage() {
             </div>
           ) : null}
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-3 mb-6">
             <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
               <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
                 Kayit

@@ -4,6 +4,7 @@ import type { RatingContext } from "./ratings";
 export type JobListItem = {
   id: number;
   requestId: number;
+  participantSide: "customer" | "carrier";
   baslangicSehri: string;
   varisSehri: string;
   anlasilanFiyat: number;
@@ -20,6 +21,7 @@ export type JobListItem = {
 export type JobDetail = {
   id: number;
   requestId: number;
+  participantSide: "customer" | "carrier";
   durum: string;
   anlasilanFiyat: number;
   olusturmaTarihi: string;
@@ -61,15 +63,29 @@ export type JobDetail = {
   ratingContext: RatingContext;
 };
 
-export function getMyJobs(accessToken: string) {
-  return apiFetch<JobListItem[]>("/jobs/my", {
+type JobAudience = "customer" | "carrier";
+
+function withAudience(path: string, audience?: JobAudience): string {
+  if (!audience) {
+    return path;
+  }
+
+  return `${path}?as=${audience}`;
+}
+
+export function getMyJobs(accessToken: string, audience?: JobAudience) {
+  return apiFetch<JobListItem[]>(withAudience("/jobs/my", audience), {
     method: "GET",
     accessToken,
   });
 }
 
-export function getJobDetail(jobId: number, accessToken: string) {
-  return apiFetch<JobDetail>(`/jobs/${jobId}`, {
+export function getJobDetail(
+  jobId: number,
+  accessToken: string,
+  audience?: JobAudience
+) {
+  return apiFetch<JobDetail>(withAudience(`/jobs/${jobId}`, audience), {
     method: "GET",
     accessToken,
   });

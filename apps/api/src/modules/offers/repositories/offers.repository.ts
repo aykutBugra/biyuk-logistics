@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
@@ -12,12 +12,20 @@ const OPEN_OFFER_STATUS = {
   durumAdi: "OLUSTURULDU",
 } as const;
 
+type PrismaExecutor = Prisma.TransactionClient | PrismaClient;
+
 export type OpenRequestListItemRecord = {
   id: number;
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
   varisKonumMetni: string | null;
+  baslangicProvider: string | null;
+  varisProvider: string | null;
+  baslangicEnlem: number;
+  baslangicBoylam: number;
+  varisEnlem: number;
+  varisBoylam: number;
   rotaMesafeMetre: number | null;
   rotaSureSaniye: number | null;
   tekTasimaIstiyor: boolean;
@@ -165,19 +173,24 @@ export type AcceptOfferResult =
   | {
       ok: true;
       jobId: number;
+      reservationSnapshot: {
+        vehicleId: number;
+        shipmentId: number;
+        requestId: number;
+        offerId: number;
+        reservedAgirlikKg: number | null;
+        reservedHacimM3: number | null;
+        isDedicated: boolean;
+      };
+      rejectedSiblingOffers: Array<{
+        offerId: number;
+        carrierId: number;
+      }>;
     }
   | {
       ok: false;
       reason: "shipment_exists" | "offer_not_open" | "request_not_open";
     };
-
-class OfferAcceptanceStateError extends Error {
-  constructor(
-    readonly reason: "shipment_exists" | "offer_not_open" | "request_not_open"
-  ) {
-    super(reason);
-  }
-}
 
 @Injectable()
 export class OffersRepository {
@@ -209,6 +222,8 @@ export class OffersRepository {
     return status?.id ?? null;
   }
 
+  // Repository tarafinda yalnizca temel discovery havuzu cekilir; rota sapma
+  // filtresi burada degil evaluator ile servis katmaninda uygulanir.
   async findOpenRequestsForCarrier(
     carrierId: number,
     filters: OpenRequestFilters
@@ -222,8 +237,14 @@ export class OffersRepository {
         varisSehri: true,
         baslangicKonumMetni: true,
         varisKonumMetni: true,
-        rotaMesafeMetre: true,        //yeni
-        rotaSureSaniye: true,         //yeni
+        baslangicProvider: true,
+        varisProvider: true,
+        baslangicEnlem: true,
+        baslangicBoylam: true,
+        varisEnlem: true,
+        varisBoylam: true,
+        rotaMesafeMetre: true,
+        rotaSureSaniye: true,
         tekTasimaIstiyor: true,
         agirlikKg: true,
         hacimM3: true,
@@ -264,8 +285,14 @@ export class OffersRepository {
       varisSehri: request.varisSehri,
       baslangicKonumMetni: request.baslangicKonumMetni,
       varisKonumMetni: request.varisKonumMetni,
-      rotaMesafeMetre: request.rotaMesafeMetre,       //yeni
-      rotaSureSaniye: request.rotaSureSaniye,         //yeni
+      baslangicProvider: request.baslangicProvider,
+      varisProvider: request.varisProvider,
+      baslangicEnlem: request.baslangicEnlem.toNumber(),
+      baslangicBoylam: request.baslangicBoylam.toNumber(),
+      varisEnlem: request.varisEnlem.toNumber(),
+      varisBoylam: request.varisBoylam.toNumber(),
+      rotaMesafeMetre: request.rotaMesafeMetre,
+      rotaSureSaniye: request.rotaSureSaniye,
       tekTasimaIstiyor: request.tekTasimaIstiyor,
       agirlikKg: request.agirlikKg?.toNumber() ?? null,
       hacimM3: request.hacimM3?.toNumber() ?? null,
@@ -278,6 +305,8 @@ export class OffersRepository {
     }));
   }
 
+  // Detail ekraninin route filtresi uygulayabilmesi icin request'in canonical
+  // koordinatlari ve ana route metrikleri bu seviyede eksiksiz okunur.
   async findOpenRequestByIdForCarrier(
     requestId: number,
     carrierId: number
@@ -309,8 +338,8 @@ export class OffersRepository {
         varisSehri: true,
         baslangicKonumMetni: true,
         varisKonumMetni: true,
-        rotaMesafeMetre: true,
-        rotaSureSaniye: true,
+        rotaMesafeMetre: true,    //yeni
+        rotaSureSaniye: true,     //yeni
         baslangicProvider: true,
         varisProvider: true,
         baslangicPlaceId: true,
@@ -493,8 +522,12 @@ export class OffersRepository {
     return Boolean(offer);
   }
 
-  async create(input: CreateOfferRecordInput): Promise<StoredOfferRecord> {
-    const offer = await this.prisma.client.teklif.create({
+  async create(
+    input: CreateOfferRecordInput,
+    executor?: PrismaExecutor
+  ): Promise<StoredOfferRecord> {
+    const db = this.getExecutor(executor);
+    const offer = await db.teklif.create({
       data: {
         istekId: input.istekId,
         nakliyeciId: input.nakliyeciId,
@@ -826,8 +859,13 @@ export class OffersRepository {
     };
   }
 
-  async rejectOpenOfferById(offerId: number, rejectedStatusId: number): Promise<boolean> {
-    const result = await this.prisma.client.teklif.updateMany({
+  async rejectOpenOfferById(
+    offerId: number,
+    rejectedStatusId: number,
+    executor?: PrismaExecutor
+  ): Promise<boolean> {
+    const db = this.getExecutor(executor);
+    const result = await db.teklif.updateMany({
       where: {
         id: offerId,
         durum: {
@@ -849,102 +887,133 @@ export class OffersRepository {
     return result.count > 0;
   }
 
-  async acceptOffer(input: AcceptOfferInput): Promise<AcceptOfferResult> {
-    try {
-      return await this.prisma.client.$transaction(async (tx) => {
-        const existingShipment = await tx.nakliye.findFirst({
-          where: {
-            istekId: input.requestId,
-          },
-          select: {
-            id: true,
-          },
-        });
+  async acceptOfferInTransaction(
+    tx: Prisma.TransactionClient,
+    input: AcceptOfferInput
+  ): Promise<AcceptOfferResult> {
+    const requestSnapshot = await tx.istek.findFirst({
+      where: {
+        id: input.requestId,
+      },
+      select: {
+        agirlikKg: true,
+        hacimM3: true,
+        tekTasimaIstiyor: true,
+      },
+    });
 
-        if (existingShipment) {
-          throw new OfferAcceptanceStateError("shipment_exists");
-        }
+    const existingShipment = await tx.nakliye.findFirst({
+      where: {
+        istekId: input.requestId,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-        const acceptedOfferResult = await tx.teklif.updateMany({
-          where: {
-            id: input.offerId,
-            durumId: input.openOfferStatusId,
-          },
-          data: {
-            durumId: input.acceptedOfferStatusId,
-          },
-        });
-
-        if (acceptedOfferResult.count === 0) {
-          throw new OfferAcceptanceStateError("offer_not_open");
-        }
-
-        const requestResult = await tx.istek.updateMany({
-          where: {
-            id: input.requestId,
-            silmeTarihi: null,
-            durumId: input.openRequestStatusId,
-          },
-          data: {
-            durumId: input.agreedRequestStatusId,
-          },
-        });
-
-        if (requestResult.count === 0) {
-          throw new OfferAcceptanceStateError("request_not_open");
-        }
-
-        await tx.teklif.updateMany({
-          where: {
-            istekId: input.requestId,
-            id: {
-              not: input.offerId,
-            },
-            durumId: input.openOfferStatusId,
-          },
-          data: {
-            durumId: input.rejectedOfferStatusId,
-          },
-        });
-
-        const shipment = await tx.nakliye.create({
-          data: {
-            istekId: input.requestId,
-            nakliyeciId: input.carrierId,
-            aracId: input.aracId,
-            anlasilanFiyat: new Prisma.Decimal(input.fiyat),
-            durumId: input.initialShipmentStatusId,
-          },
-          select: {
-            id: true,
-          },
-        });
-
-        return {
-          ok: true,
-          jobId: shipment.id,
-        };
-      });
-    } catch (error) {
-      if (error instanceof OfferAcceptanceStateError) {
-        return {
-          ok: false,
-          reason: error.reason,
-        };
-      }
-
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        return {
-          ok: false,
-          reason: "shipment_exists",
-        };
-      }
-
-      throw error;
+    if (existingShipment) {
+      return {
+        ok: false,
+        reason: "shipment_exists",
+      };
     }
+
+    const acceptedOfferResult = await tx.teklif.updateMany({
+      where: {
+        id: input.offerId,
+        durumId: input.openOfferStatusId,
+      },
+      data: {
+        durumId: input.acceptedOfferStatusId,
+      },
+    });
+
+    if (acceptedOfferResult.count === 0) {
+      return {
+        ok: false,
+        reason: "offer_not_open",
+      };
+    }
+
+    const requestResult = await tx.istek.updateMany({
+      where: {
+        id: input.requestId,
+        silmeTarihi: null,
+        durumId: input.openRequestStatusId,
+      },
+      data: {
+        durumId: input.agreedRequestStatusId,
+      },
+    });
+
+    if (requestResult.count === 0) {
+      return {
+        ok: false,
+        reason: "request_not_open",
+      };
+    }
+
+    const rejectedSiblingOffers = await tx.teklif.findMany({
+      where: {
+        istekId: input.requestId,
+        id: {
+          not: input.offerId,
+        },
+        durumId: input.openOfferStatusId,
+      },
+      select: {
+        id: true,
+        nakliyeciId: true,
+      },
+    });
+
+    await tx.teklif.updateMany({
+      where: {
+        istekId: input.requestId,
+        id: {
+          not: input.offerId,
+        },
+        durumId: input.openOfferStatusId,
+      },
+      data: {
+        durumId: input.rejectedOfferStatusId,
+      },
+    });
+
+    const shipment = await tx.nakliye.create({
+      data: {
+        istekId: input.requestId,
+        nakliyeciId: input.carrierId,
+        aracId: input.aracId,
+        anlasilanFiyat: new Prisma.Decimal(input.fiyat),
+        durumId: input.initialShipmentStatusId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return {
+      ok: true,
+      jobId: shipment.id,
+      reservationSnapshot: {
+        vehicleId: input.aracId,
+        shipmentId: shipment.id,
+        requestId: input.requestId,
+        offerId: input.offerId,
+        reservedAgirlikKg: requestSnapshot?.agirlikKg?.toNumber() ?? null,
+        reservedHacimM3: requestSnapshot?.hacimM3?.toNumber() ?? null,
+        isDedicated: requestSnapshot?.tekTasimaIstiyor ?? false,
+      },
+      rejectedSiblingOffers: rejectedSiblingOffers.map((offer) => ({
+        offerId: offer.id,
+        carrierId: offer.nakliyeciId,
+      })),
+    };
+  }
+
+  private getExecutor(executor?: PrismaExecutor): PrismaExecutor {
+    return executor ?? this.prisma.client;
   }
 
 
@@ -953,7 +1022,11 @@ export class OffersRepository {
     carrierId: number,
     filters: OpenRequestFilters
   ): Prisma.IstekWhereInput {
+    // Bu fonksiyon sadece temel discovery havuzu icin SQL where nesnesi uretir.
+    // Route sapma filtresi burada degil, evaluator tarafinda gercek rota ile uygulanir.
     const andFilters: Prisma.IstekWhereInput[] = [];
+    // Bu blok acik istek havuzunun degismeyen temel kosullarini tanimlar:
+    // silinmemis, baska bir musterinin, nakliyeye donusmemis ve hala acik durumda istekler.
     const where: Prisma.IstekWhereInput = {
       silmeTarihi: null,
       musteriId: {
@@ -974,6 +1047,8 @@ export class OffersRepository {
       },
     };
 
+    // Sehir filtreleri normalized alanlarla desteklenir; boylece kullanici farkli
+    // yazimlarla ayni ili secse bile SQL seviyesi daha tutarli calisir.
     if (filters.baslangicSehir) {
       andFilters.push({
         OR: [
@@ -1014,6 +1089,8 @@ export class OffersRepository {
       where.tekTasimaIstiyor = filters.tekTasimaIstiyor;
     }
 
+    // Agirlik ve hacim filtreleri route mantigindan bagimsizdir; sadece temel
+    // discovery havuzunu daraltmak icin SQL araligi olarak uygulanir.
     if (typeof filters.minAgirlikKg === "number" || typeof filters.maxAgirlikKg === "number") {
       where.agirlikKg = {
         ...(typeof filters.minAgirlikKg === "number"

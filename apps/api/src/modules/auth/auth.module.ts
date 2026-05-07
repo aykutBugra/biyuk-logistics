@@ -24,10 +24,9 @@ import { JwtStrategy } from "./jwt.strategy";
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>("auth.accessSecret") ?? "dev-access-secret",
+        secret: configService.getOrThrow<string>("auth.accessSecret"),
         signOptions: {
-          expiresIn:
-            (configService.get<JwtTtlValue>("auth.accessTtl") ?? "15m") as JwtTtlValue,
+          expiresIn: configService.getOrThrow<JwtTtlValue>("auth.accessTtl"),
         },
       }),
     }),

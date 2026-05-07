@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
+import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import RatingComposerCard from "@/components/RatingComposerCard";
+import StatusBadge from "@/components/StatusBadge";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   acceptOffer,
@@ -50,6 +52,36 @@ function formatTransportDate(value: string | null): string {
   return new Intl.DateTimeFormat("tr-TR", {
     dateStyle: "medium",
   }).format(new Date(`${value}T00:00:00`));
+}
+
+function getRequestStatusLabel(status: string): string {
+  switch (status.trim().toUpperCase()) {
+    case "OLUSTURULDU":
+      return "Acik";
+    case "ANLASILDI":
+      return "Anlasma saglandi";
+    case "TAMAMLANDI":
+      return "Tamamlandi";
+    case "IPTAL_EDILDI":
+      return "Iptal edildi";
+    default:
+      return status;
+  }
+}
+
+function getOfferStatusLabel(status: string): string {
+  switch (status.trim().toUpperCase()) {
+    case "OLUSTURULDU":
+      return "Bekliyor";
+    case "KABUL_EDILDI":
+      return "Kabul edildi";
+    case "REDDEDILDI":
+      return "Reddedildi";
+    case "IPTAL_EDILDI":
+      return "Iptal edildi";
+    default:
+      return status;
+  }
 }
 
 function getJobStatusCopy(status: string): { title: string; description: string } {
@@ -361,8 +393,8 @@ export default function TransportRequestDetailPage() {
 
   if (status !== "ready") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-gray-600 font-medium">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <p className="font-medium text-slate-500">Yukleniyor...</p>
       </div>
     );
   }
@@ -376,36 +408,36 @@ export default function TransportRequestDetailPage() {
 
   return (
     <CustomerTransportRequestsShell title="Istek detayi">
-      {isLoading ? (
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 text-gray-600">
-          Istek detayi yukleniyor...
-        </div>
-      ) : null}
+      {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900">Kayit goruntulenemedi</h2>
-          <p className="mt-2 text-sm text-gray-600">{errorMessage}</p>
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
+          <h2 className="text-base font-bold text-red-800">Kayit goruntulenemedi</h2>
+          <p className="mt-1">{errorMessage}</p>
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && request ? (
         <div className="grid gap-6">
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
+          {/* Request header */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
-                    {request.durum}
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge
+                    status={request.durum}
+                    label={getRequestStatusLabel(request.durum)}
+                  />
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                    #{request.id}
                   </span>
-                  <span>#{request.id}</span>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-2xl font-black tracking-tight text-slate-950">
                   {formatLocationLabel(
                     request.baslangicKonumMetni,
                     request.baslangicSehri
                   )}{" "}
-                  {"->"}{" "}
+                  →{" "}
                   {formatLocationLabel(
                     request.varisKonumMetni,
                     request.varisSehri
@@ -425,7 +457,7 @@ export default function TransportRequestDetailPage() {
                     {formatTransportDate(request.tasimaTarihi)}
                   </span>
                   {request.tekTasimaIstiyor ? (
-                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">
+                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700">
                       Tek tasima
                     </span>
                   ) : null}
@@ -433,14 +465,14 @@ export default function TransportRequestDetailPage() {
               </div>
 
               <div className="flex flex-col items-start gap-3 md:items-end">
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-slate-400">
                   {formatDate(request.olusturmaTarihi)}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {canMutateRequest ? (
                     <Link
                       href={`/dashboard/isteklerim/${request.id}/duzenle`}
-                      className="inline-flex items-center justify-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                      className="inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
                     >
                       Duzenle
                     </Link>
@@ -448,9 +480,9 @@ export default function TransportRequestDetailPage() {
                   {canMutateRequest ? (
                     <button
                       type="button"
-                      onClick={handleDelete}
+                      onClick={() => void handleDelete()}
                       disabled={isDeleting}
-                      className="inline-flex items-center justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="text-sm font-semibold text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isDeleting ? "Siliniyor..." : "Sil"}
                     </button>
@@ -460,6 +492,7 @@ export default function TransportRequestDetailPage() {
             </div>
           </div>
 
+          {/* Active shipment banner */}
           {request.nakliye ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
               <h3 className="text-lg font-bold text-emerald-900">
@@ -471,69 +504,75 @@ export default function TransportRequestDetailPage() {
             </div>
           ) : null}
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
-            <h3 className="text-lg font-bold text-gray-900">Yuk detayi</h3>
-            <dl className="mt-4 grid gap-3 text-sm text-gray-600 md:grid-cols-2">
+          {/* Cargo details */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-900">Yuk detayi</h3>
+            <dl className="mt-4 grid gap-3 text-sm text-slate-600 md:grid-cols-2">
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Yuk tipi</dt>
+                <dt className="font-medium text-slate-900">Yuk tipi</dt>
                 <dd>{getCargoTypeLabel(request.yukTipi)}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Agirlik</dt>
+                <dt className="font-medium text-slate-900">Agirlik</dt>
                 <dd>{formatWeightKg(request.agirlikKg)}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Hacim</dt>
+                <dt className="font-medium text-slate-900">Hacim</dt>
                 <dd>{formatVolumeM3(request.hacimM3)}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-gray-900">Tasima tarihi</dt>
+                <dt className="font-medium text-slate-900">Tasima tarihi</dt>
                 <dd>{formatTransportDate(request.tasimaTarihi)}</dd>
               </div>
               <div className="flex items-center justify-between gap-4 md:col-span-2">
-                <dt className="font-medium text-gray-900">Tasima tercihi</dt>
+                <dt className="font-medium text-slate-900">Tasima tercihi</dt>
                 <dd>{request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}</dd>
               </div>
             </dl>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-600">
-              {request.yukDetay}
-            </p>
+            {request.yukDetay ? (
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                {request.yukDetay}
+              </p>
+            ) : null}
           </div>
 
+          {/* Shipment details */}
           {request.nakliye ? (
-            <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-gray-900">Olusan nakliye</h3>
-              <dl className="mt-4 grid gap-3 text-sm text-gray-600 md:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-slate-900">Olusan nakliye</h3>
+              <dl className="mt-4 grid gap-3 text-sm text-slate-600 md:grid-cols-2">
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Durum</dt>
-                  <dd>{request.nakliye.durum}</dd>
+                  <dt className="font-medium text-slate-900">Durum</dt>
+                  <dd>
+                    <StatusBadge status={request.nakliye.durum} />
+                  </dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Anlasilan fiyat</dt>
+                  <dt className="font-medium text-slate-900">Anlasilan fiyat</dt>
                   <dd>{formatCurrency(request.nakliye.anlasilanFiyat)}</dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Nakliyeci</dt>
+                  <dt className="font-medium text-slate-900">Nakliyeci</dt>
                   <dd>{request.nakliye.carrierName}</dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Kullanici adi</dt>
+                  <dt className="font-medium text-slate-900">Kullanici adi</dt>
                   <dd>@{request.nakliye.carrierUsername}</dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Arac plakasi</dt>
+                  <dt className="font-medium text-slate-900">Arac plakasi</dt>
                   <dd>{request.nakliye.aracPlaka}</dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Nakliye kaydi</dt>
+                  <dt className="font-medium text-slate-900">Nakliye kaydi</dt>
                   <dd>#{request.nakliye.id}</dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Kayit zamani</dt>
+                  <dt className="font-medium text-slate-900">Kayit zamani</dt>
                   <dd>{formatDate(request.nakliye.olusturmaTarihi)}</dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Baslangic</dt>
+                  <dt className="font-medium text-slate-900">Baslangic</dt>
                   <dd>
                     {request.nakliye.baslangicTarihi
                       ? formatDate(request.nakliye.baslangicTarihi)
@@ -541,7 +580,7 @@ export default function TransportRequestDetailPage() {
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Teslim</dt>
+                  <dt className="font-medium text-slate-900">Teslim</dt>
                   <dd>
                     {request.nakliye.teslimTarihi
                       ? formatDate(request.nakliye.teslimTarihi)
@@ -552,6 +591,7 @@ export default function TransportRequestDetailPage() {
             </div>
           ) : null}
 
+          {/* Rating */}
           {request.nakliye ? (
             <RatingComposerCard
               eyebrow="Kapanis degerlendirmesi"
@@ -566,12 +606,13 @@ export default function TransportRequestDetailPage() {
             />
           ) : null}
 
+          {/* Location cards */}
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">Baslangic</h3>
-              <dl className="mt-4 space-y-3 text-sm text-gray-600">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-slate-900">Baslangic</h3>
+              <dl className="mt-4 space-y-3 text-sm text-slate-600">
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Konum</dt>
+                  <dt className="font-medium text-slate-900">Konum</dt>
                   <dd className="text-right">
                     {formatLocationLabel(
                       request.baslangicKonumMetni,
@@ -580,34 +621,34 @@ export default function TransportRequestDetailPage() {
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Sehir</dt>
+                  <dt className="font-medium text-slate-900">Sehir</dt>
                   <dd>{request.normalizeBaslangicSehir || request.baslangicSehri}</dd>
                 </div>
                 {request.normalizeBaslangicIlce ? (
                   <div className="flex items-center justify-between gap-4">
-                    <dt className="font-medium text-gray-900">Ilce</dt>
+                    <dt className="font-medium text-slate-900">Ilce</dt>
                     <dd>{request.normalizeBaslangicIlce}</dd>
                   </div>
                 ) : null}
               </dl>
             </div>
 
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">Varis</h3>
-              <dl className="mt-4 space-y-3 text-sm text-gray-600">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-slate-900">Varis</h3>
+              <dl className="mt-4 space-y-3 text-sm text-slate-600">
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Konum</dt>
+                  <dt className="font-medium text-slate-900">Konum</dt>
                   <dd className="text-right">
                     {formatLocationLabel(request.varisKonumMetni, request.varisSehri)}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-gray-900">Sehir</dt>
+                  <dt className="font-medium text-slate-900">Sehir</dt>
                   <dd>{request.normalizeVarisSehir || request.varisSehri}</dd>
                 </div>
                 {request.normalizeVarisIlce ? (
                   <div className="flex items-center justify-between gap-4">
-                    <dt className="font-medium text-gray-900">Ilce</dt>
+                    <dt className="font-medium text-slate-900">Ilce</dt>
                     <dd>{request.normalizeVarisIlce}</dd>
                   </div>
                 ) : null}
@@ -615,11 +656,14 @@ export default function TransportRequestDetailPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
-            <h3 className="text-lg font-bold text-gray-900">Gelen teklifler</h3>
+          {/* Incoming offers */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-900">Gelen teklifler</h3>
 
             {isIncomingOffersLoading ? (
-              <p className="mt-4 text-sm text-gray-600">Teklifler yukleniyor...</p>
+              <div className="mt-4">
+                <DashboardPageSkeleton />
+              </div>
             ) : null}
 
             {!isIncomingOffersLoading && incomingOffersErrorMessage ? (
@@ -629,7 +673,7 @@ export default function TransportRequestDetailPage() {
             {!isIncomingOffersLoading &&
             !incomingOffersErrorMessage &&
             incomingOffers.length === 0 ? (
-              <p className="mt-4 text-sm text-gray-600">
+              <p className="mt-4 text-sm text-slate-500">
                 Bu istek icin henuz teklif yok.
               </p>
             ) : null}
@@ -645,33 +689,36 @@ export default function TransportRequestDetailPage() {
                   return (
                     <div
                       key={offer.id}
-                      className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+                      className="rounded-xl border border-slate-100 bg-slate-50 p-4"
                     >
                       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
-                            <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
-                              {offer.durum}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <StatusBadge
+                              status={offer.durum}
+                              label={getOfferStatusLabel(offer.durum)}
+                            />
+                            <span className="text-sm text-slate-500">
+                              Teklif #{offer.id}
                             </span>
-                            <span>Teklif #{offer.id}</span>
                             {offer.aracPlaka ? (
-                              <span className="rounded-full bg-gray-200 px-2.5 py-1 font-semibold text-gray-700">
+                              <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
                                 {offer.aracPlaka}
                               </span>
                             ) : null}
                           </div>
-                          <p className="text-sm font-semibold text-gray-900">
+                          <p className="text-sm font-semibold text-slate-900">
                             {offer.carrierName}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-slate-500">
                             @{offer.carrierUsername}
                           </p>
                           {offer.not ? (
-                            <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                            <p className="whitespace-pre-wrap text-sm text-slate-600">
                               {offer.not}
                             </p>
                           ) : (
-                            <p className="text-sm text-gray-400">
+                            <p className="text-sm text-slate-400">
                               Teklif notu eklenmedi.
                             </p>
                           )}
@@ -680,26 +727,38 @@ export default function TransportRequestDetailPage() {
                           <div className="text-sm font-semibold text-emerald-700">
                             {formatCurrency(offer.fiyat)}
                           </div>
-                          {canActOnOffer ? (
-                            <div className="flex flex-wrap gap-2 md:justify-end">
-                              <button
-                                type="button"
-                                onClick={() => handleOfferDecision(offer, "accept")}
-                                disabled={actingOfferId !== null}
-                                className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {actingOfferId === offer.id ? "Isleniyor..." : "Kabul Et"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleOfferDecision(offer, "reject")}
-                                disabled={actingOfferId !== null}
-                                className="inline-flex items-center justify-center rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {actingOfferId === offer.id ? "Isleniyor..." : "Reddet"}
-                              </button>
-                            </div>
-                          ) : null}
+                          <div className="flex flex-wrap gap-2 md:justify-end">
+                            <Link
+                              href={`/dashboard/konusmalar/teklif/${offer.id}`}
+                              className="inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+                            >
+                              Konusmaya git
+                            </Link>
+                            {canActOnOffer ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleOfferDecision(offer, "accept")}
+                                  disabled={actingOfferId !== null}
+                                  className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {actingOfferId === offer.id
+                                    ? "Isleniyor..."
+                                    : "Kabul Et"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleOfferDecision(offer, "reject")}
+                                  disabled={actingOfferId !== null}
+                                  className="text-sm font-semibold text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {actingOfferId === offer.id
+                                    ? "Isleniyor..."
+                                    : "Reddet"}
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     </div>

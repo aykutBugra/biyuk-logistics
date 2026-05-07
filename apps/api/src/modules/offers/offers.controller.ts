@@ -22,6 +22,7 @@ import { MyIncomingOfferListItemResponseDto } from "./dto/my-incoming-offer-list
 import { MyOfferListItemResponseDto } from "./dto/my-offer-list-item-response.dto";
 import { OfferResponseDto } from "./dto/offer-response.dto";
 import { OpenRequestDetailResponseDto } from "./dto/open-request-detail-response.dto";
+import { OpenRequestDetailQueryDto } from "./dto/open-request-detail-query.dto";
 import { OpenRequestListItemResponseDto } from "./dto/open-request-list-item-response.dto";
 import { OpenRequestQueryDto } from "./dto/open-request-query.dto";
 import { OffersService } from "./offers.service";
@@ -44,9 +45,10 @@ export class OffersController {
   @Roles(ROLE_NAMES.NAKLIYECI)
   getOpenRequestById(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Param("requestId", ParseIntPipe) requestId: number
+    @Param("requestId", ParseIntPipe) requestId: number,
+    @Query() query: OpenRequestDetailQueryDto
   ): Promise<OpenRequestDetailResponseDto> {
-    return this.offersService.getOpenRequestById(currentUser, requestId);
+    return this.offersService.getOpenRequestById(currentUser, requestId, query);
   }
 
   @Post("requests/:requestId")

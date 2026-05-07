@@ -86,6 +86,7 @@ export class RatingsService {
         ratingId: rating.id,
         jobId: job.id,
         puanDegeri: rating.puanDegeri,
+        actorUserId: currentUser.id,
       });
 
       return toSubmittedRatingResponse(rating);

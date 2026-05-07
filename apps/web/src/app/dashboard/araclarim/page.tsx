@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
+import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import EmptyStateCard from "@/components/EmptyStateCard";
 import SummaryStatCard from "@/components/SummaryStatCard";
+import VehicleCard from "@/components/VehicleCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   deleteVehicle,
@@ -17,7 +19,6 @@ import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
 import {
   formatVolumeM3,
   formatWeightKg,
-  getVehicleBodyTypeLabel,
 } from "@/lib/logistics";
 
 export default function MyVehiclesPage() {
@@ -136,7 +137,7 @@ export default function MyVehiclesPage() {
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-        <div className="font-medium text-slate-600">Yukleniyor...</div>
+        <p className="font-medium text-slate-500">Yukleniyor...</p>
       </div>
     );
   }
@@ -145,43 +146,72 @@ export default function MyVehiclesPage() {
     (total, vehicle) => total + vehicle.maksimumAgirlikKg,
     0
   );
+  const totalReservedWeight = vehicles.reduce(
+    (total, vehicle) => total + vehicle.capacitySummary.rezerveAgirlikKg,
+    0
+  );
   const totalVolumeCapacity = vehicles.reduce(
     (total, vehicle) => total + (vehicle.maksimumHacimM3 ?? 0),
     0
   );
+  const totalReservedVolume = vehicles.reduce(
+    (total, vehicle) => total + vehicle.capacitySummary.rezerveHacimM3,
+    0
+  );
+  const totalActiveReservations = vehicles.reduce(
+    (total, vehicle) => total + vehicle.capacitySummary.aktifRezervasyonSayisi,
+    0
+  );
 
   return (
-    <CarrierVehiclesShell title="Araclarim">
-      {isLoading ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Araclar yukleniyor...
-        </div>
-      ) : null}
+    <CarrierVehiclesShell
+      title="Araclarim"
+      description="Filondaki araclari, kapasite durumlarini ve aktif rezervasyonlari buradan takip et."
+      headerActions={
+        <Link
+          href="/dashboard/arac_ekle"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+        >
+          <i className="pi pi-plus text-xs" />
+          Yeni arac ekle
+        </Link>
+      }
+    >
+      {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && vehicles.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5 mb-6">
           <SummaryStatCard label="Toplam arac" value={vehicles.length} />
           <SummaryStatCard
             label="Toplam agirlik"
             value={formatWeightKg(totalWeightCapacity)}
           />
           <SummaryStatCard
+            label="Rezerve agirlik"
+            value={formatWeightKg(totalReservedWeight)}
+          />
+          <SummaryStatCard
             label="Toplam hacim"
             value={formatVolumeM3(totalVolumeCapacity)}
+          />
+          <SummaryStatCard
+            label="Aktif rezervasyon"
+            value={totalActiveReservations}
+            hint={`Rezerve hacim: ${formatVolumeM3(totalReservedVolume)}`}
           />
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && vehicles.length === 0 ? (
         <EmptyStateCard
-          title="Henuz arac yok"
-          description="Ilk aracini eklediginde burada goreceksin."
+          title="Filonda arac yok"
+          description="Ilk aracini ekleyerek teklif vermeye baslayabilirsin. Arac olmadan musteri isteklerine teklif yapamaz veya istegin karsiliksiz kalir."
           actionHref="/dashboard/arac_ekle"
           actionLabel="Ilk araci ekle"
         />
@@ -189,74 +219,14 @@ export default function MyVehiclesPage() {
 
       {!isLoading && !errorMessage && vehicles.length > 0 ? (
         <div className="grid gap-4">
-          {vehicles.map((vehicle) => {
-            const isDeleting = deletingVehicleId === vehicle.id;
-
-            return (
-              <div
-                key={vehicle.id}
-                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-200"
-              >
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                        {vehicle.plaka}
-                      </span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                        Arac #{vehicle.id}
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                        {vehicle.marka} {"->"} {vehicle.model}
-                      </h2>
-                      <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                          {getVehicleBodyTypeLabel(vehicle.kasaTipi)}
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                          {formatWeightKg(vehicle.maksimumAgirlikKg)}
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                          {formatVolumeM3(vehicle.maksimumHacimM3)}
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                          {vehicle.yil} model
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-start gap-3 lg:min-w-[240px] lg:items-end">
-                    <div className="flex flex-wrap gap-2 lg:justify-end">
-                      <Link
-                        href={`/dashboard/araclarim/${vehicle.id}`}
-                        className="inline-flex items-center rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                      >
-                        Detay
-                      </Link>
-                      <Link
-                        href={`/dashboard/araclarim/${vehicle.id}/duzenle`}
-                        className="inline-flex items-center rounded-2xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
-                      >
-                        Duzenle
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(vehicle.id)}
-                        disabled={isDeleting}
-                        className="inline-flex items-center rounded-2xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isDeleting ? "Siliniyor..." : "Sil"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {vehicles.map((vehicle) => (
+            <VehicleCard
+              key={vehicle.id}
+              vehicle={vehicle}
+              isDeleting={deletingVehicleId === vehicle.id}
+              onDelete={() => void handleDelete(vehicle.id)}
+            />
+          ))}
         </div>
       ) : null}
     </CarrierVehiclesShell>

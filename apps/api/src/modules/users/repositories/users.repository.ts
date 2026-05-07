@@ -1,12 +1,28 @@
 import { Prisma } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
-
-
-//gerçek db bağlantısı
+import type { DashboardIntroRole } from "../../../common/types/dashboard-intro-role.type";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
+const COMPLETED_SHIPMENT_STATUS = {
+  durumTuru: "NAKLIYE",
+  durumAdi: "TAMAMLANDI",
+} as const;
 
-//listeleme için seçilen alan
+const OPEN_OFFER_STATUS = {
+  durumTuru: "TEKLIF",
+  durumAdi: "OLUSTURULDU",
+} as const;
+
+const ACCEPTED_OFFER_STATUS = {
+  durumTuru: "TEKLIF",
+  durumAdi: "KABUL_EDILDI",
+} as const;
+
+const AGREED_REQUEST_STATUS = {
+  durumTuru: "ISTEK",
+  durumAdi: "ANLASILDI",
+} as const;
+
 const authUserSelect = {
   id: true,
   ad: true,
@@ -14,7 +30,9 @@ const authUserSelect = {
   mail: true,
   kullaniciAdi: true,
   telefonNumarasi: true,
-  sifreHash: true,  //login doğrulaması için gerekli
+  customerIntroDismissedAt: true,
+  carrierIntroDismissedAt: true,
+  sifreHash: true,
   roller: {
     select: {
       rol: {
@@ -26,8 +44,6 @@ const authUserSelect = {
   },
 } satisfies Prisma.KullaniciSelect;
 
-//listeleme için seçilen alanlar . sifreHash'i içermiyor çünkü profile response'da şifre 
-//hash'ine ihtiyaç yok.
 const userProfileSelect = {
   id: true,
   ad: true,
@@ -35,7 +51,9 @@ const userProfileSelect = {
   mail: true,
   kullaniciAdi: true,
   telefonNumarasi: true,
-  sifreHash: false, //profile response'unda şifre hash'ine ihtiyaç yok, bu yüzden false.
+  customerIntroDismissedAt: true,
+  carrierIntroDismissedAt: true,
+  sifreHash: false,
   roller: {
     select: {
       rol: {
@@ -47,12 +65,206 @@ const userProfileSelect = {
   },
 } satisfies Prisma.KullaniciSelect;
 
-//Prisma sorgularından dönen ham kullanıcı verisi.
-//Şifre hash'i içerir ve roller roleName olarak gelir.
+const accountDeletionSnapshotSelect = {
+  id: true,
+  nakliyeler: {
+    where: {
+      NOT: {
+        durum: {
+          durumTuru: {
+            equals: COMPLETED_SHIPMENT_STATUS.durumTuru,
+            mode: Prisma.QueryMode.insensitive,
+          },
+          durumAdi: {
+            equals: COMPLETED_SHIPMENT_STATUS.durumAdi,
+            mode: Prisma.QueryMode.insensitive,
+          },
+        },
+      },
+    },
+    select: {
+      id: true,
+    },
+    take: 1,
+  },
+  istekler: {
+    where: {
+      OR: [
+        {
+          nakliye: {
+            is: {
+              NOT: {
+                durum: {
+                  durumTuru: {
+                    equals: COMPLETED_SHIPMENT_STATUS.durumTuru,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                  durumAdi: {
+                    equals: COMPLETED_SHIPMENT_STATUS.durumAdi,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          durum: {
+            durumTuru: {
+              equals: AGREED_REQUEST_STATUS.durumTuru,
+              mode: Prisma.QueryMode.insensitive,
+            },
+            durumAdi: {
+              equals: AGREED_REQUEST_STATUS.durumAdi,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+          OR: [
+            {
+              nakliye: {
+                is: null,
+              },
+            },
+            {
+              nakliye: {
+                is: {
+                  NOT: {
+                    durum: {
+                      durumTuru: {
+                        equals: COMPLETED_SHIPMENT_STATUS.durumTuru,
+                        mode: Prisma.QueryMode.insensitive,
+                      },
+                      durumAdi: {
+                        equals: COMPLETED_SHIPMENT_STATUS.durumAdi,
+                        mode: Prisma.QueryMode.insensitive,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    select: {
+      id: true,
+      durum: {
+        select: {
+          durumTuru: true,
+          durumAdi: true,
+        },
+      },
+      nakliye: {
+        select: {
+          id: true,
+          durum: {
+            select: {
+              durumTuru: true,
+              durumAdi: true,
+            },
+          },
+        },
+      },
+    },
+    take: 1,
+  },
+  teklifler: {
+    where: {
+      OR: [
+        {
+          durum: {
+            durumTuru: {
+              equals: OPEN_OFFER_STATUS.durumTuru,
+              mode: Prisma.QueryMode.insensitive,
+            },
+            durumAdi: {
+              equals: OPEN_OFFER_STATUS.durumAdi,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+          istek: {
+            silmeTarihi: null,
+          },
+        },
+        {
+          durum: {
+            durumTuru: {
+              equals: ACCEPTED_OFFER_STATUS.durumTuru,
+              mode: Prisma.QueryMode.insensitive,
+            },
+            durumAdi: {
+              equals: ACCEPTED_OFFER_STATUS.durumAdi,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+          OR: [
+            {
+              istek: {
+                nakliye: {
+                  is: null,
+                },
+              },
+            },
+            {
+              istek: {
+                nakliye: {
+                  is: {
+                    NOT: {
+                      durum: {
+                        durumTuru: {
+                          equals: COMPLETED_SHIPMENT_STATUS.durumTuru,
+                          mode: Prisma.QueryMode.insensitive,
+                        },
+                        durumAdi: {
+                          equals: COMPLETED_SHIPMENT_STATUS.durumAdi,
+                          mode: Prisma.QueryMode.insensitive,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    select: {
+      id: true,
+      durum: {
+        select: {
+          durumTuru: true,
+          durumAdi: true,
+        },
+      },
+      istek: {
+        select: {
+          silmeTarihi: true,
+          nakliye: {
+            select: {
+              id: true,
+              durum: {
+                select: {
+                  durumTuru: true,
+                  durumAdi: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    take: 1,
+  },
+} satisfies Prisma.KullaniciSelect;
+
 type StoredAuthUserQuery = Prisma.KullaniciGetPayload<{ select: typeof authUserSelect }>;
 type StoredProfileUserQuery = Prisma.KullaniciGetPayload<{ select: typeof userProfileSelect }>;
+type StoredAccountDeletionSnapshotQuery = Prisma.KullaniciGetPayload<{
+  select: typeof accountDeletionSnapshotSelect;
+}>;
 
-//user repository'sinin uyguladığı interface. Kullanıcı verilerine erişmek için gerekli tüm yöntemleri tanımlar.
 export type StoredUserRecord = {
   id: number;
   ad: string;
@@ -60,12 +272,14 @@ export type StoredUserRecord = {
   mail: string;
   kullaniciAdi: string;
   telefonNumarasi: string | null;
+  customerIntroDismissedAt: Date | null;
+  carrierIntroDismissedAt: Date | null;
   sifreHash: string;
   roleNames: string[];
 };
 
 export type StoredUserProfileRecord = Omit<StoredUserRecord, "sifreHash">;
-//StoredUserRecord'dan şifre hash'ini çıkarıyoruz çünkü profile response'unda şifre hash'ine ihtiyaç yok.
+
 export type CreateStoredUserInput = {
   ad: string;
   soyad: string;
@@ -76,18 +290,30 @@ export type CreateStoredUserInput = {
   roleId: number;
 };
 
-//injectable olarak işaretliyoruz ki NestJS bu sınıfı dependency injection ile yönetebilsin.
+export type DeleteStoredUserAccountBlockReason =
+  | "NOT_FOUND"
+  | "ACTIVE_CARRIER_SHIPMENT"
+  | "ACTIVE_CUSTOMER_SHIPMENT"
+  | "OPEN_CARRIER_OFFER"
+  | "STALE_ACCEPTED_OFFER"
+  | "STALE_AGREED_REQUEST";
+
+export type DeleteStoredUserAccountResult =
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      reason: DeleteStoredUserAccountBlockReason;
+    };
+
 @Injectable()
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
-//
 
-
-//
   async findActiveByIdentifier(identifier: string): Promise<StoredUserRecord | null> {
-    const user = await this.prisma.client.kullanici.findFirst({ //findFirst çağrılıyor . DB ye istek(promise) atılıyor.
-                                                                //user veri değil . DB den veri gelene kadar beklemesi gerekiyor. 
-      where: {                                                  //burada await sonuç gelmeden aşağı geçme diyor .
+    const user = await this.prisma.client.kullanici.findFirst({
+      where: {
         silmeTarihi: null,
         OR: [
           {
@@ -109,7 +335,7 @@ export class UsersRepository {
 
     return user ? this.mapStoredUser(user) : null;
   }
-  //login için tek kullanıcı getirme sorgusu. Silinmemiş kullanıcıyı mail veya kullanıcı adı ile getiriyor.
+
   async existsByMail(mail: string): Promise<boolean> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -125,7 +351,7 @@ export class UsersRepository {
 
     return Boolean(user);
   }
-  //kullanıcı adı ile kullanıcı var mı yok mu sorgusu. Kullanıcı adı benzersiz olduğu için sadece true false dönüyor.
+
   async existsByUsername(kullaniciAdi: string): Promise<boolean> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -141,8 +367,7 @@ export class UsersRepository {
 
     return Boolean(user);
   }
-  //kullanıcı oluşturma sorgusu. Kullanıcıyı oluşturduktan sonra role ataması yapıyor. 
-  //Transaction kullanarak iki işlemi tek seferde yapıyoruz.
+
   async createWithRole(input: CreateStoredUserInput): Promise<StoredUserRecord> {
     return this.prisma.client.$transaction((tx) =>
       this.createWithRoleInTransaction(tx, input)
@@ -184,8 +409,6 @@ export class UsersRepository {
     return this.mapStoredUser(user);
   }
 
-//ana listeleme sorgusu. Silinmemiş tüm kullanıcıları getiriyor.
-
   async findActiveById(id: number): Promise<StoredUserRecord | null> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -198,7 +421,6 @@ export class UsersRepository {
     return user ? this.mapStoredUser(user) : null;
   }
 
-  //profile için tek kullanıcı getirme sorgusu. Silinmemiş kullanıcıyı id ile getiriyor.
   async findProfileById(id: number): Promise<StoredUserProfileRecord | null> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -211,55 +433,177 @@ export class UsersRepository {
     return user ? this.mapStoredProfile(user) : null;
   }
 
-  
+  async dismissDashboardIntroById(
+    userId: number,
+    role: DashboardIntroRole
+  ): Promise<StoredUserProfileRecord | null> {
+    const user = await this.prisma.client.kullanici.findFirst({
+      where: {
+        id: userId,
+        silmeTarihi: null,
+      },
+      select: {
+        id: true,
+        customerIntroDismissedAt: true,
+        carrierIntroDismissedAt: true,
+      },
+    });
 
+    if (!user) {
+      return null;
+    }
 
+    const timestampField =
+      role === "carrier" ? "carrierIntroDismissedAt" : "customerIntroDismissedAt";
 
+    if (user[timestampField] !== null) {
+      return this.findProfileById(userId);
+    }
 
-  async findAllActiveProfiles(): Promise<StoredUserProfileRecord[]> {
-  const users = await this.prisma.client.kullanici.findMany({  //prisma ile DB ye sorgu atıyoruz.findmany birden fazla kayıt döndüreceği için kullanıyoruz.
-    where: {        //filtreleme koşulları
-      silmeTarihi: null,
-    },
-    select: userProfileSelect,  //db den sadece ihtiyacımız olan alanları seçiyoruz. gereksiz veri çekmemiş oluyoruz.
-    orderBy: {
-      id: "asc",
-    },
-  });
+    const updatedUser = await this.prisma.client.kullanici.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        [timestampField]: new Date(),
+      },
+      select: userProfileSelect,
+    });
 
-  return users.map((user) => this.mapStoredProfile(user));//her kullanıcıyı tek tek dolaş ve her user ı dönüştür
+    return this.mapStoredProfile(updatedUser);
   }
 
+  async findAllActiveProfiles(): Promise<StoredUserProfileRecord[]> {
+    const users = await this.prisma.client.kullanici.findMany({
+      where: {
+        silmeTarihi: null,
+      },
+      select: userProfileSelect,
+      orderBy: {
+        id: "asc",
+      },
+    });
 
+    return users.map((user) => this.mapStoredProfile(user));
+  }
 
+  async deleteAccountById(userId: number): Promise<DeleteStoredUserAccountResult> {
+    return this.prisma.client.$transaction(async (tx) => {
+      const deletionSnapshot = await tx.kullanici.findFirst({
+        where: {
+          id: userId,
+          silmeTarihi: null,
+        },
+        select: accountDeletionSnapshotSelect,
+      });
 
-  /*
-  async findAllActiveProfiles(ad?: string): Promise<StoredUserProfileRecord[]> {
-  const users = await this.prisma.client.kullanici.findMany({
-    where: {
-      // Soft delete edilmemiş kullanıcıları getiriyoruz.
-      silmeTarihi: null,
+      if (!deletionSnapshot) {
+        return {
+          ok: false,
+          reason: "NOT_FOUND",
+        };
+      }
 
-      // Eğer ?ad=... geldiyse sadece o ada sahip kullanıcıyı filtreliyoruz.
-      ...(ad
-        ? {
-            ad: {
-              equals: ad,
-              mode: Prisma.QueryMode.insensitive,
-            },
-          }
-        : {}),
-    },
-    select: userProfileSelect,
-    orderBy: {
-      id: "asc",
-    },
-  });
+      const blockReason = this.resolveDeleteBlockReason(deletionSnapshot);
 
-  // Prisma sonucunu uygulamanın kullandığı profile record formatına çeviriyoruz.
-  return users.map((user) => this.mapStoredProfile(user));
-}
-*/
+      if (blockReason) {
+        return {
+          ok: false,
+          reason: blockReason,
+        };
+      }
+
+      const deletedAt = new Date();
+      const anonymizedSuffix = `deleted-${deletionSnapshot.id}-${deletedAt.getTime()}`;
+
+      await tx.arac.updateMany({
+        where: {
+          sahipId: deletionSnapshot.id,
+          silmeTarihi: null,
+        },
+        data: {
+          silmeTarihi: deletedAt,
+        },
+      });
+
+      await tx.carrierRoute.updateMany({
+        where: {
+          nakliyeciId: deletionSnapshot.id,
+          silmeTarihi: null,
+        },
+        data: {
+          silmeTarihi: deletedAt,
+        },
+      });
+
+      await tx.istek.updateMany({
+        where: {
+          musteriId: deletionSnapshot.id,
+          silmeTarihi: null,
+        },
+        data: {
+          silmeTarihi: deletedAt,
+        },
+      });
+
+      const deletedUser = await tx.kullanici.updateMany({
+        where: {
+          id: deletionSnapshot.id,
+          silmeTarihi: null,
+        },
+        data: {
+          silmeTarihi: deletedAt,
+          mail: `${anonymizedSuffix}@deleted.local`,
+          kullaniciAdi: anonymizedSuffix,
+          telefonNumarasi: null,
+        },
+      });
+
+      if (deletedUser.count === 0) {
+        return {
+          ok: false,
+          reason: "NOT_FOUND",
+        };
+      }
+
+      return {
+        ok: true,
+      };
+    });
+  }
+
+  private resolveDeleteBlockReason(
+    snapshot: StoredAccountDeletionSnapshotQuery
+  ): DeleteStoredUserAccountBlockReason | null {
+    if (snapshot.nakliyeler.length > 0) {
+      return "ACTIVE_CARRIER_SHIPMENT";
+    }
+
+    const blockingRequest = snapshot.istekler[0] ?? null;
+
+    if (blockingRequest?.nakliye) {
+      return "ACTIVE_CUSTOMER_SHIPMENT";
+    }
+
+    if (blockingRequest) {
+      return "STALE_AGREED_REQUEST";
+    }
+
+    const blockingOffer = snapshot.teklifler[0] ?? null;
+
+    if (!blockingOffer) {
+      return null;
+    }
+
+    const isOpenOffer =
+      blockingOffer.durum.durumTuru.trim().toUpperCase() ===
+        OPEN_OFFER_STATUS.durumTuru &&
+      blockingOffer.durum.durumAdi.trim().toUpperCase() ===
+        OPEN_OFFER_STATUS.durumAdi;
+
+    return isOpenOffer ? "OPEN_CARRIER_OFFER" : "STALE_ACCEPTED_OFFER";
+  }
+
   private mapStoredUser(user: StoredAuthUserQuery): StoredUserRecord {
     return {
       id: user.id,
@@ -268,6 +612,8 @@ export class UsersRepository {
       mail: user.mail,
       kullaniciAdi: user.kullaniciAdi,
       telefonNumarasi: user.telefonNumarasi,
+      customerIntroDismissedAt: user.customerIntroDismissedAt,
+      carrierIntroDismissedAt: user.carrierIntroDismissedAt,
       sifreHash: user.sifreHash,
       roleNames: user.roller.map((role) => role.rol.rolAd),
     };
@@ -281,6 +627,8 @@ export class UsersRepository {
       mail: user.mail,
       kullaniciAdi: user.kullaniciAdi,
       telefonNumarasi: user.telefonNumarasi,
+      customerIntroDismissedAt: user.customerIntroDismissedAt,
+      carrierIntroDismissedAt: user.carrierIntroDismissedAt,
       roleNames: user.roller.map((role) => role.rol.rolAd),
     };
   }

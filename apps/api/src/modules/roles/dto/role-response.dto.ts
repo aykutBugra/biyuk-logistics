@@ -1,5 +1,10 @@
-import type { RoleName } from "../../../common/constants/role-names";
+import type {
+  BusinessRoleName,
+  RoleName,
+} from "../../../common/constants/role-names";
 
-export class RoleResponseDto {    //RoleResponseDto, bir kullanıcının rollerini temsil eden bir DTO'dur
+export class RoleResponseDto {
   roles!: RoleName[];
+  businessRoles!: BusinessRoleName[];
+  isAdmin!: boolean;
 }

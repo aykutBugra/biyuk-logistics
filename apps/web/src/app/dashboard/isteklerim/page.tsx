@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
+import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import EmptyStateCard from "@/components/EmptyStateCard";
-import StatusBadge from "@/components/StatusBadge";
+import InlineHelpTrigger from "@/components/InlineHelpTrigger";
+import MyRequestCard from "@/components/MyRequestCard";
 import SummaryStatCard from "@/components/SummaryStatCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
@@ -15,19 +17,6 @@ import {
 } from "@/lib/api/transport-requests";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCustomerPageAccess } from "@/lib/auth/use-customer-page-access";
-import {
-  formatLocationLabel,
-  formatVolumeM3,
-  formatWeightKg,
-  getCargoTypeLabel,
-} from "@/lib/logistics";
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 export default function MyTransportRequestsPage() {
   const router = useRouter();
@@ -150,35 +139,45 @@ export default function MyTransportRequestsPage() {
 
   if (status !== "ready") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-gray-600 font-medium">Yukleniyor...</div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <p className="font-medium text-slate-500">Yukleniyor...</p>
       </div>
     );
   }
 
   const agreementCount = requests.filter((request) => {
     const normalizedStatus = request.durum.trim().toUpperCase();
-
     return normalizedStatus === "ANLASILDI" || normalizedStatus === "TAMAMLANDI";
   }).length;
   const activeCount = requests.length - agreementCount;
 
   return (
-    <CustomerTransportRequestsShell title="Isteklerim">
-      {isLoading ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Istekler yukleniyor...
+    <CustomerTransportRequestsShell
+      title="Isteklerim"
+      description="Olusturdugun tasima taleplerini ve her birinin aktif akis durumunu buradan takip et."
+      headerActions={
+        <div className="flex items-center gap-3">
+          <InlineHelpTrigger helpKey="my-requests" />
+          <Link
+            href="/dashboard/istek_ekle"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+          >
+            <i className="pi pi-plus text-xs" />
+            Yeni istek
+          </Link>
         </div>
-      ) : null}
+      }
+    >
+      {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && requests.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3 mb-6">
           <SummaryStatCard label="Toplam istek" value={requests.length} />
           <SummaryStatCard label="Acik akista" value={activeCount} />
           <SummaryStatCard label="Anlasilan is" value={agreementCount} />
@@ -196,94 +195,14 @@ export default function MyTransportRequestsPage() {
 
       {!isLoading && !errorMessage && requests.length > 0 ? (
         <div className="grid gap-4">
-          {requests.map((request) => {
-            const isDeleting = deletingRequestId === request.id;
-
-            return (
-              <div
-                key={request.id}
-                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-blue-200"
-              >
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                      <StatusBadge status={request.durum} />
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                        Istek #{request.id}
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                        {formatLocationLabel(
-                          request.baslangicKonumMetni,
-                          request.baslangicSehri
-                        )}{" "}
-                        {"->"}{" "}
-                        {formatLocationLabel(
-                          request.varisKonumMetni,
-                          request.varisSehri
-                        )}
-                      </h2>
-                      <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                          {getCargoTypeLabel(request.yukTipi)}
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                          {formatWeightKg(request.agirlikKg)}
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                          {formatVolumeM3(request.hacimM3)}
-                        </span>
-                        {request.tekTasimaIstiyor ? (
-                          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700 ring-1 ring-amber-100">
-                            Tek tasima
-                          </span>
-                        ) : null}
-                        {request.tasimaTarihi ? (
-                          <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                            {request.tasimaTarihi}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="max-w-3xl text-sm leading-6 text-slate-600 line-clamp-3">
-                        {request.yukDetay}
-                      </p>
-                    </div>
-
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                      Olusturma zamani: {formatDate(request.olusturmaTarihi)}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col items-start gap-3 lg:min-w-[250px] lg:items-end">
-                    <div className="flex flex-wrap gap-2 lg:justify-end">
-                      <Link
-                        href={`/dashboard/isteklerim/${request.id}`}
-                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                      >
-                        Detay
-                      </Link>
-                      <Link
-                        href={`/dashboard/isteklerim/${request.id}/duzenle`}
-                        className="inline-flex items-center justify-center rounded-2xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
-                      >
-                        Duzenle
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(request.id)}
-                        disabled={isDeleting}
-                        className="inline-flex items-center justify-center rounded-2xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isDeleting ? "Siliniyor..." : "Sil"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {requests.map((request) => (
+            <MyRequestCard
+              key={request.id}
+              request={request}
+              isDeleting={deletingRequestId === request.id}
+              onDelete={() => void handleDelete(request.id)}
+            />
+          ))}
         </div>
       ) : null}
     </CustomerTransportRequestsShell>

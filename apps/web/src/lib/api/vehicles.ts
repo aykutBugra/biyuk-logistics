@@ -15,6 +15,18 @@ export type CreateVehicleInput = {
 
 export type UpdateVehicleInput = CreateVehicleInput;
 
+export type VehicleCapacitySummary = {
+  toplamAgirlikKg: number;
+  toplamHacimM3: number | null;
+  rezerveAgirlikKg: number;
+  rezerveHacimM3: number;
+  kalanAgirlikKg: number;
+  kalanHacimM3: number | null;
+  aktifRezervasyonSayisi: number;
+  aktifTekTasimaRezervasyonuVar: boolean;
+  hesapEksigiVar: boolean;
+};
+
 export type VehicleListItem = {
   id: number;
   plaka: string;
@@ -27,6 +39,7 @@ export type VehicleListItem = {
   uzunlukCm: number | null;
   genislikCm: number | null;
   yukseklikCm: number | null;
+  capacitySummary: VehicleCapacitySummary;
 };
 
 export type VehicleDetail = VehicleListItem;

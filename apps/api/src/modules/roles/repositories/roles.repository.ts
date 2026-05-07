@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import type { RoleName } from "../../../common/constants/role-names";
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
@@ -41,5 +42,27 @@ export class RolesRepository {
     });
 
     return rows.map((row) => row.rol.rolAd);
+  }
+
+  async createRoleAssignment(userId: number, roleId: number): Promise<void> {
+    await this.prisma.client.kullaniciRol.create({
+      data: {
+        kullaniciId: userId,
+        rolId: roleId,
+      },
+    });
+  }
+
+  async createRoleAssignmentInTransaction(
+    tx: Prisma.TransactionClient,
+    userId: number,
+    roleId: number
+  ): Promise<void> {
+    await tx.kullaniciRol.create({
+      data: {
+        kullaniciId: userId,
+        rolId: roleId,
+      },
+    });
   }
 }

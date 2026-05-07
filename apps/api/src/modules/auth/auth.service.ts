@@ -1,15 +1,24 @@
-import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { Prisma } from "@prisma/client";
 import { JwtService } from "@nestjs/jwt";
+import { Prisma } from "@prisma/client";
 import { compare, hash } from "bcryptjs";
-import { ROLE_NAMES, type RoleName } from "../../common/constants/role-names";
-import type { JwtTtlValue } from "../../config/auth.config";
+import {
+  ROLE_NAMES,
+  type BusinessRoleName,
+} from "../../common/constants/role-names";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import type { DashboardIntroRole } from "../../common/types/dashboard-intro-role.type";
+import type { JwtTtlValue } from "../../config/auth.config";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { RolesService } from "../roles/roles.service";
 import { UserProfileResponseDto } from "../users/dto/user-profile-response.dto";
 import { type AuthUserRecord, UsersService } from "../users/users.service";
+import { CreateVehicleDto } from "../vehicles/dto/create-vehicle.dto";
 import {
   createVehicleForOwner,
   isVehiclePlateUniqueConstraintTarget,
@@ -19,34 +28,31 @@ import { AuthTokenResponseDto } from "./dto/auth-token-response.dto";
 import { LoginDto } from "./dto/login.dto";
 import { type RegisterRoleName, RegisterDto } from "./dto/register.dto";
 
-type AccessTokenPayload = {   //AccessTokenPayload, erişim token'ının içinde yer alacak bilgileri tanımlayan bir türdür
+type AccessTokenPayload = {
   sub: number;
   mail: string;
   kullaniciAdi: string;
   roles: AuthUserRecord["roles"];
 };
 
-type RefreshTokenPayload = {  //RefreshTokenPayload, yenileme token'ının içinde yer alacak bilgileri tanımlayan bir türdür
+type RefreshTokenPayload = {
   sub: number;
   type: "refresh";
 };
 
-type NormalizedRegisterInput = {  //NormalizedRegisterInput, kayıt işlemi sırasında gelen verilerin normalize edilmiş halini temsil eden bir türdür
+type NormalizedRegisterInput = {
   ad: string;
   soyad: string;
   mail: string;
   kullaniciAdi: string;
   telefonNumarasi: string | null;
   password: string;
-  role: RoleName;
+  role: BusinessRoleName;
   initialVehicle: VehicleDraft | null;
 };
 
-
-//AuthService kendi içinde new UsersService() veya new RolesService() gibi işlemler yapmaz, bunun yerine
-//bu servisleri constructor aracılığıyla alır. 
 @Injectable()
-export class AuthService {    //AuthService, kimlik doğrulama işlemlerini gerçekleştiren bir hizmettir
+export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly rolesService: RolesService,
@@ -55,55 +61,57 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
     private readonly configService: ConfigService
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<AuthTokenResponseDto> { //register metodu, yeni bir kullanıcı kaydı oluşturur ve 
-    const normalizedInput = this.normalizeRegisterInput(registerDto);       //başarılı bir kayıt işleminden sonra erişim ve yenileme 
-                                                                            //token'ları içeren bir AuthTokenResponseDto döner
-    await this.assertRegistrationIdentifiersAvailable(  //Kayıt sırasında kullanılan mail ve kullanıcı adı gibi tanımlayıcıların benzersiz olduğunu doğrular
+  async register(registerDto: RegisterDto): Promise<AuthTokenResponseDto> {
+    const normalizedInput = this.normalizeRegisterInput(registerDto);
+
+    await this.assertRegistrationIdentifiersAvailable(
       normalizedInput.mail,
       normalizedInput.kullaniciAdi
     );
 
-    const roleId = await this.rolesService.requireRoleId(normalizedInput.role);
+    const customerRoleId = await this.rolesService.requireRoleId(ROLE_NAMES.MUSTERI);
     const sifreHash = await hash(normalizedInput.password, 12);
-    let user: AuthUserRecord;   
 
-    try { //Yeni kullanıcı oluşturma işlemi sırasında oluşabilecek benzersiz kısıtlama hatalarını yakalar ve uygun şekilde ConflictException olarak yeniden fırlatır
-      user = await this.prisma.client.$transaction(async (tx) => {
-        const createdUser = await this.usersService.createUserWithResolvedRoleIdInTransaction(tx, {
-          ad: normalizedInput.ad,
-          soyad: normalizedInput.soyad,
-          mail: normalizedInput.mail,
-          kullaniciAdi: normalizedInput.kullaniciAdi,
-          telefonNumarasi: normalizedInput.telefonNumarasi,
-          sifreHash,
-          roleId,
-        });
+    let userId: number;
+
+    try {
+      userId = await this.prisma.client.$transaction(async (tx) => {
+        const createdUser =
+          await this.usersService.createUserWithResolvedRoleIdInTransaction(tx, {
+            ad: normalizedInput.ad,
+            soyad: normalizedInput.soyad,
+            mail: normalizedInput.mail,
+            kullaniciAdi: normalizedInput.kullaniciAdi,
+            telefonNumarasi: normalizedInput.telefonNumarasi,
+            sifreHash,
+            roleId: customerRoleId,
+          });
 
         if (normalizedInput.initialVehicle) {
           await createVehicleForOwner(tx, {
             sahipId: createdUser.id,
             ...normalizedInput.initialVehicle,
           });
+          await this.rolesService.assignRoleToUserInTransaction(
+            tx,
+            createdUser.id,
+            ROLE_NAMES.NAKLIYECI
+          );
         }
 
-        return createdUser;
+        return createdUser.id;
       });
-    } catch (error) { 
+    } catch (error) {
       this.rethrowUniqueConstraintAsConflict(error);
       throw error;
     }
 
-    const tokens = await this.createTokenPair(user);
-
-    return {
-      ...tokens,
-      user: this.usersService.toUserProfile(this.toUserIdentity(user)),
-    };
+    return this.createAuthResponseForUserId(userId);
   }
 
-  async login(loginDto: LoginDto): Promise<AuthTokenResponseDto> {      //login metodu, kullanıcı giriş işlemini gerçekleştirir. Verilen kimlik bilgilerini 
-    const identifier = loginDto.identifier.trim();                       //doğrular ve başarılı bir girişten sonra erişim ve yenileme token'ları içeren bir 
-    const user = await this.usersService.findActiveByIdentifier(identifier);    //AuthTokenResponseDto döner
+  async login(loginDto: LoginDto): Promise<AuthTokenResponseDto> {
+    const identifier = loginDto.identifier.trim();
+    const user = await this.usersService.findActiveByIdentifier(identifier);
 
     if (!user) {
       throw new UnauthorizedException("Invalid credentials.");
@@ -112,19 +120,14 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
     const isPasswordValid = await compare(loginDto.password, user.sifreHash);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException("şifre hatalı");
+      throw new UnauthorizedException("Sifre hatali");
     }
 
-    const tokens = await this.createTokenPair(user);
-
-    return {
-      ...tokens,
-      user: this.usersService.toUserProfile(this.toUserIdentity(user)),
-    };
+    return this.createAuthResponse(user);
   }
 
-  async refresh(refreshToken: string): Promise<AuthTokenResponseDto> {  //refresh metodu, geçerli bir yenileme token'ı alır, doğrular ve 
-    let payload: RefreshTokenPayload;                                   //yeni bir erişim ve yenileme token'ı çifti döner.
+  async refresh(refreshToken: string): Promise<AuthTokenResponseDto> {
+    let payload: RefreshTokenPayload;
 
     try {
       payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(refreshToken, {
@@ -147,8 +150,48 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
     return this.createTokenPair(user);
   }
 
-  async getCurrentUser(currentUser: AuthenticatedUser): Promise<UserProfileResponseDto> { //getCurrentUser metodu, geçerli kimliği doğrulanmış kullanıcı bilgilerini alır ve UserProfileResponseDto formatında döner
-    const user = await this.usersService.findProfileById(currentUser.id);                 //bilgilerini alır ve UserProfileResponseDto formatında döner
+  async completeCarrierOnboarding(
+    currentUser: AuthenticatedUser,
+    createVehicleDto: CreateVehicleDto
+  ): Promise<AuthTokenResponseDto> {
+    const user = await this.usersService.findActiveById(currentUser.id);
+
+    if (!user) {
+      throw new UnauthorizedException("Current user could not be resolved.");
+    }
+
+    if (user.roles.includes(ROLE_NAMES.NAKLIYECI)) {
+      throw new ConflictException("Carrier onboarding is already complete.");
+    }
+
+    if (!user.roles.includes(ROLE_NAMES.MUSTERI)) {
+      throw new ConflictException("Current user is not eligible for carrier onboarding.");
+    }
+
+    try {
+      await this.prisma.client.$transaction(async (tx) => {
+        await createVehicleForOwner(tx, {
+          sahipId: user.id,
+          ...createVehicleDto,
+        });
+        await this.rolesService.assignRoleToUserInTransaction(
+          tx,
+          user.id,
+          ROLE_NAMES.NAKLIYECI
+        );
+      });
+    } catch (error) {
+      this.rethrowUniqueConstraintAsConflict(error);
+      throw error;
+    }
+
+    return this.createAuthResponseForUserId(user.id);
+  }
+
+  async getCurrentUser(
+    currentUser: AuthenticatedUser
+  ): Promise<UserProfileResponseDto> {
+    const user = await this.usersService.findProfileById(currentUser.id);
 
     if (!user) {
       throw new UnauthorizedException("Current user could not be resolved.");
@@ -157,7 +200,24 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
     return user;
   }
 
-  private async createTokenPair(user: AuthUserRecord): Promise<AuthTokenResponseDto> {  
+  async dismissDashboardIntro(
+    currentUser: AuthenticatedUser,
+    role: DashboardIntroRole
+  ): Promise<UserProfileResponseDto> {
+    const user = await this.usersService.dismissDashboardIntro(currentUser.id, role);
+
+    if (!user) {
+      throw new UnauthorizedException("Current user could not be resolved.");
+    }
+
+    return user;
+  }
+
+  async deleteCurrentUser(currentUser: AuthenticatedUser): Promise<void> {
+    await this.usersService.deleteOwnAccount(currentUser.id);
+  }
+
+  private async createTokenPair(user: AuthUserRecord): Promise<AuthTokenResponseDto> {
     const accessPayload: AccessTokenPayload = {
       sub: user.id,
       mail: user.mail,
@@ -188,7 +248,28 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
     };
   }
 
-  private async assertRegistrationIdentifiersAvailable(  //Kayıt sırasında kullanılan mail ve kullanıcı adı gibi tanımlayıcıların benzersiz olduğunu doğrular
+  private async createAuthResponseForUserId(
+    userId: number
+  ): Promise<AuthTokenResponseDto> {
+    const user = await this.usersService.findActiveById(userId);
+
+    if (!user) {
+      throw new UnauthorizedException("Current user could not be resolved.");
+    }
+
+    return this.createAuthResponse(user);
+  }
+
+  private async createAuthResponse(user: AuthUserRecord): Promise<AuthTokenResponseDto> {
+    const tokens = await this.createTokenPair(user);
+
+    return {
+      ...tokens,
+      user: this.usersService.toUserProfile(this.toUserIdentity(user)),
+    };
+  }
+
+  private async assertRegistrationIdentifiersAvailable(
     mail: string,
     kullaniciAdi: string
   ): Promise<void> {
@@ -207,16 +288,18 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
   }
 
   private normalizeRegisterInput(registerDto: RegisterDto): NormalizedRegisterInput {
-    return {  
+    const normalizedRole = this.normalizeRegisterRole(registerDto.role);
+
+    return {
       ad: registerDto.ad.trim(),
       soyad: registerDto.soyad.trim(),
       mail: registerDto.mail.trim().toLowerCase(),
       kullaniciAdi: registerDto.kullaniciAdi.trim().toLowerCase(),
       telefonNumarasi: registerDto.telefonNumarasi?.trim() || null,
       password: registerDto.password,
-      role: this.normalizeRegisterRole(registerDto.role),
+      role: normalizedRole,
       initialVehicle:
-        this.normalizeRegisterRole(registerDto.role) === ROLE_NAMES.NAKLIYECI
+        normalizedRole === ROLE_NAMES.NAKLIYECI
           ? {
               marka: registerDto.marka ?? "",
               model: registerDto.model ?? "",
@@ -233,7 +316,7 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
     };
   }
 
-  private normalizeRegisterRole(role?: RegisterRoleName): RoleName {
+  private normalizeRegisterRole(role?: RegisterRoleName): BusinessRoleName {
     if (!role || role === "KULLANICI") {
       return ROLE_NAMES.MUSTERI;
     }
@@ -265,7 +348,6 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
     throw new ConflictException("User identifiers must be unique.");
   }
 
-          //toUserIdentity, AuthUserRecord içinden sifreHash alanını çıkartarak kullanıcının kimlik bilgilerini temsil eden bir nesne döner
   private toUserIdentity(user: AuthUserRecord): Omit<AuthUserRecord, "sifreHash"> {
     return {
       id: user.id,
@@ -274,29 +356,25 @@ export class AuthService {    //AuthService, kimlik doğrulama işlemlerini ger�
       mail: user.mail,
       kullaniciAdi: user.kullaniciAdi,
       telefonNumarasi: user.telefonNumarasi,
+      customerIntroDismissedAt: user.customerIntroDismissedAt ?? null,
+      carrierIntroDismissedAt: user.carrierIntroDismissedAt ?? null,
       roles: user.roles,
     };
   }
 
   private get accessSecret(): string {
-    return this.configService.get<string>("auth.accessSecret") ?? "dev-access-secret";
+    return this.configService.getOrThrow<string>("auth.accessSecret");
   }
 
   private get accessTtl(): JwtTtlValue {
-    return (
-      this.configService.get<JwtTtlValue>("auth.accessTtl") ?? "15m"
-    ) as JwtTtlValue;
+    return this.configService.getOrThrow<JwtTtlValue>("auth.accessTtl");
   }
 
   private get refreshSecret(): string {
-    return (
-      this.configService.get<string>("auth.refreshSecret") ?? "dev-refresh-secret"
-    );
+    return this.configService.getOrThrow<string>("auth.refreshSecret");
   }
 
   private get refreshTtl(): JwtTtlValue {
-    return (
-      this.configService.get<JwtTtlValue>("auth.refreshTtl") ?? "7d"
-    ) as JwtTtlValue;
+    return this.configService.getOrThrow<JwtTtlValue>("auth.refreshTtl");
   }
 }

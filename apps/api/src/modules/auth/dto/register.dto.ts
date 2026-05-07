@@ -13,7 +13,10 @@ import {
   MinLength,
   ValidateIf,
 } from "class-validator";
-import { ROLE_NAMES } from "../../../common/constants/role-names";
+import {
+  BUSINESS_ROLE_VALUES,
+  ROLE_NAMES,
+} from "../../../common/constants/role-names";
 import { VEHICLE_BODY_TYPES } from "../../vehicles/vehicle.constants";
 
 const trimString = ({ value }: { value: unknown }) =>
@@ -49,8 +52,7 @@ const toNumber = ({ value }: { value: unknown }) => {
 
 export const REGISTER_ROLE_VALUES = [
   "KULLANICI",
-  ROLE_NAMES.MUSTERI,
-  ROLE_NAMES.NAKLIYECI,
+  ...BUSINESS_ROLE_VALUES,
 ] as const;
 
 export type RegisterRoleName = (typeof REGISTER_ROLE_VALUES)[number];

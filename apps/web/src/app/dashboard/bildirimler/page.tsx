@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
-import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
+import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
+import DashboardShell from "@/components/DashboardShell";
 import EmptyStateCard from "@/components/EmptyStateCard";
 import SummaryStatCard from "@/components/SummaryStatCard";
 import { ApiClientError } from "@/lib/api/api-client";
@@ -33,6 +33,10 @@ function getTypeLabel(value: string): string {
       return "Kabul";
     case "TEKLIF_REDDEDILDI":
       return "Red";
+    case "MESAJ_GELDI":
+      return "Mesaj";
+    case "KARSI_TEKLIF_GELDI":
+      return "Pazarlik";
     case "IS_BASLADI":
       return "Is";
     case "IS_TAMAMLANDI":
@@ -48,7 +52,8 @@ function getTypeLabel(value: string): string {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { accessToken, isCarrier, primaryRole, status } = useDashboardAccess();
+  const { accessToken, hasBusinessAccess, isAdmin, primaryRole, status } =
+    useDashboardAccess("shared-account");
   const [notifications, setNotifications] = useState<NotificationListItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -268,29 +273,26 @@ export default function NotificationsPage() {
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-        <div className="font-medium text-slate-600">Yukleniyor...</div>
+        <p className="font-medium text-slate-500">Yukleniyor...</p>
       </div>
     );
   }
 
-  const Shell = isCarrier ? CarrierVehiclesShell : CustomerTransportRequestsShell;
-
   return (
-    <Shell title="Bildirimler">
-      {isLoading ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Bildirimler yukleniyor...
-        </div>
-      ) : null}
+    <DashboardShell
+      title="Bildirimler"
+      description="Sana gelen sistem olaylari, teklif hareketleri ve hatirlatmalar tek inbox altinda toplanir."
+    >
+      {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
 
       {!isLoading && !errorMessage ? (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3 mb-6">
           <SummaryStatCard label="Toplam bildirim" value={notifications.length} />
           <SummaryStatCard label="Okunmamis" value={unreadCount} />
           <SummaryStatCard
@@ -305,19 +307,25 @@ export default function NotificationsPage() {
           title="Henuz bildirim yok"
           description="Yeni bildirimlerin burada listelenecek."
           actionHref={
-            primaryRole === "NAKLIYECI"
-              ? "/dashboard/acik_istekler"
-              : "/dashboard/isteklerim"
+            !hasBusinessAccess && isAdmin
+              ? "/dashboard/admin"
+              : primaryRole === "NAKLIYECI"
+                ? "/dashboard/acik_istekler"
+                : "/dashboard/isteklerim"
           }
           actionLabel={
-            primaryRole === "NAKLIYECI" ? "Acik istekleri gor" : "Isteklerime git"
+            !hasBusinessAccess && isAdmin
+              ? "Yonetim alanina git"
+              : primaryRole === "NAKLIYECI"
+                ? "Acik istekleri gor"
+                : "Isteklerime git"
           }
         />
       ) : null}
 
       {!isLoading && !errorMessage && notifications.length > 0 ? (
         <div className="space-y-4">
-          <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-slate-600">Okunmamis bildirimlerini yonet.</p>
             </div>
@@ -335,7 +343,7 @@ export default function NotificationsPage() {
             {notifications.map((notification) => (
               <article
                 key={notification.id}
-                className={`rounded-3xl border p-5 shadow-sm transition-colors ${
+                className={`rounded-2xl border p-5 shadow-sm transition-colors ${
                   notification.isRead
                     ? "border-slate-200 bg-white"
                     : "border-blue-200 bg-blue-50/60"
@@ -401,6 +409,6 @@ export default function NotificationsPage() {
           </div>
         </div>
       ) : null}
-    </Shell>
+    </DashboardShell>
   );
 }
