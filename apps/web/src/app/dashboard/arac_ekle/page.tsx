@@ -19,6 +19,7 @@ export default function CreateVehiclePage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
   const [form, setForm] = useState<VehicleFormState>(initialVehicleFormState);
+  const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (
@@ -26,6 +27,7 @@ export default function CreateVehiclePage() {
   ) => {
     const { name, value } = event.target;
 
+    setFormErrorMessage(null);
     setForm((currentForm) => ({
       ...currentForm,
       [name]: value,
@@ -39,6 +41,7 @@ export default function CreateVehiclePage() {
       return;
     }
 
+    setFormErrorMessage(null);
     setIsSubmitting(true);
 
     try {
@@ -59,9 +62,9 @@ export default function CreateVehiclePage() {
       }
 
       if (error instanceof ApiClientError) {
-        window.alert(error.message);
+        setFormErrorMessage(error.message);
       } else {
-        window.alert("Arac olusturulurken beklenmeyen bir hata olustu.");
+        setFormErrorMessage("Arac olusturulurken beklenmeyen bir hata olustu.");
       }
     } finally {
       setIsSubmitting(false);
@@ -80,18 +83,33 @@ export default function CreateVehiclePage() {
     <CarrierVehiclesShell
       title="Yeni arac ekle"
       description="Arac bilgilerini girerek filonuza yeni bir kayit olusturun."
+      headerVariant="compact"
+      motionPreset="form"
     >
       <form
         onSubmit={handleSubmit}
-        className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+        data-dashboard-form-surface
+        className="app-form-surface app-surface-strong space-y-6"
       >
-        <VehicleFormFields values={form} onChange={handleChange} disabled={isSubmitting} />
+        {formErrorMessage ? (
+          <div data-dashboard-form-error className="app-form-error-banner" role="alert">
+            <p className="text-sm font-semibold">Arac kaydedilemedi</p>
+            <p className="mt-1 text-sm">{formErrorMessage}</p>
+          </div>
+        ) : null}
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div data-dashboard-form-section>
+          <VehicleFormFields values={form} onChange={handleChange} disabled={isSubmitting} />
+        </div>
+
+        <div
+          data-dashboard-form-submit
+          className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"
+        >
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="app-button-primary app-form-submit-button app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Arac kaydediliyor..." : "Araci kaydet"}
           </button>

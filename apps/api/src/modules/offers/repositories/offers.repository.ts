@@ -14,6 +14,15 @@ const OPEN_OFFER_STATUS = {
 
 type PrismaExecutor = Prisma.TransactionClient | PrismaClient;
 
+export type OpenRequestImageRecord = {
+  id: number;
+  storageKey: string;
+  thumbnailStorageKey: string;
+  width: number;
+  height: number;
+  isPrimary: boolean;
+};
+
 export type OpenRequestListItemRecord = {
   id: number;
   baslangicSehri: string;
@@ -37,6 +46,8 @@ export type OpenRequestListItemRecord = {
   olusturmaTarihi: Date;
   durumAdi: string;
   alreadyOffered: boolean;
+  primaryImage: OpenRequestImageRecord | null;
+  imageCount: number;
 };
 
 export type OpenRequestDetailRecord = OpenRequestListItemRecord & {
@@ -53,6 +64,8 @@ export type OpenRequestDetailRecord = OpenRequestListItemRecord & {
   varisEnlem: number;
   varisBoylam: number;
   hasExistingOffer: boolean;
+  images: OpenRequestImageRecord[];
+  primaryImageId: number | null;
 };
 
 export type OpenRequestFilters = {
@@ -276,10 +289,35 @@ export class OffersRepository {
           },
           take: 1,
         },
+        gorseller: {
+          where: {
+            silmeTarihi: null,
+          },
+          orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { id: "asc" }],
+          select: {
+            id: true,
+            storageKey: true,
+            thumbnailStorageKey: true,
+            width: true,
+            height: true,
+            isPrimary: true,
+          },
+        },
       },
     });
 
     return requests.map((request) => ({
+      primaryImage: request.gorseller[0]
+        ? {
+            id: request.gorseller[0].id,
+            storageKey: request.gorseller[0].storageKey,
+            thumbnailStorageKey: request.gorseller[0].thumbnailStorageKey,
+            width: request.gorseller[0].width,
+            height: request.gorseller[0].height,
+            isPrimary: request.gorseller[0].isPrimary,
+          }
+        : null,
+      imageCount: request.gorseller.length,
       id: request.id,
       baslangicSehri: request.baslangicSehri,
       varisSehri: request.varisSehri,
@@ -383,6 +421,20 @@ export class OffersRepository {
           },
           take: 1,
         },
+        gorseller: {
+          where: {
+            silmeTarihi: null,
+          },
+          orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { id: "asc" }],
+          select: {
+            id: true,
+            storageKey: true,
+            thumbnailStorageKey: true,
+            width: true,
+            height: true,
+            isPrimary: true,
+          },
+        },
       },
     });
 
@@ -391,6 +443,17 @@ export class OffersRepository {
     }
 
     return {
+      primaryImage: request.gorseller[0]
+        ? {
+            id: request.gorseller[0].id,
+            storageKey: request.gorseller[0].storageKey,
+            thumbnailStorageKey: request.gorseller[0].thumbnailStorageKey,
+            width: request.gorseller[0].width,
+            height: request.gorseller[0].height,
+            isPrimary: request.gorseller[0].isPrimary,
+          }
+        : null,
+      imageCount: request.gorseller.length,
       id: request.id,
       baslangicSehri: request.baslangicSehri,
       varisSehri: request.varisSehri,
@@ -420,6 +483,18 @@ export class OffersRepository {
       durumAdi: request.durum.durumAdi,
       alreadyOffered: request.teklifler.length > 0,
       hasExistingOffer: request.teklifler.length > 0,
+      images: request.gorseller.map((image) => ({
+        id: image.id,
+        storageKey: image.storageKey,
+        thumbnailStorageKey: image.thumbnailStorageKey,
+        width: image.width,
+        height: image.height,
+        isPrimary: image.isPrimary,
+      })),
+      primaryImageId:
+        request.gorseller.find((image) => image.isPrimary)?.id ??
+        request.gorseller[0]?.id ??
+        null,
     };
   }
 

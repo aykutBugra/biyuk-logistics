@@ -13,11 +13,13 @@ import {
 } from "@/lib/api/carrier-routes";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
+import { useConfirm } from "@/lib/confirm/confirm-context";
 import {
   formatLocationLabel,
   formatRouteDistanceKm,
   formatRouteDuration,
 } from "@/lib/logistics";
+import { useToast } from "@/lib/toast/toast-context";
 
 function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat("tr-TR", {
@@ -35,6 +37,8 @@ function formatPlannedDate(value: string): string {
 export default function CarrierRouteDetailPage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
+  const confirm = useConfirm();
+  const showToast = useToast();
   const params = useParams<{ id: string }>();
   const routeId = Number(params.id);
   const [route, setRoute] = useState<CarrierRouteDetail | null>(null);
@@ -116,39 +120,77 @@ export default function CarrierRouteDetailPage() {
       return;
     }
 
-    if (!window.confirm("Bu rotayi silmek istedigine emin misin?")) {
+    const isConfirmed = await confirm({
+      title: "Rotayi sil",
+      message: "Bu rotayi silmek istedigine emin misin?",
+      tone: "danger",
+      confirmLabel: "Sil",
+      cancelLabel: "Vazgec",
+      defaultFocus: "reject",
+      dismissableMask: false,
+    });
+
+    if (!isConfirmed) {
       return;
     }
 
     try {
       setIsDeleting(true);
       await deleteCarrierRoute(route.id, accessToken);
+      showToast({
+        severity: "success",
+        summary: "Rota silindi",
+        detail: "Rota listeden kaldirildi.",
+      });
       router.replace("/dashboard/rotalarim");
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
-        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        showToast({
+          severity: "error",
+          summary: "Oturum sona erdi",
+          detail: "Lutfen yeniden giris yapin.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/login");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 403) {
-        window.alert("Bu islem icin yetkin yok.");
+        showToast({
+          severity: "error",
+          summary: "Yetki yok",
+          detail: "Bu islem icin yetkin yok.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-        window.alert("Bu rota bulunamadi.");
+        showToast({
+          severity: "warn",
+          summary: "Rota bulunamadi",
+          detail: "Listeye yonlendiriliyorsun.",
+          life: 3200,
+          closable: true,
+        });
         router.replace("/dashboard/rotalarim");
         return;
       }
 
-      window.alert(
-        error instanceof ApiClientError
-          ? error.message
-          : "Rota silinirken beklenmeyen bir hata olustu."
-      );
+      showToast({
+        severity: "error",
+        summary: "Rota silinemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Rota silinirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
     } finally {
       setIsDeleting(false);
     }

@@ -16,19 +16,23 @@ export default function EmptyStateCard({
   actionLabel,
 }: EmptyStateCardProps) {
   return (
-    <div className="app-surface-strong rounded-[1.8rem] p-6">
+    <section className="app-surface rounded-[1.15rem] border border-slate-200 p-5 md:p-6">
       {eyebrow ? (
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-600">
           {eyebrow}
         </p>
       ) : null}
-      <h2 className="mt-2 text-xl font-black tracking-tight text-slate-950">{title}</h2>
-      <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{description}</p>
+      <h2 className="mt-2 text-lg font-black tracking-tight text-slate-950 md:text-xl">
+        {title}
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{description}</p>
       {actionHref && actionLabel ? (
-        <Link href={actionHref} className="app-button-primary mt-5">
-          {actionLabel}
-        </Link>
+        <div className="mt-5 border-t border-slate-200 pt-4">
+          <Link href={actionHref} className="app-button-primary">
+            {actionLabel}
+          </Link>
+        </div>
       ) : null}
-    </div>
+    </section>
   );
 }

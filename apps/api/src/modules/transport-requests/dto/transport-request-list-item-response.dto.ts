@@ -1,3 +1,5 @@
+import { RequestImageSummaryResponseDto } from "../../../common/dto/request-image-summary-response.dto";
+
 export class TransportRequestListItemResponseDto {
   id!: number;
   baslangicSehri!: string;
@@ -14,4 +16,6 @@ export class TransportRequestListItemResponseDto {
   yukDetay!: string;
   olusturmaTarihi!: Date;
   durum!: string;
+  primaryImage?: RequestImageSummaryResponseDto;
+  imageCount?: number;
 }

@@ -1,17 +1,26 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import type { ChangeEvent, FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
 import InputField from "@/components/InputField";
 import LocationAutocompleteField from "@/components/LocationAutocompleteField";
+import RequestImageUploader, {
+  type RequestImageDraft,
+} from "@/components/RequestImageUploader";
 import { ApiClientError } from "@/lib/api/api-client";
 import type { SelectedLocation } from "@/lib/api/locations";
 import {
+  deleteTransportRequestImage,
   getTransportRequestDetail,
+  setPrimaryTransportRequestImage,
   updateTransportRequest,
+  uploadTransportRequestImages,
   type TransportRequestDetail,
+  type TransportRequestImage,
   type UpdateTransportRequestInput,
 } from "@/lib/api/transport-requests";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
@@ -77,20 +86,24 @@ export default function EditTransportRequestPage() {
   const requestId = Number(params.id);
 
   const [form, setForm] = useState<UpdateTransportRequestForm>(initialForm);
-  const [baslangicKonum, setBaslangicKonum] = useState<SelectedLocation | null>(
-    null
-  );
+  const [baslangicKonum, setBaslangicKonum] = useState<SelectedLocation | null>(null);
   const [varisKonum, setVarisKonum] = useState<SelectedLocation | null>(null);
   const [legacyRouteHint, setLegacyRouteHint] = useState<{
     baslangic: string | null;
     varis: string | null;
-  }>({
-    baslangic: null,
-    varis: null,
-  });
+  }>({ baslangic: null, varis: null });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
+  const [locationValidationActive, setLocationValidationActive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Photo management state
+  const [existingImages, setExistingImages] = useState<TransportRequestImage[]>([]);
+  const [pendingImages, setPendingImages] = useState<RequestImageDraft[]>([]);
+  const [imageActionError, setImageActionError] = useState<string | null>(null);
+  const [deletingImageId, setDeletingImageId] = useState<number | null>(null);
+  const [settingPrimaryImageId, setSettingPrimaryImageId] = useState<number | null>(null);
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
@@ -131,14 +144,13 @@ export default function EditTransportRequestPage() {
         setLegacyRouteHint({
           baslangic: response.baslangicPlaceId
             ? null
-            : formatLocationLabel(
-                response.baslangicKonumMetni,
-                response.baslangicSehri
-              ),
+            : formatLocationLabel(response.baslangicKonumMetni, response.baslangicSehri),
           varis: response.varisPlaceId
             ? null
             : formatLocationLabel(response.varisKonumMetni, response.varisSehri),
         });
+        // Load existing images
+        setExistingImages(response.images ?? []);
       } catch (error) {
         if (!isMounted) {
           return;
@@ -186,6 +198,7 @@ export default function EditTransportRequestPage() {
   ) => {
     const { name, value } = event.target;
 
+    setSubmitErrorMessage(null);
     setForm((currentForm) => ({
       ...currentForm,
       [name]: value,
@@ -195,11 +208,65 @@ export default function EditTransportRequestPage() {
   const handleCheckboxChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = event.target;
 
+    setSubmitErrorMessage(null);
     setForm((currentForm) => ({
       ...currentForm,
       [name]: checked,
     }));
   };
+
+  // Immediate image actions (no form save needed)
+  const handleDeleteImage = useCallback(
+    async (imageId: number) => {
+      if (!accessToken || deletingImageId !== null || settingPrimaryImageId !== null) {
+        return;
+      }
+
+      setDeletingImageId(imageId);
+      setImageActionError(null);
+
+      try {
+        const updated = await deleteTransportRequestImage(requestId, imageId, accessToken);
+        setExistingImages(updated.images ?? []);
+      } catch (error) {
+        console.error("[edit] Gorsel silme hatasi:", error);
+        setImageActionError(
+          error instanceof ApiClientError ? error.message : "Gorsel silinemedi."
+        );
+      } finally {
+        setDeletingImageId(null);
+      }
+    },
+    [accessToken, requestId, deletingImageId, settingPrimaryImageId]
+  );
+
+  const handleSetPrimaryImage = useCallback(
+    async (imageId: number) => {
+      if (!accessToken || deletingImageId !== null || settingPrimaryImageId !== null) {
+        return;
+      }
+
+      setSettingPrimaryImageId(imageId);
+      setImageActionError(null);
+
+      try {
+        const updated = await setPrimaryTransportRequestImage(
+          requestId,
+          imageId,
+          accessToken
+        );
+        setExistingImages(updated.images ?? []);
+      } catch (error) {
+        console.error("[edit] Ana fotograf ayarlama hatasi:", error);
+        setImageActionError(
+          error instanceof ApiClientError ? error.message : "Ana fotograf ayarlanamadi."
+        );
+      } finally {
+        setSettingPrimaryImageId(null);
+      }
+    },
+    [accessToken, requestId, deletingImageId, settingPrimaryImageId]
+  );
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -214,10 +281,11 @@ export default function EditTransportRequestPage() {
     }
 
     if (!baslangicKonum || !varisKonum) {
-      window.alert("Baslangic ve varis konumunu yeniden secmelisin.");
+      setLocationValidationActive(true);
       return;
     }
 
+    setSubmitErrorMessage(null);
     setIsSubmitting(true);
 
     const payload: UpdateTransportRequestInput = {
@@ -241,6 +309,35 @@ export default function EditTransportRequestPage() {
 
     try {
       const response = await updateTransportRequest(requestId, payload, accessToken);
+
+      // Upload any newly selected images
+      if (pendingImages.length > 0) {
+        const formData = new FormData();
+        const primaryIndex = pendingImages.findIndex((img) => img.isPrimary);
+
+        pendingImages.forEach((img) => formData.append("images", img.file));
+        if (primaryIndex >= 0) {
+          formData.append("primaryIndex", String(primaryIndex));
+        }
+
+        let uploadFailed = false;
+
+        try {
+          await uploadTransportRequestImages(requestId, formData, accessToken);
+        } catch (uploadError) {
+          uploadFailed = true;
+          console.error("[edit] Fotograf upload hatasi:", uploadError);
+        }
+
+        if (uploadFailed) {
+          setSubmitErrorMessage(
+            "Degisiklikler kaydedildi ancak yeni fotograflar yuklenemedi. Sayfayi yenileyip tekrar deneyebilirsin."
+          );
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       router.replace(`/dashboard/isteklerim/${response.id}`);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
@@ -263,14 +360,17 @@ export default function EditTransportRequestPage() {
       }
 
       if (error instanceof ApiClientError) {
-        window.alert(error.message);
+        setSubmitErrorMessage(error.message);
       } else {
-        window.alert("Istek guncellenirken beklenmeyen bir hata olustu.");
+        setSubmitErrorMessage("Istek guncellenirken beklenmeyen bir hata olustu.");
       }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const imageActionsDisabled =
+    isSubmitting || deletingImageId !== null || settingPrimaryImageId !== null;
 
   if (status !== "ready") {
     return (
@@ -281,7 +381,11 @@ export default function EditTransportRequestPage() {
   }
 
   return (
-    <CustomerTransportRequestsShell title="Istek duzenle">
+    <CustomerTransportRequestsShell
+      title="Istek duzenle"
+      headerVariant="compact"
+      motionPreset="form"
+    >
       {isLoading ? (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
           Istek bilgileri yukleniyor...
@@ -298,30 +402,56 @@ export default function EditTransportRequestPage() {
       {!isLoading && !errorMessage ? (
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+          data-dashboard-form-surface
+          className="app-form-surface app-surface-strong space-y-6"
         >
-          <div className="grid gap-4 md:grid-cols-2">
+          {submitErrorMessage ? (
+            <div data-dashboard-form-error className="app-form-error-banner" role="alert">
+              <p className="text-sm font-semibold">Degisiklikler kaydedilemedi</p>
+              <p className="mt-1 text-sm">{submitErrorMessage}</p>
+            </div>
+          ) : null}
+
+          <div data-dashboard-form-section className="grid gap-4 md:grid-cols-2">
             <LocationAutocompleteField
               label="Baslangic konumu"
               placeholder="Yukleme noktasini ara"
               accessToken={accessToken ?? ""}
               value={baslangicKonum}
-              onSelect={setBaslangicKonum}
+              onSelect={(value) => {
+                setBaslangicKonum(value);
+                setSubmitErrorMessage(null);
+              }}
               legacyHint={legacyRouteHint.baslangic}
               disabled={isSubmitting}
+              invalid={locationValidationActive && !baslangicKonum}
+              validationMessage={
+                locationValidationActive && !baslangicKonum
+                  ? "Listeden bir baslangic konumu sec."
+                  : null
+              }
             />
             <LocationAutocompleteField
               label="Varis konumu"
               placeholder="Teslim noktasini ara"
               accessToken={accessToken ?? ""}
               value={varisKonum}
-              onSelect={setVarisKonum}
+              onSelect={(value) => {
+                setVarisKonum(value);
+                setSubmitErrorMessage(null);
+              }}
               legacyHint={legacyRouteHint.varis}
               disabled={isSubmitting}
+              invalid={locationValidationActive && !varisKonum}
+              validationMessage={
+                locationValidationActive && !varisKonum
+                  ? "Listeden bir varis konumu sec."
+                  : null
+              }
             />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div data-dashboard-form-section className="grid gap-4 md:grid-cols-2">
             <InputField
               name="agirlikKg"
               label="Agirlik (kg)"
@@ -352,7 +482,7 @@ export default function EditTransportRequestPage() {
                 value={form.yukTipi}
                 onChange={handleChange}
                 disabled={isSubmitting}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
+                className="app-input block text-sm"
               >
                 {CARGO_TYPE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -371,7 +501,10 @@ export default function EditTransportRequestPage() {
             />
           </div>
 
-          <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <label
+            data-dashboard-form-section
+            className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+          >
             <input
               type="checkbox"
               name="tekTasimaIstiyor"
@@ -390,7 +523,7 @@ export default function EditTransportRequestPage() {
             </span>
           </label>
 
-          <div className="space-y-2">
+          <div data-dashboard-form-section className="space-y-2">
             <label htmlFor="yukDetay" className="block text-sm font-medium text-gray-700">
               Yuk detayi
             </label>
@@ -403,15 +536,108 @@ export default function EditTransportRequestPage() {
               onChange={handleChange}
               disabled={isSubmitting}
               placeholder="Tasima ihtiyacini, paketleme seklini veya ozel notlari acikla."
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
+              className="app-input block min-h-[9rem] resize-y text-sm"
             />
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* ── Photo management section ──────────────────────── */}
+          <div
+            data-dashboard-form-section
+            className="space-y-4 rounded-[1.85rem] border border-slate-200/80 bg-white px-5 py-5 md:px-6 md:py-6"
+          >
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
+                Fotograflar
+              </p>
+              <h2 className="text-xl font-black tracking-tight text-slate-950">
+                Yuk fotograflari
+              </h2>
+            </div>
+
+            {imageActionError ? (
+              <p className="text-sm font-medium text-rose-700">{imageActionError}</p>
+            ) : null}
+
+            {/* Existing images */}
+            {existingImages.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Mevcut fotograflar
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {existingImages.map((image) => {
+                    const isDeleting = deletingImageId === image.id;
+                    const isSettingPrimary = settingPrimaryImageId === image.id;
+                    const busy = isDeleting || isSettingPrimary;
+
+                    return (
+                      <article
+                        key={image.id}
+                        className={`overflow-hidden rounded-[1.2rem] border border-slate-200 bg-white shadow-sm transition ${busy ? "opacity-60" : ""}`}
+                      >
+                        <div className="relative aspect-[4/3] bg-slate-100">
+                          <img
+                            src={image.thumbnailUrl}
+                            alt={`Fotograf ${image.id}`}
+                            className="h-full w-full object-cover"
+                          />
+                          {image.isPrimary ? (
+                            <span className="absolute left-3 top-3 rounded-full bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+                              Ana fotograf
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 px-4 py-4">
+                          {!image.isPrimary ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleSetPrimaryImage(image.id)}
+                              disabled={imageActionsDisabled}
+                              className="app-button-secondary px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {isSettingPrimary ? "Ayarlaniyor..." : "Ana fotograf yap"}
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteImage(image.id)}
+                            disabled={imageActionsDisabled}
+                            className="rounded-full border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isDeleting ? "Siliniyor..." : "Kaldir"}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">Henuz fotograf eklenmemis.</p>
+            )}
+
+            {/* New image picker */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Yeni fotograf ekle
+              </p>
+              <RequestImageUploader
+                disabled={isSubmitting}
+                onChange={setPendingImages}
+              />
+            </div>
+          </div>
+          {/* ────────────────────────────────────────────────── */}
+
+          <div
+            data-dashboard-form-submit
+            className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"
+          >
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+              className="app-button-primary app-form-submit-button app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? "Istek guncelleniyor..." : "Degisiklikleri kaydet"}
             </button>

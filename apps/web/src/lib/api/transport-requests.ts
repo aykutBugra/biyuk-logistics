@@ -15,6 +15,18 @@ export type CreateTransportRequestInput = {
 
 export type UpdateTransportRequestInput = CreateTransportRequestInput;
 
+export type TransportRequestImageSummary = {
+  id: number;
+  thumbnailUrl: string;
+  width: number;
+  height: number;
+};
+
+export type TransportRequestImage = TransportRequestImageSummary & {
+  url: string;
+  isPrimary: boolean;
+};
+
 export type TransportRequestListItem = {
   id: number;
   baslangicSehri: string;
@@ -31,6 +43,8 @@ export type TransportRequestListItem = {
   yukDetay: string;
   olusturmaTarihi: string;
   durum: string;
+  primaryImage?: TransportRequestImageSummary;
+  imageCount?: number;
 };
 
 export type TransportRequestDetail = TransportRequestListItem & {
@@ -46,6 +60,8 @@ export type TransportRequestDetail = TransportRequestListItem & {
   baslangicBoylam: number;
   varisEnlem: number;
   varisBoylam: number;
+  images?: TransportRequestImage[];
+  primaryImageId?: number | null;
   nakliye: {
     id: number;
     carrierId: number;
@@ -104,4 +120,44 @@ export function deleteTransportRequest(id: number, accessToken: string) {
     method: "DELETE",
     accessToken,
   });
+}
+
+export function uploadTransportRequestImages(
+  requestId: number,
+  formData: FormData,
+  accessToken: string
+) {
+  return apiFetch<TransportRequestDetail>(`/transport-requests/${requestId}/images`, {
+    method: "POST",
+    accessToken,
+    body: formData,
+  });
+}
+
+export function deleteTransportRequestImage(
+  requestId: number,
+  imageId: number,
+  accessToken: string
+) {
+  return apiFetch<TransportRequestDetail>(
+    `/transport-requests/${requestId}/images/${imageId}`,
+    {
+      method: "DELETE",
+      accessToken,
+    }
+  );
+}
+
+export function setPrimaryTransportRequestImage(
+  requestId: number,
+  imageId: number,
+  accessToken: string
+) {
+  return apiFetch<TransportRequestDetail>(
+    `/transport-requests/${requestId}/images/${imageId}/primary`,
+    {
+      method: "PATCH",
+      accessToken,
+    }
+  );
 }

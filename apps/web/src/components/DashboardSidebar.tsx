@@ -85,7 +85,7 @@ export default function DashboardSidebar({
     <>
       {isOpen ? (
         <div
-          className="fixed inset-0 z-30 bg-slate-900/32 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-slate-900/32 lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -93,7 +93,7 @@ export default function DashboardSidebar({
 
       <aside
         ref={asideRef}
-        className={`fixed bottom-0 left-0 top-[var(--topbar-height)] z-30 flex w-[var(--sidebar-width)] flex-col overflow-y-auto border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)] backdrop-blur-xl transition-transform duration-200 ${
+        className={`fixed bottom-0 left-0 top-[var(--topbar-height)] z-30 flex w-[var(--sidebar-width)] flex-col overflow-y-auto border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)] transition-transform duration-200 ${
           variant === "icon-rail"
             ? "lg:w-[var(--dashboard-sidebar-width-current)]"
             : "lg:w-[var(--sidebar-width)]"
@@ -113,7 +113,7 @@ export default function DashboardSidebar({
               <button
                 type="button"
                 onClick={onDesktopToggle}
-                className="hidden h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/80 text-slate-500 transition hover:bg-white hover:text-slate-900 lg:inline-flex"
+                className="hidden h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 lg:inline-flex"
                 aria-label={
                   isIconRailCollapsed ? "Menüyü genişlet" : "Menüyü daralt"
                 }
@@ -165,10 +165,10 @@ export default function DashboardSidebar({
                   <button
                     type="button"
                     onClick={() => onWorkspaceChange("customer")}
-                    className={`inline-flex h-10 items-center justify-center rounded-2xl text-xs font-semibold transition ${
+                    className={`inline-flex h-10 items-center justify-center rounded-xl border text-xs font-semibold transition ${
                       workspaceMode === "customer"
-                        ? "bg-amber-50 text-amber-700"
-                        : "bg-white/70 text-slate-600 hover:bg-white"
+                        ? "border-amber-200 bg-amber-50 text-amber-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                     aria-label="Müşteri alanına geç"
                     title="Müşteri alanına geç"
@@ -178,10 +178,10 @@ export default function DashboardSidebar({
                   <button
                     type="button"
                     onClick={() => onWorkspaceChange("carrier")}
-                    className={`inline-flex h-10 items-center justify-center rounded-2xl text-xs font-semibold transition ${
+                    className={`inline-flex h-10 items-center justify-center rounded-xl border text-xs font-semibold transition ${
                       workspaceMode === "carrier"
-                        ? "bg-blue-50 text-blue-700"
-                        : "bg-white/70 text-slate-600 hover:bg-white"
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                     aria-label="Nakliyeci alanına geç"
                     title="Nakliyeci alanına geç"
@@ -198,10 +198,10 @@ export default function DashboardSidebar({
                     <button
                       type="button"
                       onClick={() => onWorkspaceChange("customer")}
-                      className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                      className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${
                         workspaceMode === "customer"
-                          ? "bg-amber-50 text-amber-700"
-                          : "bg-white/70 text-slate-600 hover:bg-white"
+                          ? "border-amber-200 bg-amber-50 text-amber-700"
+                          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                       }`}
                     >
                       Müşteri
@@ -209,10 +209,10 @@ export default function DashboardSidebar({
                     <button
                       type="button"
                       onClick={() => onWorkspaceChange("carrier")}
-                      className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                      className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${
                         workspaceMode === "carrier"
-                          ? "bg-blue-50 text-blue-700"
-                          : "bg-white/70 text-slate-600 hover:bg-white"
+                          ? "border-blue-200 bg-blue-50 text-blue-700"
+                          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                       }`}
                     >
                       Nakliyeci
@@ -229,10 +229,10 @@ export default function DashboardSidebar({
                   <button
                     type="button"
                     onClick={() => onWorkspaceChange("customer")}
-                    className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                    className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${
                       workspaceMode === "customer"
-                        ? "bg-amber-50 text-amber-700"
-                        : "bg-white/70 text-slate-600 hover:bg-white"
+                        ? "border-amber-200 bg-amber-50 text-amber-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
                     Müşteri
@@ -240,10 +240,10 @@ export default function DashboardSidebar({
                   <button
                     type="button"
                     onClick={() => onWorkspaceChange("carrier")}
-                    className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                    className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${
                       workspaceMode === "carrier"
-                        ? "bg-blue-50 text-blue-700"
-                        : "bg-white/70 text-slate-600 hover:bg-white"
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
                     Nakliyeci
@@ -288,14 +288,14 @@ export default function DashboardSidebar({
                     href={item.href}
                     aria-label={item.label}
                     title={isIconRailCollapsed ? item.label : undefined}
-                    className={`flex items-center rounded-2xl text-sm font-semibold transition-colors ${
+                    className={`flex items-center rounded-xl border text-sm font-semibold transition-colors ${
                       isIconRailCollapsed
                         ? "gap-0 px-3 py-3 lg:justify-center lg:px-2"
                         : "gap-3 px-3 py-3"
                     } ${
                       item.isActive
-                        ? "bg-blue-600 text-white shadow-sm shadow-blue-200/60"
-                        : "bg-white/60 text-slate-600 hover:bg-white hover:text-slate-900"
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-900"
                     }`}
                   >
                     {item.icon ? (

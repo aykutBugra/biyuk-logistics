@@ -29,6 +29,8 @@ type DashboardShellProps = {
   headerActions?: ReactNode;
   headerVariant?: "default" | "compact";
   sidebarVariant?: "default" | "icon-rail";
+  motionPreset?: "default" | "operational" | "form";
+  cardMotionLimit?: number;
 };
 
 type DashboardSidebarBehaviorScope = "home" | "child" | "other";
@@ -94,6 +96,8 @@ export default function DashboardShell({
   headerActions,
   headerVariant,
   sidebarVariant,
+  motionPreset = "default",
+  cardMotionLimit,
 }: DashboardShellProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -171,6 +175,7 @@ export default function DashboardShell({
       workspaceMode={workspaceMode ?? null}
       dualBusinessRoles={dualBusinessRoles}
       onWorkspaceChange={handleWorkspaceChange}
+      pathname={pathname}
       title={title}
       description={description}
       pageEyebrow={pageEyebrow}
@@ -178,6 +183,8 @@ export default function DashboardShell({
       headerVariant={headerVariant}
       sidebarVariant={resolvedSidebarVariant}
       sidebarBehaviorScope={sidebarBehaviorScope}
+      motionPreset={motionPreset}
+      cardMotionLimit={cardMotionLimit}
     >
       {children}
     </DashboardShellFrame>

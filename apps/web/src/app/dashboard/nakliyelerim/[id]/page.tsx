@@ -22,6 +22,8 @@ import {
   getCargoTypeLabel,
 } from "@/lib/logistics";
 import { emitNotificationsChanged } from "@/lib/notifications/notification-events";
+import { useConfirm } from "@/lib/confirm/confirm-context";
+import { useToast } from "@/lib/toast/toast-context";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("tr-TR", {
@@ -45,6 +47,8 @@ function formatDateTime(value: string | null): string {
 export default function CarrierJobDetailPage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
+  const confirm = useConfirm();
+  const showToast = useToast();
   const params = useParams<{ id: string }>();
   const jobId = Number(params.id);
   const [job, setJob] = useState<JobDetail | null>(null);
@@ -133,7 +137,16 @@ export default function CarrierJobDetailPage() {
         ? "Bu isi baslatmak istedigine emin misin?"
         : "Bu isi tamamlamak istedigine emin misin?";
 
-    if (!window.confirm(confirmMessage)) {
+    const isConfirmed = await confirm({
+      title: action === "start" ? "Nakliyeyi baslat" : "Nakliyeyi tamamla",
+      message: confirmMessage,
+      confirmLabel: action === "start" ? "Baslat" : "Tamamla",
+      cancelLabel: "Vazgec",
+      defaultFocus: "accept",
+      dismissableMask: true,
+    });
+
+    if (!isConfirmed) {
       return;
     }
 
@@ -142,39 +155,70 @@ export default function CarrierJobDetailPage() {
 
       if (action === "start") {
         await startJob(job.id, accessToken);
-        window.alert("Nakliye baslatildi.");
+        showToast({
+          severity: "success",
+          summary: "Nakliye baslatildi",
+          detail: "Is artik aktif surecte.",
+        });
       } else {
         await completeJob(job.id, accessToken);
         emitNotificationsChanged();
-        window.alert("Nakliye tamamlandi.");
+        showToast({
+          severity: "success",
+          summary: "Nakliye tamamlandi",
+          detail: "Is durumu basariyla guncellendi.",
+        });
       }
 
       setReloadKey((currentKey) => currentKey + 1);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
-        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        showToast({
+          severity: "error",
+          summary: "Oturum sona erdi",
+          detail: "Lutfen yeniden giris yapin.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/login");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 403) {
-        window.alert("Bu islem icin yetkin yok.");
+        showToast({
+          severity: "error",
+          summary: "Yetki yok",
+          detail: "Bu islem icin yetkin yok.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-        window.alert("Bu nakliye artik bulunamiyor.");
+        showToast({
+          severity: "warn",
+          summary: "Nakliye bulunamadi",
+          detail: "Listeye yonlendiriliyorsun.",
+          life: 3200,
+          closable: true,
+        });
         router.replace("/dashboard/nakliyelerim");
         return;
       }
 
-      window.alert(
-        error instanceof ApiClientError
-          ? error.message
-          : "Nakliye durumu guncellenirken beklenmeyen bir hata olustu."
-      );
+      showToast({
+        severity: "error",
+        summary: "Durum guncellenemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Nakliye durumu guncellenirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
       setReloadKey((currentKey) => currentKey + 1);
     } finally {
       setActingAction(null);
@@ -189,33 +233,60 @@ export default function CarrierJobDetailPage() {
     try {
       setIsSubmittingRating(true);
       await createRatingForJob(job.id, input, accessToken);
-      window.alert("Puanin kaydedildi.");
+      showToast({
+        severity: "success",
+        summary: "Puan kaydedildi",
+        detail: "Degerlendirmen basariyla gonderildi.",
+      });
       setReloadKey((currentKey) => currentKey + 1);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
-        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        showToast({
+          severity: "error",
+          summary: "Oturum sona erdi",
+          detail: "Lutfen yeniden giris yapin.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/login");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 403) {
-        window.alert("Bu islem icin yetkin yok.");
+        showToast({
+          severity: "error",
+          summary: "Yetki yok",
+          detail: "Bu islem icin yetkin yok.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-        window.alert("Bu nakliye artik bulunamiyor.");
+        showToast({
+          severity: "warn",
+          summary: "Nakliye bulunamadi",
+          detail: "Kayit guncellenecek.",
+          life: 3200,
+          closable: true,
+        });
         router.replace("/dashboard/nakliyelerim");
         return;
       }
 
-      window.alert(
-        error instanceof ApiClientError
-          ? error.message
-          : "Puan gonderilirken beklenmeyen bir hata olustu."
-      );
+      showToast({
+        severity: "error",
+        summary: "Puan gonderilemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Puan gonderilirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
       setReloadKey((currentKey) => currentKey + 1);
     } finally {
       setIsSubmittingRating(false);

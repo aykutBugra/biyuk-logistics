@@ -1,5 +1,10 @@
+"use client";
+
+/* eslint-disable @next/next/no-img-element */
+
 import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
+import { useOperationalCardMotion } from "@/lib/motion/useOperationalCardMotion";
 import type { TransportRequestListItem } from "@/lib/api/transport-requests";
 import {
   formatLocationLabel,
@@ -56,9 +61,15 @@ export default function MyRequestCard({
   onDelete,
 }: MyRequestCardProps) {
   const nextStepHint = getNextStepHint(request.durum);
+  const { elementRef, motionProps } = useOperationalCardMotion<HTMLDivElement>();
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-blue-200">
+    <div
+      ref={elementRef}
+      data-dashboard-card
+      {...motionProps}
+      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-colors will-change-transform hover:border-blue-200"
+    >
       {/* Zone 1: status + id + date */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -76,7 +87,22 @@ export default function MyRequestCard({
       </div>
 
       {/* Zone 2: route + cargo chips + description */}
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 flex gap-3">
+        {request.primaryImage ? (
+          <div className="relative shrink-0">
+            <img
+              src={request.primaryImage.thumbnailUrl}
+              alt="Ana fotograf"
+              className="h-16 w-20 rounded-xl object-cover border border-slate-200 bg-slate-100"
+            />
+            {request.imageCount && request.imageCount > 1 ? (
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-slate-700 px-1 text-[10px] font-bold text-white">
+                +{request.imageCount - 1}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="min-w-0 flex-1 space-y-2">
         <h2 className="text-xl font-black tracking-tight text-slate-950">
           {formatLocationLabel(
             request.baslangicKonumMetni,
@@ -117,6 +143,7 @@ export default function MyRequestCard({
             {request.yukDetay}
           </p>
         ) : null}
+        </div>
       </div>
 
       {/* Zone 3: next-step hint + actions */}
@@ -130,13 +157,13 @@ export default function MyRequestCard({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/dashboard/isteklerim/${request.id}`}
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            className="app-pressable inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
             Detay
           </Link>
           <Link
             href={`/dashboard/isteklerim/${request.id}/duzenle`}
-            className="inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+            className="app-pressable inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
           >
             Duzenle
           </Link>
@@ -144,7 +171,7 @@ export default function MyRequestCard({
             type="button"
             onClick={() => onDelete(request.id)}
             disabled={isDeleting}
-            className="text-sm font-semibold text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="app-pressable text-sm font-semibold text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isDeleting ? "Siliniyor..." : "Sil"}
           </button>

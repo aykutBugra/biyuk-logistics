@@ -1,16 +1,20 @@
 "use client";
 
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
 import InputField from "@/components/InputField";
 import LocationAutocompleteField from "@/components/LocationAutocompleteField";
+import RequestImageUploader, {
+  type RequestImageDraft,
+} from "@/components/RequestImageUploader";
 import VolumeEstimateAssistant from "@/components/VolumeEstimateAssistant";
 import { ApiClientError } from "@/lib/api/api-client";
 import type { SelectedLocation } from "@/lib/api/locations";
 import {
   createTransportRequest,
+  uploadTransportRequestImages,
   type CreateTransportRequestInput,
 } from "@/lib/api/transport-requests";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
@@ -26,6 +30,15 @@ type CreateTransportRequestForm = {
   yukDetay: string;
 };
 
+type RequestFormSectionProps = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+  className?: string;
+  contentClassName?: string;
+};
+
 const initialForm: CreateTransportRequestForm = {
   tekTasimaIstiyor: false,
   agirlikKg: "",
@@ -35,6 +48,34 @@ const initialForm: CreateTransportRequestForm = {
   yukDetay: "",
 };
 
+function RequestFormSection({
+  eyebrow,
+  title,
+  description,
+  children,
+  className = "",
+  contentClassName = "space-y-5",
+}: RequestFormSectionProps) {
+  return (
+    <section
+      data-dashboard-form-section
+      className={`app-surface-strong rounded-[1.85rem] border border-slate-200/80 px-5 py-5 md:px-6 md:py-6 ${className}`.trim()}
+    >
+      <div className="mb-5 space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
+          {eyebrow}
+        </p>
+        <div className="space-y-1">
+          <h2 className="text-xl font-black tracking-tight text-slate-950">{title}</h2>
+          <p className="max-w-2xl text-sm leading-6 text-slate-600">{description}</p>
+        </div>
+      </div>
+
+      <div className={contentClassName}>{children}</div>
+    </section>
+  );
+}
+
 export default function CreateTransportRequestPage() {
   const router = useRouter();
   const { accessToken, status } = useCustomerPageAccess();
@@ -43,13 +84,17 @@ export default function CreateTransportRequestPage() {
     null
   );
   const [varisKonum, setVarisKonum] = useState<SelectedLocation | null>(null);
+  const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
+  const [locationValidationActive, setLocationValidationActive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<RequestImageDraft[]>([]);
 
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = event.target;
 
+    setFormErrorMessage(null);
     setForm((currentForm) => ({
       ...currentForm,
       [name]: value,
@@ -59,6 +104,7 @@ export default function CreateTransportRequestPage() {
   const handleCheckboxChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = event.target;
 
+    setFormErrorMessage(null);
     setForm((currentForm) => ({
       ...currentForm,
       [name]: checked,
@@ -73,10 +119,11 @@ export default function CreateTransportRequestPage() {
     }
 
     if (!baslangicKonum || !varisKonum) {
-      window.alert("Baslangic ve varis konumunu listeden secmelisin.");
+      setLocationValidationActive(true);
       return;
     }
 
+    setFormErrorMessage(null);
     setIsSubmitting(true);
 
     const payload: CreateTransportRequestInput = {
@@ -100,6 +147,37 @@ export default function CreateTransportRequestPage() {
 
     try {
       const response = await createTransportRequest(payload, accessToken);
+
+      if (selectedImages.length > 0) {
+        const formData = new FormData();
+        const primaryIndex = selectedImages.findIndex((image) => image.isPrimary);
+
+        selectedImages.forEach((image) => {
+          formData.append("images", image.file);
+        });
+
+        if (primaryIndex >= 0) {
+          formData.append("primaryIndex", String(primaryIndex));
+        }
+
+        let uploadFailed = false;
+
+        try {
+          await uploadTransportRequestImages(response.id, formData, accessToken);
+        } catch (uploadError) {
+          uploadFailed = true;
+          console.error("[istek_ekle] Fotograf upload hatasi:", uploadError);
+        }
+
+        if (uploadFailed) {
+          setFormErrorMessage(
+            "Istek olusturuldu ancak fotograflar yuklenemedi. Isteklerim > Duzenle ekranindan fotograflari ekleyebilirsin."
+          );
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       router.replace(`/dashboard/isteklerim/${response.id}`);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
@@ -116,9 +194,9 @@ export default function CreateTransportRequestPage() {
       }
 
       if (error instanceof ApiClientError) {
-        window.alert(error.message);
+        setFormErrorMessage(error.message);
       } else {
-        window.alert("Istek olusturulurken beklenmeyen bir hata olustu.");
+        setFormErrorMessage("Istek olusturulurken beklenmeyen bir hata olustu.");
       }
     } finally {
       setIsSubmitting(false);
@@ -134,54 +212,130 @@ export default function CreateTransportRequestPage() {
   }
 
   return (
-    <CustomerTransportRequestsShell title="Yeni tasima istegi olustur">
+    <CustomerTransportRequestsShell
+      title="Yeni tasima istegi olustur"
+      description="Konum, yuk ve tercih bilgilerini tek kayitta toparla."
+      headerVariant="compact"
+      motionPreset="form"
+    >
       <form
         onSubmit={handleSubmit}
-        className="space-y-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+        data-dashboard-form-surface
+        className="mx-auto max-w-5xl space-y-5"
       >
-        <div className="grid gap-4 md:grid-cols-2">
-          <LocationAutocompleteField
-            label="Baslangic konumu"
-            placeholder="Yukleme noktasini ara"
-            accessToken={accessToken ?? ""}
-            value={baslangicKonum}
-            onSelect={setBaslangicKonum}
-            disabled={isSubmitting}
-          />
-          <LocationAutocompleteField
-            label="Varis konumu"
-            placeholder="Teslim noktasini ara"
-            accessToken={accessToken ?? ""}
-            value={varisKonum}
-            onSelect={setVarisKonum}
-            disabled={isSubmitting}
-          />
-        </div>
+        {formErrorMessage ? (
+          <div data-dashboard-form-error className="app-form-error-banner" role="alert">
+            <p className="text-sm font-semibold">Form gonderilemedi</p>
+            <p className="mt-1 text-sm">{formErrorMessage}</p>
+          </div>
+        ) : null}
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <InputField
-            name="agirlikKg"
-            label="Agirlik (kg)"
-            type="number"
-            min="0.01"
-            step="0.01"
-            placeholder="Orn: 1250"
-            value={form.agirlikKg}
-            onChange={handleChange}
-            disabled={isSubmitting}
-          />
-          <div className="space-y-3">
-            <InputField
-              name="hacimM3"
-              label="Hacim (m3)"
-              type="number"
-              min="0.01"
-              step="0.01"
-              placeholder="Orn: 12.5"
-              value={form.hacimM3}
-              onChange={handleChange}
+        <RequestFormSection
+          eyebrow="Konum"
+          title=""
+          description=""
+        >
+          <div className="grid gap-4 lg:grid-cols-2">
+            <LocationAutocompleteField
+              label="Baslangic konumu"
+              placeholder="Yukleme noktasini ara"
+              accessToken={accessToken ?? ""}
+              value={baslangicKonum}
+              onSelect={(value) => {
+                setBaslangicKonum(value);
+                setFormErrorMessage(null);
+              }}
               disabled={isSubmitting}
+              invalid={locationValidationActive && !baslangicKonum}
+              validationMessage={
+                locationValidationActive && !baslangicKonum
+                  ? "Listeden bir baslangic konumu sec."
+                  : null
+              }
             />
+            <LocationAutocompleteField
+              label="Varis konumu"
+              placeholder="Teslim noktasini ara"
+              accessToken={accessToken ?? ""}
+              value={varisKonum}
+              onSelect={(value) => {
+                setVarisKonum(value);
+                setFormErrorMessage(null);
+              }}
+              disabled={isSubmitting}
+              invalid={locationValidationActive && !varisKonum}
+              validationMessage={
+                locationValidationActive && !varisKonum
+                  ? "Listeden bir varis konumu sec."
+                  : null
+              }
+            />
+          </div>
+        </RequestFormSection>
+
+        <RequestFormSection
+          eyebrow="Yuk"
+          title=""
+          description=""
+        >
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <InputField
+                name="agirlikKg"
+                label="Agirlik (kg)"
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="Orn: 1250"
+                value={form.agirlikKg}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              />
+              <InputField
+                name="hacimM3"
+                label="Hacim (m3)"
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="Orn: 12.5"
+                value={form.hacimM3}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              />
+
+              <div className="space-y-2">
+                <label
+                  className="block text-sm font-semibold text-slate-700"
+                  htmlFor="yukTipi"
+                >
+                  Yuk tipi
+                </label>
+                <select
+                  id="yukTipi"
+                  name="yukTipi"
+                  value={form.yukTipi}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  className="app-input block text-sm"
+                >
+                  {CARGO_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <InputField
+                name="tasimaTarihi"
+                label="Tasima tarihi"
+                type="date"
+                value={form.tasimaTarihi}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              />
+            </div>
+
             <VolumeEstimateAssistant
               accessToken={accessToken ?? ""}
               disabled={isSubmitting}
@@ -194,80 +348,99 @@ export default function CreateTransportRequestPage() {
               }
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700" htmlFor="yukTipi">
-              Yuk tipi
+        </RequestFormSection>
+
+        <RequestFormSection
+          eyebrow="Tercih"
+          title=""
+          description=""
+          contentClassName=""
+        >
+          <label className="group flex items-start gap-4 rounded-[1.45rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4 md:items-center">
+            <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm md:mt-0">
+              <input
+                type="checkbox"
+                name="tekTasimaIstiyor"
+                checked={form.tekTasimaIstiyor}
+                onChange={handleCheckboxChange}
+                disabled={isSubmitting}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-slate-900">
+                Tek tasima istiyorum
+              </span>
+              <span className="mt-1 block text-xs leading-5 text-slate-500">
+                Bu yuk baska yuklerle birlestirilmeden, tek tasima olarak planlansin.
+              </span>
+            </span>
+          </label>
+        </RequestFormSection>
+
+        <RequestFormSection
+          eyebrow="Not"
+          title=""
+          description=""
+        >
+          <div className="space-y-2">
+            <label
+              htmlFor="yukDetay"
+              className="block text-sm font-semibold text-slate-700"
+            >
+              Yuk detayi
             </label>
-            <select
-              id="yukTipi"
-              name="yukTipi"
-              value={form.yukTipi}
+            <textarea
+              id="yukDetay"
+              name="yukDetay"
+              required
+              rows={4}
+              value={form.yukDetay}
               onChange={handleChange}
               disabled={isSubmitting}
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
-            >
-              {CARGO_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              placeholder="Tasima ihtiyacini, paketleme seklini veya ozel notlari acikla."
+              className="app-input block min-h-[8.5rem] resize-y text-sm"
+            />
           </div>
-          <InputField
-            name="tasimaTarihi"
-            label="Tasima tarihi"
-            type="date"
-            value={form.tasimaTarihi}
-            onChange={handleChange}
-            disabled={isSubmitting}
-          />
-        </div>
+        </RequestFormSection>
 
-        <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            name="tekTasimaIstiyor"
-            checked={form.tekTasimaIstiyor}
-            onChange={handleCheckboxChange}
-            disabled={isSubmitting}
-            className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
-          <span>
-            <span className="block font-semibold text-slate-900">
-              Tek tasima istiyorum
-            </span>
-            <span className="block text-xs text-slate-500">
-              Bu yukun baska yuklerle birlestirilmeden tasinmasini ister.
-            </span>
-          </span>
-        </label>
+        <RequestImageUploader
+          disabled={isSubmitting}
+          onChange={setSelectedImages}
+        />
 
-        <div className="space-y-2">
-          <label htmlFor="yukDetay" className="block text-sm font-medium text-gray-700">
-            Yuk detayi
-          </label>
-          <textarea
-            id="yukDetay"
-            name="yukDetay"
-            required
-            rows={5}
-            value={form.yukDetay}
-            onChange={handleChange}
-            disabled={isSubmitting}
-            placeholder="Tasima ihtiyacini, paketleme seklini veya ozel notlari acikla."
-            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
-          />
-        </div>
+        <section
+          data-dashboard-form-section
+          className="app-surface-strong rounded-[1.85rem] border border-slate-200/80 px-5 py-5 md:px-6 md:py-6"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
+                Form aksiyonu
+              </p>
+              <h2 className="text-xl font-black tracking-tight text-slate-950">
+                Istek kaydini yayinlamaya hazirsin
+              </h2>
+              <p className="text-sm leading-6 text-slate-600">
+                Kayit tamamlandiginda gelen teklifleri Isteklerim ekranindan takip
+                edersin.
+              </p>
+            </div>
 
-        <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
-          >
-            {isSubmitting ? "Istek olusturuluyor..." : "Istek olustur"}
-          </button>
-        </div>
+            <div
+              data-dashboard-form-submit
+              className="flex w-full items-center justify-start lg:w-auto lg:justify-end"
+            >
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="app-button-primary app-form-submit-button app-pressable min-w-[13rem] text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? "Istek olusturuluyor..." : "Istek olustur"}
+              </button>
+            </div>
+          </div>
+        </section>
       </form>
     </CustomerTransportRequestsShell>
   );

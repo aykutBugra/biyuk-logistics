@@ -102,12 +102,15 @@ export default function CarrierRoutesPage() {
     <CarrierVehiclesShell
       title="Rotalarim"
       description="Planladigin ana hatlari kaydet, sakla ve sonraki discovery fazi icin hazir tut."
+      headerVariant="compact"
+      motionPreset="operational"
+      cardMotionLimit={6}
       headerActions={
         <div className="flex items-center gap-3">
           <InlineHelpTrigger helpKey="routes" />
           <Link
             href="/dashboard/rotalarim/yeni"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            className="app-pressable inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
             <i className="pi pi-plus text-xs" />
             Yeni rota tanimla
@@ -118,30 +121,35 @@ export default function CarrierRoutesPage() {
       {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
+        <div
+          data-dashboard-primary
+          className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700"
+        >
           {errorMessage}
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && routes.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
-          <SummaryStatCard label="Toplam rota" value={routes.length} />
-          <SummaryStatCard label="Sapma tanimli" value={routesWithDeviation} />
-          <SummaryStatCard label="Mesafe hazir" value={routesWithMetrics} />
+        <div data-dashboard-stats className="mb-6 grid gap-4 md:grid-cols-3">
+          <SummaryStatCard label="Toplam rota" value={routes.length} density="compact" />
+          <SummaryStatCard label="Sapma tanimli" value={routesWithDeviation} density="compact" />
+          <SummaryStatCard label="Mesafe hazir" value={routesWithMetrics} density="compact" />
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && routes.length === 0 ? (
-        <EmptyStateCard
-          title="Henuz rota tanimi yok"
-          description="Planladigin ana hatti bir kez tanimladiginda burada goreceksin. Bu bilgi mevcut discovery'yi bozmaz, sonraki route-aware faza temel olur."
-          actionHref="/dashboard/rotalarim/yeni"
-          actionLabel="Ilk rotayi tanimla"
-        />
+        <div data-dashboard-primary>
+          <EmptyStateCard
+            title="Henuz rota tanimi yok"
+            description="Planladigin ana hatti bir kez tanimladiginda burada goreceksin. Bu bilgi mevcut discovery'yi bozmaz, sonraki route-aware faza temel olur."
+            actionHref="/dashboard/rotalarim/yeni"
+            actionLabel="Ilk rotayi tanimla"
+          />
+        </div>
       ) : null}
 
       {!isLoading && !errorMessage && routes.length > 0 ? (
-        <div className="grid gap-4">
+        <div data-dashboard-primary className="grid gap-4">
           {routes.map((route) => (
             <RouteCard key={route.id} route={route} />
           ))}

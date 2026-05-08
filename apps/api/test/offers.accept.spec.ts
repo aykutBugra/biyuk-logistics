@@ -1,6 +1,7 @@
 import { ConflictException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { ROLE_NAMES } from "../src/common/constants/role-names";
+import { MediaStorageService } from "../src/infrastructure/media/media-storage.service";
 import { PrismaService } from "../src/infrastructure/prisma/prisma.service";
 import { CarrierRoutesService } from "../src/modules/carrier-routes/carrier-routes.service";
 import { NotificationsPublisher } from "../src/modules/notifications/notifications.publisher";
@@ -138,6 +139,14 @@ describe("OffersService.acceptById", () => {
         {
           provide: VehicleCapacityService,
           useValue: vehicleCapacityServiceMock,
+        },
+        {
+          provide: MediaStorageService,
+          useValue: {
+            saveFile: jest.fn(),
+            deleteFile: jest.fn(),
+            toPublicUrl: jest.fn(),
+          },
         },
         {
           provide: PrismaService,

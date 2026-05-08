@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useOperationalCardMotion } from "@/lib/motion/useOperationalCardMotion";
 import type { CarrierRouteListItem } from "@/lib/api/carrier-routes";
 import {
   formatLocationLabel,
@@ -28,9 +31,16 @@ const hasMetrics = (route: CarrierRouteListItem) =>
 
 export default function RouteCard({ route }: RouteCardProps) {
   const metricsReady = hasMetrics(route);
+  const { elementRef, motionProps } =
+    useOperationalCardMotion<HTMLElement>();
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-blue-200">
+    <article
+      ref={elementRef}
+      data-dashboard-card
+      {...motionProps}
+      className="rounded-2xl border border-slate-200 bg-white shadow-sm transition-colors will-change-transform hover:border-blue-200"
+    >
       {/* Header zone */}
       <div className="border-b border-slate-100 px-5 py-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -76,13 +86,13 @@ export default function RouteCard({ route }: RouteCardProps) {
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/dashboard/rotalarim/${route.id}`}
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="app-pressable inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             Detay
           </Link>
           <Link
             href={`/dashboard/rotalarim/${route.id}/duzenle`}
-            className="inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+            className="app-pressable inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
           >
             Duzenle
           </Link>

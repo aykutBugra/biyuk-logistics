@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import MotionCollapse from "@/components/MotionCollapse";
 import { ApiClientError } from "@/lib/api/api-client";
 import { getMyUnreadNotificationCount } from "@/lib/api/notifications";
 import {
@@ -117,7 +118,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-[var(--topbar-border)] bg-[var(--topbar-bg)] backdrop-blur-xl">
+    <nav className="sticky top-0 z-50 border-b border-[var(--topbar-border)] bg-[var(--topbar-bg)]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex min-h-[var(--topbar-height)] items-center justify-between gap-4 py-3">
           <div className="flex items-center gap-6">
@@ -125,7 +126,7 @@ export default function Navbar() {
               href="/"
               className="flex items-center gap-3 text-slate-950 transition hover:opacity-90"
             >
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-blue-200/80 bg-blue-50 text-sm font-black text-blue-700">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-sm font-black text-blue-700">
                 B
               </span>
               <span className="text-2xl font-black tracking-tight">
@@ -141,10 +142,10 @@ export default function Navbar() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`rounded-full px-3.5 py-2 text-sm font-semibold transition ${
+                    className={`rounded-full border px-3.5 py-2 text-sm font-semibold transition ${
                       active
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-slate-600 hover:bg-white/80 hover:text-slate-950"
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-transparent text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-950"
                     }`}
                   >
                     {link.label}
@@ -161,10 +162,10 @@ export default function Navbar() {
               <>
                 <Link
                   href={notificationsHref}
-                  className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition ${
+                  className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-semibold transition ${
                     isActive(pathname, notificationsHref)
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:bg-white/80 hover:text-slate-950"
+                      ? "border-blue-200 bg-blue-50 text-blue-700"
+                      : "border-transparent text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-950"
                   }`}
                 >
                   <span>Bildirimler</span>
@@ -176,10 +177,10 @@ export default function Navbar() {
                 </Link>
                 <Link
                   href={dashboardHref}
-                  className={`rounded-full px-3.5 py-2 text-sm font-semibold transition ${
+                  className={`rounded-full border px-3.5 py-2 text-sm font-semibold transition ${
                     pathname.startsWith("/dashboard")
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:bg-white/80 hover:text-slate-950"
+                      ? "border-blue-200 bg-blue-50 text-blue-700"
+                      : "border-transparent text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-950"
                   }`}
                 >
                   Panelim
@@ -190,17 +191,23 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="rounded-full px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white/80 hover:text-slate-950"
+                  className="rounded-full border border-transparent px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-200 hover:bg-white hover:text-slate-950"
                 >
                   Cikis Yap
                 </button>
               </>
             ) : (
               <>
-                <Link href="/login" className="app-button-ghost px-4 py-2.5">
+                <Link
+                  href="/login"
+                  className="app-button-ghost app-pressable px-4 py-2.5"
+                >
                   Giris Yap
                 </Link>
-                <Link href="/register" className="app-button-primary px-5 py-2.5">
+                <Link
+                  href="/register"
+                  className="app-button-primary app-pressable px-5 py-2.5"
+                >
                   Kayit Ol
                 </Link>
               </>
@@ -210,7 +217,7 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => setIsMobileOpen((currentState) => !currentState)}
-            className="inline-flex items-center rounded-2xl border border-slate-200/80 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 md:hidden"
+            className="app-pressable inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 md:hidden"
             aria-expanded={isMobileOpen}
             aria-label="Menuyu ac"
           >
@@ -218,8 +225,8 @@ export default function Navbar() {
           </button>
         </div>
 
-        {isMobileOpen ? (
-          <div className="space-y-3 border-t border-slate-200/80 py-4 md:hidden">
+        <MotionCollapse isOpen={isMobileOpen} className="md:hidden">
+          <div className="space-y-3 border-t border-slate-200/80 py-4">
             <div className="flex flex-col gap-2">
               {publicLinks.map((link) => {
                 const active = isActive(pathname, link.href);
@@ -229,10 +236,10 @@ export default function Navbar() {
                     key={link.href}
                     href={link.href}
                     onClick={handleMobileNavigate}
-                    className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${
                       active
-                        ? "bg-blue-50 text-blue-700"
-                        : "bg-white/70 text-slate-600 hover:bg-white hover:text-slate-950"
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                     }`}
                   >
                     {link.label}
@@ -247,7 +254,7 @@ export default function Navbar() {
                   <Link
                     href={notificationsHref}
                     onClick={handleMobileNavigate}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700"
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
                   >
                     <span>Bildirimler</span>
                     {hasUnreadNotifications ? (
@@ -259,7 +266,7 @@ export default function Navbar() {
                   <Link
                     href={dashboardHref}
                     onClick={handleMobileNavigate}
-                    className="block rounded-2xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700"
+                    className="block rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700"
                   >
                     Panelim
                   </Link>
@@ -269,7 +276,7 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="w-full rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3 text-left text-sm font-semibold text-slate-700"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     Cikis Yap
                   </button>
@@ -279,14 +286,14 @@ export default function Navbar() {
                   <Link
                     href="/login"
                     onClick={handleMobileNavigate}
-                    className="block rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700"
+                    className="app-pressable block rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     Giris Yap
                   </Link>
                   <Link
                     href="/register"
                     onClick={handleMobileNavigate}
-                    className="app-button-primary block px-4 py-3 text-sm"
+                    className="app-button-primary app-pressable block px-4 py-3 text-sm"
                   >
                     Kayit Ol
                   </Link>
@@ -294,7 +301,7 @@ export default function Navbar() {
               )
             ) : null}
           </div>
-        ) : null}
+        </MotionCollapse>
       </div>
     </nav>
   );

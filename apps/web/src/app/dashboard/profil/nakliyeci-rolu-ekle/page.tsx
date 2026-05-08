@@ -118,33 +118,45 @@ export default function CarrierRoleOnboardingPage() {
       title="Nakliyeci rolunu ekle"
       description="Ilk aracini tanimla. Arac basariyla kaydoldugunda hesabin musteri + nakliyeci olarak genisler."
       headerActions={<InlineHelpTrigger helpKey="add-carrier-role" />}
+      headerVariant="compact"
+      motionPreset="form"
     >
       <form
         onSubmit={handleSubmit}
-        className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+        data-dashboard-form-surface
+        className="app-form-surface app-surface-strong space-y-6"
       >
         {errorMessage ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div
+            data-dashboard-form-error
+            className="app-form-error-banner"
+            role="alert"
+          >
             {errorMessage}
           </div>
         ) : null}
 
-        <VehicleFormFields
-          values={form}
-          onChange={handleChange}
-          disabled={isSubmitting}
-          sectionTitle="Ilk Arac Bilgisi"
-          sectionHint="Arac basariyla olusmadan nakliyeci rolu verilmez."
-        />
+        <div data-dashboard-form-section>
+          <VehicleFormFields
+            values={form}
+            onChange={handleChange}
+            disabled={isSubmitting}
+            sectionTitle="Ilk Arac Bilgisi"
+            sectionHint="Arac basariyla olusmadan nakliyeci rolu verilmez."
+          />
+        </div>
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          data-dashboard-form-submit
+          className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"
+        >
           <p className="text-sm text-slate-500">
             Bu adim yarim kalirsa hesabin yalnizca musteri olarak kalir.
           </p>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="app-button-primary app-form-submit-button app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Nakliyeci rolu ekleniyor..." : "Nakliyeci rolunu ekle"}
           </button>

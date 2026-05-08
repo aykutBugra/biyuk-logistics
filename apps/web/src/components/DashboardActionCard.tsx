@@ -55,7 +55,7 @@ export default function DashboardActionCard({
         data-motion-shortcut-card
         onMouseEnter={() => handleHoverMotion(true)}
         onMouseLeave={() => handleHoverMotion(false)}
-        className="app-surface-strong group flex min-h-0 items-center justify-between gap-3 rounded-[1.2rem] px-4 py-3 transition-colors will-change-transform hover:border-blue-200"
+        className="app-surface-strong group flex min-h-0 items-center justify-between gap-3 rounded-[0.95rem] px-4 py-3 transition-colors will-change-transform hover:border-blue-300"
       >
         <h2 className="text-sm font-bold tracking-tight text-slate-950 transition-colors group-hover:text-blue-700 md:text-[0.95rem]">
           {title}
@@ -72,7 +72,7 @@ export default function DashboardActionCard({
         href={href}
         onMouseEnter={() => handleHoverMotion(true)}
         onMouseLeave={() => handleHoverMotion(false)}
-        className="app-surface group flex min-h-0 items-center justify-between gap-3 rounded-[1.1rem] px-3.5 py-3 transition-colors will-change-transform hover:border-slate-300"
+        className="app-surface group flex min-h-0 items-center justify-between gap-3 rounded-[0.9rem] px-3.5 py-3 transition-colors will-change-transform hover:border-slate-300"
       >
         <h2 className="text-sm font-semibold tracking-tight text-slate-700 transition-colors group-hover:text-slate-950">
           {title}
@@ -92,7 +92,7 @@ export default function DashboardActionCard({
       href={href}
       onMouseEnter={() => handleHoverMotion(true)}
       onMouseLeave={() => handleHoverMotion(false)}
-      className="app-surface-strong group rounded-[1.45rem] p-4 transition-colors will-change-transform hover:border-blue-200"
+      className="app-surface-strong group rounded-[1rem] p-4 transition-colors will-change-transform hover:border-blue-300"
     >
       <div className="flex items-start justify-between gap-3">
         {eyebrow ? (

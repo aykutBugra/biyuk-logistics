@@ -2,6 +2,9 @@ import type { InputHTMLAttributes } from "react";
 
 type InputFieldProps = {
   label: string;
+  invalid?: boolean;
+  validationMessage?: string;
+  hint?: string;
 } & InputHTMLAttributes<HTMLInputElement>;
 
 export default function InputField({
@@ -12,9 +15,14 @@ export default function InputField({
   className = "",
   id,
   name,
+  invalid = false,
+  validationMessage,
+  hint,
   ...inputProps
 }: InputFieldProps) {
   const inputId = id ?? name;
+  const messageId =
+    inputId && (validationMessage || hint) ? `${inputId}-field-message` : undefined;
 
   return (
     <div className="space-y-2">
@@ -30,9 +38,19 @@ export default function InputField({
         type={type}
         required={required}
         placeholder={placeholder}
+        aria-invalid={invalid || undefined}
+        aria-describedby={messageId}
         className={`app-input appearance-none text-base sm:text-sm ${className}`.trim()}
         {...inputProps}
       />
+      {validationMessage || hint ? (
+        <p
+          id={messageId}
+          className={validationMessage ? "app-field-status app-field-error" : "app-field-status app-field-hint"}
+        >
+          {validationMessage ?? hint}
+        </p>
+      ) : null}
     </div>
   );
 }

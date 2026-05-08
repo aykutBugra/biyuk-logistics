@@ -1,7 +1,21 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { StoredSubmittedRatingRecord } from "../../ratings/rating-context.helpers";
+
+const transportRequestImageSelect = {
+  id: true,
+  storageKey: true,
+  thumbnailStorageKey: true,
+  mimeType: true,
+  sizeBytes: true,
+  width: true,
+  height: true,
+  sortOrder: true,
+  isPrimary: true,
+  originalFileName: true,
+  createdAt: true,
+} satisfies Prisma.IstekGorselSelect;
 
 const transportRequestSelect = {
   id: true,
@@ -35,6 +49,13 @@ const transportRequestSelect = {
       durumTuru: true,
       durumAdi: true,
     },
+  },
+  gorseller: {
+    where: {
+      silmeTarihi: null,
+    },
+    orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { id: "asc" }],
+    select: transportRequestImageSelect,
   },
   nakliye: {
     select: {
@@ -77,8 +98,14 @@ const transportRequestSelect = {
   },
 } satisfies Prisma.IstekSelect;
 
+type PrismaExecutor = Prisma.TransactionClient | PrismaClient;
+
 type StoredTransportRequestQuery = Prisma.IstekGetPayload<{
   select: typeof transportRequestSelect;
+}>;
+
+type StoredTransportRequestImageQuery = Prisma.IstekGorselGetPayload<{
+  select: typeof transportRequestImageSelect;
 }>;
 
 export type CreateTransportRequestRecordInput = {
@@ -114,6 +141,33 @@ export type UpdateTransportRequestRecordInput = Omit<
   CreateTransportRequestRecordInput,
   "musteriId" | "durumId"
 >;
+
+export type CreateTransportRequestImageRecordInput = {
+  requestId: number;
+  storageKey: string;
+  thumbnailStorageKey: string;
+  mimeType: string;
+  sizeBytes: number;
+  width: number;
+  height: number;
+  sortOrder: number;
+  isPrimary: boolean;
+  originalFileName: string;
+};
+
+export type StoredTransportRequestImageRecord = {
+  id: number;
+  storageKey: string;
+  thumbnailStorageKey: string;
+  mimeType: string;
+  sizeBytes: number;
+  width: number;
+  height: number;
+  sortOrder: number;
+  isPrimary: boolean;
+  originalFileName: string;
+  createdAt: Date;
+};
 
 export type StoredTransportRequestJobRecord = {
   id: number;
@@ -161,6 +215,9 @@ export type StoredTransportRequestRecord = {
   durumTuru: string;
   durumAdi: string;
   nakliye: StoredTransportRequestJobRecord | null;
+  images: StoredTransportRequestImageRecord[];
+  primaryImageId: number | null;
+  imageCount: number;
 };
 
 @Injectable()
@@ -212,8 +269,8 @@ export class TransportRequestsRepository {
         baslangicBoylam: new Prisma.Decimal(input.baslangicBoylam),
         varisEnlem: new Prisma.Decimal(input.varisEnlem),
         varisBoylam: new Prisma.Decimal(input.varisBoylam),
-        rotaMesafeMetre: input.rotaMesafeMetre,                     //service katmanında hesaplanan metre bilgisi db ye yazılır
-        rotaSureSaniye: input.rotaSureSaniye,                       //service katmanında hesaplanan sğre bilgisi db ye yazılır
+        rotaMesafeMetre: input.rotaMesafeMetre,
+        rotaSureSaniye: input.rotaSureSaniye,
         tekTasimaIstiyor: input.tekTasimaIstiyor,
         agirlikKg: new Prisma.Decimal(input.agirlikKg),
         hacimM3: new Prisma.Decimal(input.hacimM3),
@@ -329,9 +386,152 @@ export class TransportRequestsRepository {
     return transportRequest ? this.mapStoredTransportRequest(transportRequest) : null;
   }
 
+  async countActiveImagesByRequestId(
+    requestId: number,
+    executor?: PrismaExecutor
+  ): Promise<number> {
+    const db = this.getExecutor(executor);
+    return db.istekGorsel.count({
+      where: {
+        istekId: requestId,
+        silmeTarihi: null,
+      },
+    });
+  }
+
+  async findNextImageSortOrder(
+    requestId: number,
+    executor?: PrismaExecutor
+  ): Promise<number> {
+    const db = this.getExecutor(executor);
+    const lastImage = await db.istekGorsel.findFirst({
+      where: {
+        istekId: requestId,
+        silmeTarihi: null,
+      },
+      orderBy: [{ sortOrder: "desc" }, { id: "desc" }],
+      select: {
+        sortOrder: true,
+      },
+    });
+
+    return lastImage ? lastImage.sortOrder + 1 : 0;
+  }
+
+  async createImages(
+    inputs: CreateTransportRequestImageRecordInput[],
+    executor?: PrismaExecutor
+  ): Promise<void> {
+    if (inputs.length === 0) {
+      return;
+    }
+
+    const db = this.getExecutor(executor);
+    await db.istekGorsel.createMany({
+      data: inputs.map((input) => ({
+        istekId: input.requestId,
+        storageKey: input.storageKey,
+        thumbnailStorageKey: input.thumbnailStorageKey,
+        mimeType: input.mimeType,
+        sizeBytes: input.sizeBytes,
+        width: input.width,
+        height: input.height,
+        sortOrder: input.sortOrder,
+        isPrimary: input.isPrimary,
+        originalFileName: input.originalFileName,
+      })),
+    });
+  }
+
+  async clearActivePrimaryByRequestId(
+    requestId: number,
+    executor?: PrismaExecutor
+  ): Promise<void> {
+    const db = this.getExecutor(executor);
+    await db.istekGorsel.updateMany({
+      where: {
+        istekId: requestId,
+        silmeTarihi: null,
+        isPrimary: true,
+      },
+      data: {
+        isPrimary: false,
+      },
+    });
+  }
+
+  async setPrimaryImageByIdAndRequestId(
+    imageId: number,
+    requestId: number,
+    executor?: PrismaExecutor
+  ): Promise<boolean> {
+    const db = this.getExecutor(executor);
+    const result = await db.istekGorsel.updateMany({
+      where: {
+        id: imageId,
+        istekId: requestId,
+        silmeTarihi: null,
+      },
+      data: {
+        isPrimary: true,
+      },
+    });
+
+    return result.count > 0;
+  }
+
+  async findActiveImageByIdAndRequestId(
+    imageId: number,
+    requestId: number,
+    executor?: PrismaExecutor
+  ): Promise<StoredTransportRequestImageRecord | null> {
+    const db = this.getExecutor(executor);
+    const image = await db.istekGorsel.findFirst({
+      where: {
+        id: imageId,
+        istekId: requestId,
+        silmeTarihi: null,
+      },
+      select: transportRequestImageSelect,
+    });
+
+    return image ? this.mapStoredTransportRequestImage(image) : null;
+  }
+
+  async softDeleteImageByIdAndRequestId(
+    imageId: number,
+    requestId: number,
+    deletedAt: Date,
+    executor?: PrismaExecutor
+  ): Promise<boolean> {
+    const db = this.getExecutor(executor);
+    const result = await db.istekGorsel.updateMany({
+      where: {
+        id: imageId,
+        istekId: requestId,
+        silmeTarihi: null,
+      },
+      data: {
+        silmeTarihi: deletedAt,
+        isPrimary: false,
+      },
+    });
+
+    return result.count > 0;
+  }
+
+  private getExecutor(executor?: PrismaExecutor): PrismaExecutor {
+    return executor ?? this.prisma.client;
+  }
+
   private mapStoredTransportRequest(
     transportRequest: StoredTransportRequestQuery
   ): StoredTransportRequestRecord {
+    const images = transportRequest.gorseller.map((image) =>
+      this.mapStoredTransportRequestImage(image)
+    );
+    const primaryImage = images.find((image) => image.isPrimary) ?? null;
+
     return {
       id: transportRequest.id,
       baslangicSehri: transportRequest.baslangicSehri,
@@ -385,6 +585,27 @@ export class TransportRequestsRepository {
             })),
           }
         : null,
+      images,
+      primaryImageId: primaryImage?.id ?? null,
+      imageCount: images.length,
+    };
+  }
+
+  private mapStoredTransportRequestImage(
+    image: StoredTransportRequestImageQuery
+  ): StoredTransportRequestImageRecord {
+    return {
+      id: image.id,
+      storageKey: image.storageKey,
+      thumbnailStorageKey: image.thumbnailStorageKey,
+      mimeType: image.mimeType,
+      sizeBytes: image.sizeBytes,
+      width: image.width,
+      height: image.height,
+      sortOrder: image.sortOrder,
+      isPrimary: image.isPrimary,
+      originalFileName: image.originalFileName,
+      createdAt: image.createdAt,
     };
   }
 }

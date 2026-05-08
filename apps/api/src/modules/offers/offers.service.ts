@@ -8,8 +8,11 @@ import {
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
+import { RequestImageResponseDto } from "../../common/dto/request-image-response.dto";
+import { RequestImageSummaryResponseDto } from "../../common/dto/request-image-summary-response.dto";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { unwrapTransactionResult } from "../../common/utils/unwrap-transaction-result";
+import { MediaStorageService } from "../../infrastructure/media/media-storage.service";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { normalizeCityFilter } from "../../common/utils/normalize-city-filter";
 import { OfferThreadsService } from "../offer-threads/offer-threads.service";
@@ -34,6 +37,7 @@ import {
   type OpenRequestFilters,
   type OfferDecisionContextRecord,
   type OpenRequestDetailRecord,
+  type OpenRequestImageRecord,
   type OpenRequestListItemRecord,
   type StoredOfferRecord,
   OffersRepository,
@@ -80,6 +84,7 @@ export class OffersService {
     private readonly openRequestRouteAwareEvaluator: OpenRequestRouteAwareEvaluator,
     private readonly offerThreadsService: OfferThreadsService,
     private readonly vehicleCapacityService: VehicleCapacityService,
+    private readonly mediaStorageService: MediaStorageService,
     private readonly prisma: PrismaService
   ) {}
 
@@ -683,6 +688,10 @@ export class OffersService {
       durum: request.durumAdi,
       alreadyOffered: request.alreadyOffered,
       rotaUyumu,
+      primaryImage: request.primaryImage
+        ? this.toImageSummaryResponse(request.primaryImage)
+        : undefined,
+      imageCount: request.imageCount > 0 ? request.imageCount : undefined,
     };
   }
 
@@ -704,6 +713,32 @@ export class OffersService {
       normalizeVarisIlce: request.normalizeVarisIlce,
       hasActiveVehicle: false,
       hasExistingOffer: request.hasExistingOffer,
+      images:
+        request.images.length > 0
+          ? request.images.map((image) => this.toImageResponse(image))
+          : undefined,
+      primaryImageId: request.primaryImageId,
+    };
+  }
+
+  private toImageSummaryResponse(
+    image: OpenRequestImageRecord
+  ): RequestImageSummaryResponseDto {
+    return {
+      id: image.id,
+      thumbnailUrl: this.mediaStorageService.toPublicUrl(image.thumbnailStorageKey),
+      width: image.width,
+      height: image.height,
+    };
+  }
+
+  private toImageResponse(
+    image: OpenRequestImageRecord
+  ): RequestImageResponseDto {
+    return {
+      ...this.toImageSummaryResponse(image),
+      url: this.mediaStorageService.toPublicUrl(image.storageKey),
+      isPrimary: image.isPrimary,
     };
   }
 

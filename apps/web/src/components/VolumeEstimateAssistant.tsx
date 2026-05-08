@@ -3,6 +3,7 @@
 import Image from "next/image";
 import type { ChangeEvent } from "react";
 import { useEffect, useState } from "react";
+import MotionCollapse from "@/components/MotionCollapse";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   estimateVolumeFromImages,
@@ -220,53 +221,66 @@ export default function VolumeEstimateAssistant({
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-slate-900">
-            AI destekli tahmini tasima hacmi onerisi
+    <div className="app-surface-muted rounded-[1.1rem] border border-slate-200 p-4 sm:p-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="max-w-lg space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
+            AI hacim yardimi
           </p>
-          <p className="text-xs text-slate-500">
-            Fotograf yukleyip tasima planlamasi icin tahmini bir hacim onerisi alabilirsin.
-          </p>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-slate-900">
+              Fotograflardan m3 onerisi al
+            </p>
+            <p className="text-xs leading-5 text-slate-600">
+              Hacim alanini doldururken ikincil bir destek olarak kullan; sonucu
+              istersen form gonderilmeden once duzenleyebilirsin.
+            </p>
+          </div>
         </div>
+
         <button
           type="button"
           onClick={() => setIsOpen((currentValue) => !currentValue)}
+          aria-expanded={isOpen}
           disabled={disabled}
-          className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+          className="app-button-secondary app-pressable shrink-0 px-3.5 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isOpen ? "Paneli gizle" : "Goruntuyle tahmin et"}
         </button>
       </div>
 
-      {isOpen ? (
-        <div className="mt-4 space-y-4 border-t border-slate-200 pt-4">
-          <div className="space-y-2">
-            <label
-              htmlFor="volume-estimate-images"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Gorseller
-            </label>
-            <input
-              id="volume-estimate-images"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              disabled={disabled || isEstimating}
-              onChange={handleFileChange}
-              className="block w-full rounded-lg border border-dashed border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700"
-            />
-            <p className="text-xs text-slate-500">
-              En fazla 3 gorsel ve her gorsel icin 5 MB limit uygulanir.
-            </p>
-            {selectedFiles.length > 0 ? (
-              <p className="text-xs font-medium text-slate-600">
-                {selectedFiles.length} gorsel secildi:{" "}
-                {selectedFiles.map((file) => file.name).join(", ")}
+      <MotionCollapse isOpen={isOpen} className="mt-4">
+        <div
+          data-dashboard-form-conditional
+          className="space-y-4 border-t border-slate-200 pt-4"
+        >
+          <div className="rounded-[1rem] border border-dashed border-slate-300 bg-white p-4">
+            <div className="space-y-2">
+              <label
+                htmlFor="volume-estimate-images"
+                className="block text-sm font-semibold text-slate-700"
+              >
+                Gorseller
+              </label>
+              <input
+                id="volume-estimate-images"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                disabled={disabled || isEstimating}
+                onChange={handleFileChange}
+                className="block w-full rounded-xl border border-dashed border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700"
+              />
+              <p className="text-xs text-slate-500">
+                En fazla 3 gorsel; her biri icin 5 MB limit uygulanir.
               </p>
-            ) : null}
+              {selectedFiles.length > 0 ? (
+                <p className="text-xs font-medium text-slate-600">
+                  {selectedFiles.length} gorsel secildi:{" "}
+                  {selectedFiles.map((file) => file.name).join(", ")}
+                </p>
+              ) : null}
+            </div>
           </div>
 
           {previewImages.length > 0 ? (
@@ -274,7 +288,7 @@ export default function VolumeEstimateAssistant({
               {previewImages.map((previewImage) => (
                 <div
                   key={previewImage.url}
-                  className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+                  className="overflow-hidden rounded-[0.95rem] border border-slate-200 bg-white"
                 >
                   <div className="relative aspect-[4/3] bg-slate-100">
                     <Image
@@ -285,7 +299,7 @@ export default function VolumeEstimateAssistant({
                       className="object-cover"
                     />
                   </div>
-                  <div className="space-y-1 px-3 py-2">
+                  <div className="space-y-1 px-3 py-2.5">
                     <p className="truncate text-xs font-medium text-slate-800">
                       {previewImage.fileName}
                     </p>
@@ -301,7 +315,7 @@ export default function VolumeEstimateAssistant({
           <div className="space-y-2">
             <label
               htmlFor="volume-estimate-description"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-semibold text-slate-700"
             >
               Kisa aciklama (opsiyonel)
             </label>
@@ -312,7 +326,7 @@ export default function VolumeEstimateAssistant({
               onChange={(event) => setDescription(event.target.value)}
               disabled={disabled || isEstimating}
               placeholder="Orn: 6 koli, 1 camasir makinesi ve 1 koltuk."
-              className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-slate-100"
+              className="app-input block min-h-[6rem] resize-y bg-white text-sm"
             />
           </div>
 
@@ -321,12 +335,12 @@ export default function VolumeEstimateAssistant({
               type="button"
               onClick={handleEstimate}
               disabled={disabled || isEstimating}
-              className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              className="app-button-secondary app-pressable px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isEstimating ? "Tahmin uretiliyor..." : "Tahmini tasima hacmi uret"}
             </button>
             <span className="text-xs text-slate-500">
-              Son degeri istersen duzenleyebilirsin.
+              Son degeri uygulamadan once istersen elle guncelleyebilirsin.
             </span>
           </div>
 
@@ -337,7 +351,7 @@ export default function VolumeEstimateAssistant({
           ) : null}
 
           {estimate ? (
-            <div className="space-y-4 rounded-2xl border border-blue-200 bg-white p-4 shadow-sm">
+            <div className="space-y-4 rounded-[1rem] border border-slate-200 bg-white p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
@@ -349,13 +363,13 @@ export default function VolumeEstimateAssistant({
                   <p className="mt-2 text-sm text-slate-600">{estimate.summary}</p>
                 </div>
                 <span
-                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                    estimate.confidenceLevel === "YUKSEK"
-                      ? "bg-emerald-100 text-emerald-700"
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
+                      estimate.confidenceLevel === "YUKSEK"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                       : estimate.confidenceLevel === "ORTA"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-rose-100 text-rose-700"
-                  }`}
+                        ? "border-amber-200 bg-amber-50 text-amber-700"
+                        : "border-rose-200 bg-rose-50 text-rose-700"
+                    }`}
                 >
                   Guven: {estimate.confidenceLevel.toLowerCase()}
                 </span>
@@ -445,18 +459,19 @@ export default function VolumeEstimateAssistant({
                   type="button"
                   onClick={handleApply}
                   disabled={disabled}
-                  className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                  className="app-button-primary app-pressable px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Hacim alanina uygula
                 </button>
                 <span className="text-xs text-slate-500">
-                  Bu sonuc gorsel yorum ve tasima kurallarina dayali tahmindir; formu gondermeden once son degeri degistirebilirsin.
+                  Bu sonuc gorsel yorum ve tasima kurallarina dayali tahmindir; formu
+                  gondermeden once son degeri degistirebilirsin.
                 </span>
               </div>
             </div>
           ) : null}
         </div>
-      ) : null}
+      </MotionCollapse>
     </div>
   );
 }

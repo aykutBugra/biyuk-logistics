@@ -4,7 +4,9 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import AuthSplitShell from "@/components/AuthSplitShell";
 import InputField from "@/components/InputField";
+import MotionCollapse from "@/components/MotionCollapse";
 import VehicleFormFields from "@/components/VehicleFormFields";
 import { ApiClientError, apiFetch } from "@/lib/api/api-client";
 import {
@@ -182,7 +184,7 @@ export default function RegisterPage() {
   if (isCheckingAuth) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="app-surface rounded-3xl px-5 py-4 font-medium text-slate-600">
+        <div className="app-surface rounded-[1.15rem] px-5 py-4 font-medium text-slate-600">
           Yonlendiriliyor...
         </div>
       </div>
@@ -190,186 +192,197 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="px-4 py-10 md:py-14">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(320px,0.82fr)_minmax(0,1.18fr)]">
-        <section className="app-hero-surface rounded-[2rem] p-8 text-white md:p-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-blue-100">
-            Bi'yuk
+    <AuthSplitShell
+      rememberKey="public-register"
+      gridClassName="max-w-7xl lg:grid-cols-[minmax(320px,0.82fr)_minmax(0,1.18fr)]"
+      hero={
+        <>
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-blue-600">
+            Bi&apos;yuk
           </p>
-          <h1 className="mt-4 text-4xl font-black tracking-tight md:text-5xl">
+          <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
             Tek hesapla operasyon akisini kur.
           </h1>
-          <p className="mt-5 max-w-xl text-base leading-7 text-blue-50/90">
+          <p className="mt-5 max-w-xl text-base leading-7 text-slate-600">
             Musteri olarak baslayabilir veya ilk aracinla dogrudan nakliyeci
             akisina girebilirsin. Ileride ayni hesapta iki rolu de yonetirsin.
           </p>
 
           <div className="mt-8 space-y-3">
-            <div className="rounded-2xl border border-white/16 bg-white/10 px-4 py-3 text-sm leading-6 backdrop-blur">
+            <div className="app-surface-muted rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-600">
               Musteri hesabinda talep, teklif ve anlasilan is takibi acilir.
             </div>
-            <div className="rounded-2xl border border-white/16 bg-white/10 px-4 py-3 text-sm leading-6 backdrop-blur">
+            <div className="app-surface-muted rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-600">
               Nakliyeci kaydi ilk aracinla birlikte rota, teklif ve operasyon
               akislarini etkinlestirir.
             </div>
           </div>
-        </section>
-
-        <section className="app-surface-strong rounded-[2rem] p-8 md:p-10">
-          <div className="max-w-3xl">
-            <div className="inline-flex rounded-full border border-blue-200/80 bg-blue-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-700">
-              Kayit
+        </>
+      }
+      card={
+        <div className="max-w-3xl">
+          <div data-auth-card-step>
+            <div className="max-w-3xl">
+              <div className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-700">
+                Kayit
+              </div>
+              <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950">
+                Hesabini olustur
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Once giris modunu sec, sonra temel hesap bilgilerini doldur.
+              </p>
             </div>
-            <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950">
-              Hesabini olustur
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              Once giris modunu sec, sonra temel hesap bilgilerini doldur.
-            </p>
+          </div>
 
-            <div className="mt-6 grid gap-3 md:grid-cols-2">
-              {(["MUSTERI", "NAKLIYECI"] as RegisterRole[]).map((option) => {
-                const isActive = role === option;
+          <div className="mt-6 grid gap-3 md:grid-cols-2" data-auth-card-step>
+            {(["MUSTERI", "NAKLIYECI"] as RegisterRole[]).map((option) => {
+              const isActive = role === option;
 
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => handleRoleChange(option)}
-                    disabled={isSubmitting}
-                    className={`rounded-[1.4rem] border px-5 py-4 text-left transition ${
-                      isActive
-                        ? "border-blue-300 bg-blue-50 text-blue-900 shadow-sm"
-                        : "border-slate-200 bg-white/70 text-slate-700 hover:bg-white"
-                    }`}
-                  >
-                    <p className="text-sm font-bold">
-                      {option === "MUSTERI" ? "Musteri" : "Nakliyeci"}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
-                      {roleDescriptions[option]}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-
-            <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-              {errorState ? (
-                <div
-                  className={`rounded-2xl border p-4 text-sm ${
-                    errorState.kind === "duplicate-email"
-                      ? "border-amber-200 bg-amber-50 text-amber-800"
-                      : "border-red-200 bg-red-50 text-red-700"
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => handleRoleChange(option)}
+                  disabled={isSubmitting}
+                  className={`rounded-[1rem] border px-5 py-4 text-left transition ${
+                    isActive
+                      ? "border-blue-200 bg-blue-50 text-blue-900"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                   }`}
                 >
-                  <p>{errorState.message}</p>
-                  {errorState.kind === "duplicate-email" ? (
-                    <p className="mt-3">
-                      <Link href="/login" className="font-semibold text-blue-700 hover:underline">
-                        Giris yap
-                      </Link>{" "}
-                      ve sonra{" "}
-                      <span className="font-semibold">Profilim &gt; Nakliyeci rolunu ekle</span>{" "}
-                      akisini kullan.
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
+                  <p className="text-sm font-bold">
+                    {option === "MUSTERI" ? "Musteri" : "Nakliyeci"}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    {roleDescriptions[option]}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <InputField
-                  name="ad"
-                  label="Ad"
-                  type="text"
-                  placeholder="Orn: Mehmet"
-                  value={accountForm.ad}
-                  onChange={handleAccountChange}
-                  disabled={isSubmitting}
-                />
-                <InputField
-                  name="soyad"
-                  label="Soyad"
-                  type="text"
-                  placeholder="Orn: Akcil"
-                  value={accountForm.soyad}
-                  onChange={handleAccountChange}
-                  disabled={isSubmitting}
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+            {errorState ? (
+              <div
+                className={`app-form-error-banner text-sm ${
+                  errorState.kind === "duplicate-email"
+                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                    : ""
+                }`}
+              >
+                <p>{errorState.message}</p>
+                {errorState.kind === "duplicate-email" ? (
+                  <p className="mt-3">
+                    <Link href="/login" className="font-semibold text-blue-700 hover:underline">
+                      Giris yap
+                    </Link>{" "}
+                    ve sonra{" "}
+                    <span className="font-semibold">Profilim &gt; Nakliyeci rolunu ekle</span>{" "}
+                    akisini kullan.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 md:grid-cols-2" data-auth-card-step>
+              <InputField
+                name="ad"
+                label="Ad"
+                type="text"
+                placeholder="Orn: Mehmet"
+                value={accountForm.ad}
+                onChange={handleAccountChange}
+                disabled={isSubmitting}
+              />
+              <InputField
+                name="soyad"
+                label="Soyad"
+                type="text"
+                placeholder="Orn: Akcil"
+                value={accountForm.soyad}
+                onChange={handleAccountChange}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2" data-auth-card-step>
+              <InputField
+                name="telefonNumarasi"
+                label="Telefon numarasi"
+                type="tel"
+                placeholder="Orn: 555 123 45 67"
+                value={accountForm.telefonNumarasi}
+                onChange={handleAccountChange}
+                disabled={isSubmitting}
+                required={false}
+              />
+              <InputField
+                name="kullaniciAdi"
+                label="Kullanici adi"
+                type="text"
+                placeholder="Orn: mehmetakcil73"
+                autoComplete="username"
+                value={accountForm.kullaniciAdi}
+                onChange={handleAccountChange}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2" data-auth-card-step>
+              <InputField
+                name="mail"
+                label="E-posta"
+                type="email"
+                placeholder="mehmet@example.com"
+                autoComplete="email"
+                value={accountForm.mail}
+                onChange={handleAccountChange}
+                disabled={isSubmitting}
+              />
+              <InputField
+                name="password"
+                label="Sifre"
+                type="password"
+                placeholder="********"
+                autoComplete="new-password"
+                value={accountForm.password}
+                onChange={handleAccountChange}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <MotionCollapse isOpen={role === "NAKLIYECI"} className="w-full">
+              <div className="rounded-[1rem] border border-slate-200 bg-slate-50 p-5">
+                <VehicleFormFields
+                  values={vehicleForm}
+                  onChange={handleVehicleChange}
+                  disabled={isSubmitting || role !== "NAKLIYECI"}
+                  sectionTitle="Ilk Arac Kaydi"
+                  sectionHint="Bu arac basariyla kaydedildiginde hesabin musteri + nakliyeci olarak acilir."
                 />
               </div>
+            </MotionCollapse>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <InputField
-                  name="telefonNumarasi"
-                  label="Telefon numarasi"
-                  type="tel"
-                  placeholder="Orn: 555 123 45 67"
-                  value={accountForm.telefonNumarasi}
-                  onChange={handleAccountChange}
-                  disabled={isSubmitting}
-                  required={false}
-                />
-                <InputField
-                  name="kullaniciAdi"
-                  label="Kullanici adi"
-                  type="text"
-                  placeholder="Orn: mehmetakcil73"
-                  autoComplete="username"
-                  value={accountForm.kullaniciAdi}
-                  onChange={handleAccountChange}
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <InputField
-                  name="mail"
-                  label="E-posta"
-                  type="email"
-                  placeholder="mehmet@example.com"
-                  autoComplete="email"
-                  value={accountForm.mail}
-                  onChange={handleAccountChange}
-                  disabled={isSubmitting}
-                />
-                <InputField
-                  name="password"
-                  label="Sifre"
-                  type="password"
-                  placeholder="********"
-                  autoComplete="new-password"
-                  value={accountForm.password}
-                  onChange={handleAccountChange}
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              {role === "NAKLIYECI" ? (
-                <div className="rounded-[1.6rem] border border-slate-200 bg-white/70 p-5">
-                  <VehicleFormFields
-                    values={vehicleForm}
-                    onChange={handleVehicleChange}
-                    disabled={isSubmitting}
-                    sectionTitle="Ilk Arac Kaydi"
-                    sectionHint="Bu arac basariyla kaydedildiginde hesabin musteri + nakliyeci olarak acilir."
-                  />
-                </div>
-              ) : null}
-
-              <button type="submit" disabled={isSubmitting} className="app-button-primary w-full">
+            <div data-auth-card-step>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="app-button-primary app-form-submit-button app-pressable w-full"
+              >
                 {isSubmitting ? "Kayit olusturuluyor..." : "Hesap olustur"}
               </button>
+            </div>
 
-              <p className="text-sm text-slate-600">
-                Zaten hesabin var mi?{" "}
-                <Link href="/login" className="font-bold text-blue-700 hover:text-blue-800">
-                  Giris Yap
-                </Link>
-              </p>
-            </form>
-          </div>
-        </section>
-      </div>
-    </main>
+            <p className="text-sm text-slate-600" data-auth-card-step>
+              Zaten hesabin var mi?{" "}
+              <Link href="/login" className="font-bold text-blue-700 hover:text-blue-800">
+                Giris Yap
+              </Link>
+            </p>
+          </form>
+        </div>
+      }
+    />
   );
 }

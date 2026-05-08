@@ -10,6 +10,8 @@ type CarrierVehiclesShellProps = {
   headerActions?: ReactNode;
   headerVariant?: "default" | "compact";
   sidebarVariant?: "default" | "icon-rail";
+  motionPreset?: "default" | "operational" | "form";
+  cardMotionLimit?: number;
 };
 
 export default function CarrierVehiclesShell({
@@ -19,6 +21,8 @@ export default function CarrierVehiclesShell({
   headerActions,
   headerVariant,
   sidebarVariant,
+  motionPreset,
+  cardMotionLimit,
 }: CarrierVehiclesShellProps) {
   return (
     <DashboardShell
@@ -28,6 +32,8 @@ export default function CarrierVehiclesShell({
       headerActions={headerActions}
       headerVariant={headerVariant}
       sidebarVariant={sidebarVariant}
+      motionPreset={motionPreset}
+      cardMotionLimit={cardMotionLimit}
     >
       {children}
     </DashboardShell>

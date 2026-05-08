@@ -18,7 +18,9 @@ import {
 import { acceptOffer, rejectOffer } from "@/lib/api/offers";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useDashboardAccess } from "@/lib/auth/use-dashboard-access";
+import { useConfirm } from "@/lib/confirm/confirm-context";
 import { formatLocationLabel } from "@/lib/logistics";
+import { useToast } from "@/lib/toast/toast-context";
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("tr-TR", {
@@ -72,6 +74,8 @@ export default function OfferThreadDetailPage() {
   const router = useRouter();
   const params = useParams<{ offerId: string }>();
   const offerId = Number(params.offerId);
+  const confirm = useConfirm();
+  const showToast = useToast();
   const { accessToken, isCarrierWorkspace, status } =
     useDashboardAccess("shared-business");
   const [thread, setThread] = useState<OfferThreadDetail | null>(null);
@@ -175,11 +179,19 @@ export default function OfferThreadDetailPage() {
       return;
     }
 
-    const confirmed = window.confirm(
-      action === "accept"
-        ? "Bu teklifi kabul etmek istedigine emin misin?"
-        : "Bu teklifi reddetmek istedigine emin misin?"
-    );
+    const confirmed = await confirm({
+      title:
+        action === "accept" ? "Teklifi kabul et" : "Teklifi reddet",
+      message:
+        action === "accept"
+          ? "Bu teklifi kabul etmek istedigine emin misin?"
+          : "Bu teklifi reddetmek istedigine emin misin?",
+      tone: action === "reject" ? "danger" : "default",
+      confirmLabel: action === "accept" ? "Kabul Et" : "Reddet",
+      cancelLabel: "Vazgec",
+      defaultFocus: action === "reject" ? "reject" : "accept",
+      dismissableMask: action !== "reject",
+    });
 
     if (!confirmed) {
       return;
@@ -190,30 +202,57 @@ export default function OfferThreadDetailPage() {
 
       if (action === "accept") {
         await acceptOffer(thread.offerId, accessToken);
-        window.alert("Teklif kabul edildi ve nakliye olusturuldu.");
+        showToast({
+          severity: "success",
+          summary: "Teklif kabul edildi",
+          detail: "Nakliye kaydi olusturuldu.",
+        });
       } else {
         await rejectOffer(thread.offerId, accessToken);
-        window.alert("Teklif reddedildi.");
+        showToast({
+          severity: "info",
+          summary: "Teklif reddedildi",
+          detail: "Teklif durumu guncellendi.",
+        });
       }
 
       setReloadKey((currentKey) => currentKey + 1);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
+        showToast({
+          severity: "error",
+          summary: "Oturum sona erdi",
+          detail: "Lutfen yeniden giris yapin.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/login");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 403) {
+        showToast({
+          severity: "error",
+          summary: "Yetki yok",
+          detail: "Bu islem icin yetkin yok.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/");
         return;
       }
 
-      window.alert(
-        error instanceof ApiClientError
-          ? error.message
-          : "Teklif karari verilirken beklenmeyen bir hata olustu."
-      );
+      showToast({
+        severity: "error",
+        summary: "Teklif guncellenemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Teklif karari verilirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
       setReloadKey((currentKey) => currentKey + 1);
     } finally {
       setIsActingOffer(false);
@@ -237,11 +276,16 @@ export default function OfferThreadDetailPage() {
       setMessageDraft("");
       setReloadKey((currentKey) => currentKey + 1);
     } catch (error) {
-      window.alert(
-        error instanceof ApiClientError
-          ? error.message
-          : "Mesaj gonderilirken beklenmeyen bir hata olustu."
-      );
+      showToast({
+        severity: "error",
+        summary: "Mesaj gonderilemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Mesaj gonderilirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
     } finally {
       setIsSendingMessage(false);
     }
@@ -257,7 +301,13 @@ export default function OfferThreadDetailPage() {
     const parsedAmount = Number(counterOfferAmount);
 
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      window.alert("Gecerli bir karsi teklif tutari gir.");
+      showToast({
+        severity: "warn",
+        summary: "Gecersiz tutar",
+        detail: "Gecerli bir karsi teklif tutari gir.",
+        life: 3200,
+        closable: true,
+      });
       return;
     }
 
@@ -275,11 +325,16 @@ export default function OfferThreadDetailPage() {
       setCounterOfferNote("");
       setReloadKey((currentKey) => currentKey + 1);
     } catch (error) {
-      window.alert(
-        error instanceof ApiClientError
-          ? error.message
-          : "Karsi teklif gonderilirken beklenmeyen bir hata olustu."
-      );
+      showToast({
+        severity: "error",
+        summary: "Karsi teklif gonderilemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Karsi teklif gonderilirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
     } finally {
       setIsSendingCounterOffer(false);
     }

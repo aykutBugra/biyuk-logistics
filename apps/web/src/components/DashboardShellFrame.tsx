@@ -2,12 +2,15 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useDashboardRouteTransitionId } from "@/components/DashboardRouteTemplate";
 import DashboardTopbar from "@/components/DashboardTopbar";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import type { DashboardRenderedNavGroup } from "@/lib/dashboard/navigation";
 import type { StoredAuth, StoredDashboardWorkspaceMode } from "@/lib/auth/auth-storage";
 import { gsap } from "@/lib/motion/gsap-client";
-import { MOTION_DURATIONS, MOTION_EASES, MOTION_LAYOUT, MOTION_STAGGERS } from "@/lib/motion/motion-tokens";
+import { MOTION_DURATIONS, MOTION_EASES, MOTION_LAYOUT } from "@/lib/motion/motion-tokens";
+import { useDashboardFormMotion } from "@/lib/motion/useDashboardFormMotion";
+import { useDashboardOperationalMotion } from "@/lib/motion/useDashboardOperationalMotion";
 import { useReducedMotion } from "@/lib/motion/useReducedMotion";
 import { useSurfaceReveal } from "@/lib/motion/useSurfaceReveal";
 
@@ -20,6 +23,7 @@ type DashboardShellFrameProps = {
   workspaceMode: StoredDashboardWorkspaceMode | null;
   dualBusinessRoles: boolean;
   onWorkspaceChange: (mode: StoredDashboardWorkspaceMode) => void;
+  pathname: string;
   title: string;
   description?: string;
   children: ReactNode;
@@ -28,6 +32,8 @@ type DashboardShellFrameProps = {
   headerVariant?: "default" | "compact";
   sidebarVariant?: "default" | "icon-rail";
   sidebarBehaviorScope?: "home" | "child" | "other";
+  motionPreset?: "default" | "operational" | "form";
+  cardMotionLimit?: number;
 };
 
 let rememberedDashboardChildSidebarExpanded = false;
@@ -87,6 +93,7 @@ export default function DashboardShellFrame({
   workspaceMode,
   dualBusinessRoles,
   onWorkspaceChange,
+  pathname,
   title,
   description,
   children,
@@ -95,14 +102,17 @@ export default function DashboardShellFrame({
   headerVariant = "default",
   sidebarVariant = "default",
   sidebarBehaviorScope = "other",
+  motionPreset = "default",
+  cardMotionLimit = 6,
 }: DashboardShellFrameProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const reducedMotion = useReducedMotion();
   const frameRef = useRef<HTMLDivElement | null>(null);
+  const routeSurfaceRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const hasAnimatedContentRef = useRef(false);
   const hasMountedSidebarMotionRef = useRef(false);
+  const routeTransitionId = useDashboardRouteTransitionId();
   const rememberedChildSidebarExpanded = useSyncExternalStore(
     subscribeToDashboardChildSidebarExpanded,
     getDashboardChildSidebarExpandedSnapshot,
@@ -117,6 +127,17 @@ export default function DashboardShellFrame({
   useSurfaceReveal(headerRef, {
     y: 6,
     duration: MOTION_DURATIONS.base,
+  });
+
+  useDashboardOperationalMotion(contentRef, {
+    enabled: motionPreset === "operational",
+    routeTransitionId,
+    cardMotionLimit,
+  });
+
+  useDashboardFormMotion(contentRef, {
+    enabled: motionPreset === "form",
+    routeTransitionId,
   });
 
   useEffect(() => {
@@ -166,53 +187,6 @@ export default function DashboardShellFrame({
     });
   }, [isDesktopSidebarExpanded, isIconRail, reducedMotion]);
 
-  useEffect(() => {
-    if (sidebarBehaviorScope === "home" || reducedMotion || !contentRef.current) {
-      return;
-    }
-
-    const contentElement = contentRef.current;
-
-    const runReveal = () => {
-      if (hasAnimatedContentRef.current) {
-        return;
-      }
-
-      const revealableChildren = Array.from(contentElement.children).filter(
-        (child) => !(child as HTMLElement).hasAttribute("data-motion-skip")
-      ) as HTMLElement[];
-
-      if (revealableChildren.length === 0) {
-        return;
-      }
-
-      hasAnimatedContentRef.current = true;
-
-      gsap.from(revealableChildren, {
-        autoAlpha: 0,
-        y: 8,
-        duration: MOTION_DURATIONS.base,
-        ease: MOTION_EASES.standard,
-        stagger: MOTION_STAGGERS.sections,
-        clearProps: "opacity,transform,visibility",
-      });
-    };
-
-    runReveal();
-
-    const observer = new MutationObserver(() => {
-      runReveal();
-    });
-
-    observer.observe(contentElement, {
-      childList: true,
-    });
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [reducedMotion, sidebarBehaviorScope]);
-
   const handleDesktopSidebarToggle = () => {
     if (sidebarBehaviorScope !== "child") {
       return;
@@ -246,10 +220,16 @@ export default function DashboardShellFrame({
 
       <div className="pt-[var(--topbar-height)] lg:pl-[var(--dashboard-main-offset)]">
         <main className="min-h-[calc(100vh-var(--topbar-height))] px-4 py-5 md:px-6 md:py-6">
-          <div className="mx-auto max-w-7xl space-y-5">
+          <div
+            ref={routeSurfaceRef}
+            data-dashboard-route-surface
+            data-dashboard-pathname={pathname}
+            className="mx-auto max-w-7xl space-y-5"
+          >
             {headerVariant === "compact" ? (
               <div
                 ref={headerRef}
+                data-dashboard-header
                 className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
               >
                 <div className="space-y-1.5">
@@ -274,7 +254,8 @@ export default function DashboardShellFrame({
             ) : (
               <div
                 ref={headerRef}
-                className="app-surface-strong rounded-[1.75rem] p-5 md:p-6"
+                data-dashboard-header
+                className="app-surface-strong rounded-[1.15rem] p-5 md:p-6"
               >
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div className="space-y-2">
@@ -297,7 +278,9 @@ export default function DashboardShellFrame({
               </div>
             )}
 
-            <div ref={contentRef}>{children}</div>
+            <div ref={contentRef} data-dashboard-route-content>
+              {children}
+            </div>
           </div>
         </main>
       </div>

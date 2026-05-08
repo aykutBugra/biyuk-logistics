@@ -16,12 +16,12 @@ export default function SummaryStatCard({
 
   return (
     <div
-      className={`app-surface-strong transition hover:-translate-y-0.5 ${
+      className={`app-surface-strong border-slate-200 transition hover:-translate-y-0.5 ${
         isTight
-          ? "rounded-[1.2rem] p-3.5"
+          ? "rounded-[0.95rem] p-3.5"
           : isCompact
-            ? "rounded-[1.35rem] p-4"
-            : "rounded-[1.6rem] p-5"
+            ? "rounded-[1rem] p-4"
+            : "rounded-[1.1rem] p-5"
       }`}
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">

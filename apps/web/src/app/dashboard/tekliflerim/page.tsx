@@ -97,35 +97,47 @@ export default function MyOffersPage() {
     <CarrierVehiclesShell
       title="Tekliflerim"
       description="Verdigin teklifleri, her birinin mevcut durumunu ve musteri yanitlarini buradan takip et."
+      headerVariant="compact"
+      motionPreset="operational"
+      cardMotionLimit={6}
       headerActions={<InlineHelpTrigger helpKey="my-offers" />}
     >
       {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
+        <div
+          data-dashboard-primary
+          className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700"
+        >
           {errorMessage}
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && offers.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
-          <SummaryStatCard label="Toplam teklif" value={offers.length} />
-          <SummaryStatCard label="Beklemede" value={openOfferCount} />
-          <SummaryStatCard label="Kabul edilen" value={acceptedOfferCount} />
+        <div data-dashboard-stats className="mb-6 grid gap-4 md:grid-cols-3">
+          <SummaryStatCard label="Toplam teklif" value={offers.length} density="compact" />
+          <SummaryStatCard label="Beklemede" value={openOfferCount} density="compact" />
+          <SummaryStatCard
+            label="Kabul edilen"
+            value={acceptedOfferCount}
+            density="compact"
+          />
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && offers.length === 0 ? (
-        <EmptyStateCard
-          title="Henuz teklif yok"
-          description="Acik istekleri inceleyip ilk teklifini verdiginde burada goreceksin."
-          actionHref="/dashboard/acik_istekler"
-          actionLabel="Acik istekleri incele"
-        />
+        <div data-dashboard-primary>
+          <EmptyStateCard
+            title="Henuz teklif yok"
+            description="Acik istekleri inceleyip ilk teklifini verdiginde burada goreceksin."
+            actionHref="/dashboard/acik_istekler"
+            actionLabel="Acik istekleri incele"
+          />
+        </div>
       ) : null}
 
       {!isLoading && !errorMessage && offers.length > 0 ? (
-        <div className="grid gap-4">
+        <div data-dashboard-primary className="grid gap-4">
           {offers.map((offer) => (
             <MyOfferCard key={offer.id} offer={offer} />
           ))}

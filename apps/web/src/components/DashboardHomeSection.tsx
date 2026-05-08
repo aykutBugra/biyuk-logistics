@@ -44,7 +44,7 @@ export default function DashboardHomeSection({
     <section
       ref={sectionRef}
       className={`app-surface ${
-        isCompact ? "rounded-[1.45rem] p-4" : "rounded-[1.6rem] p-4 md:p-5"
+        isCompact ? "rounded-[1rem] p-4" : "rounded-[1.1rem] p-4 md:p-5"
       }`}
     >
       <div

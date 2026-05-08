@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   autocompleteLocations,
@@ -18,6 +18,9 @@ type LocationAutocompleteFieldProps = {
   disabled?: boolean;
   required?: boolean;
   legacyHint?: string | null;
+  invalid?: boolean;
+  validationMessage?: string | null;
+  hint?: string | null;
 };
 
 function createSessionToken(): string {
@@ -37,7 +40,11 @@ export default function LocationAutocompleteField({
   disabled = false,
   required = true,
   legacyHint,
+  invalid = false,
+  validationMessage,
+  hint,
 }: LocationAutocompleteFieldProps) {
+  const inputId = useId();
   const [query, setQuery] = useState(value?.konumMetni ?? "");
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,6 +52,15 @@ export default function LocationAutocompleteField({
   const [isOpen, setIsOpen] = useState(false);
   const [sessionToken, setSessionToken] = useState(createSessionToken);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const messageId = `${inputId}-field-message`;
+  const hasValidationError = invalid && Boolean(validationMessage);
+  const helperMessage = errorMessage
+    ? errorMessage
+    : hasValidationError
+      ? validationMessage
+      : !value && legacyHint
+        ? `Mevcut kayit: ${legacyHint}. Guncellemeden once yeni konumu listeden sec.`
+        : hint;
 
   useEffect(() => {
     setQuery(value?.konumMetni ?? "");
@@ -149,10 +165,13 @@ export default function LocationAutocompleteField({
 
   return (
     <div className="space-y-2" ref={rootRef}>
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      <label className="block text-sm font-medium text-gray-700" htmlFor={inputId}>
+        {label}
+      </label>
 
       <div className="relative">
         <input
+          id={inputId}
           type="text"
           value={query}
           onChange={(event) => {
@@ -172,7 +191,9 @@ export default function LocationAutocompleteField({
           required={required && value === null}
           disabled={disabled}
           placeholder={placeholder}
-          className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
+          aria-invalid={invalid || Boolean(errorMessage) || undefined}
+          aria-describedby={helperMessage ? messageId : undefined}
+          className="app-input block text-sm"
         />
 
         {isOpen && suggestions.length > 0 ? (
@@ -209,14 +230,19 @@ export default function LocationAutocompleteField({
         </div>
       ) : null}
 
-      {!value && legacyHint ? (
-        <p className="text-xs text-amber-700">
-          Mevcut kayit: {legacyHint}. Guncellemeden once yeni konumu listeden sec.
+      {helperMessage ? (
+        <p
+          id={messageId}
+          className={
+            errorMessage || hasValidationError
+              ? "app-field-status app-field-error"
+              : !value && legacyHint
+                ? "app-field-status text-xs text-amber-700"
+                : "app-field-status app-field-hint"
+          }
+        >
+          {helperMessage}
         </p>
-      ) : null}
-
-      {errorMessage ? (
-        <p className="text-xs text-red-600">{errorMessage}</p>
       ) : null}
     </div>
   );

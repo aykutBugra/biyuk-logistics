@@ -13,16 +13,20 @@ import {
 } from "@/lib/api/vehicles";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
+import { useConfirm } from "@/lib/confirm/confirm-context";
 import {
   formatDimensionsCm,
   formatVolumeM3,
   formatWeightKg,
   getVehicleBodyTypeLabel,
 } from "@/lib/logistics";
+import { useToast } from "@/lib/toast/toast-context";
 
 export default function VehicleDetailPage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
+  const confirm = useConfirm();
+  const showToast = useToast();
   const params = useParams<{ id: string }>();
   const vehicleId = Number(params.id);
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
@@ -104,39 +108,77 @@ export default function VehicleDetailPage() {
       return;
     }
 
-    if (!window.confirm("Bu araci silmek istedigine emin misin?")) {
+    const isConfirmed = await confirm({
+      title: "Araci sil",
+      message: "Bu araci silmek istedigine emin misin?",
+      tone: "danger",
+      confirmLabel: "Sil",
+      cancelLabel: "Vazgec",
+      defaultFocus: "reject",
+      dismissableMask: false,
+    });
+
+    if (!isConfirmed) {
       return;
     }
 
     try {
       setIsDeleting(true);
       await deleteVehicle(vehicle.id, accessToken);
+      showToast({
+        severity: "success",
+        summary: "Arac silindi",
+        detail: "Arac filodan kaldirildi.",
+      });
       router.replace("/dashboard/araclarim");
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
-        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        showToast({
+          severity: "error",
+          summary: "Oturum sona erdi",
+          detail: "Lutfen yeniden giris yapin.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/login");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 403) {
-        window.alert("Bu islem icin yetkin yok.");
+        showToast({
+          severity: "error",
+          summary: "Yetki yok",
+          detail: "Bu islem icin yetkin yok.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-        window.alert("Bu arac bulunamadi.");
+        showToast({
+          severity: "warn",
+          summary: "Arac bulunamadi",
+          detail: "Listeye yonlendiriliyorsun.",
+          life: 3200,
+          closable: true,
+        });
         router.replace("/dashboard/araclarim");
         return;
       }
 
-      window.alert(
-        error instanceof ApiClientError
-          ? error.message
-          : "Arac silinirken beklenmeyen bir hata olustu."
-      );
+      showToast({
+        severity: "error",
+        summary: "Arac silinemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Arac silinirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
     } finally {
       setIsDeleting(false);
     }

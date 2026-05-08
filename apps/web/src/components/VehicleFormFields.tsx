@@ -23,12 +23,12 @@ export default function VehicleFormFields({
   return (
     <>
       {sectionTitle ? (
-        <div className="relative py-4">
+        <div className="relative py-3">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-slate-200"></div>
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white/90 px-3 font-semibold tracking-wider text-slate-500">
+            <span className="bg-slate-50 px-3 font-semibold tracking-wider text-slate-500">
               {sectionTitle}
             </span>
           </div>
@@ -151,7 +151,7 @@ export default function VehicleFormFields({
         </div>
       </div>
 
-      {sectionHint ? <p className="text-sm text-slate-500">{sectionHint}</p> : null}
+      {sectionHint ? <p className="text-sm leading-6 text-slate-500">{sectionHint}</p> : null}
     </>
   );
 }

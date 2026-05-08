@@ -1,3 +1,4 @@
+import { RequestImageResponseDto } from "../../../common/dto/request-image-response.dto";
 import { TransportRequestListItemResponseDto } from "./transport-request-list-item-response.dto";
 import { TransportRequestJobSummaryResponseDto } from "./transport-request-job-summary-response.dto";
 
@@ -15,4 +16,6 @@ export class TransportRequestDetailResponseDto extends TransportRequestListItemR
   varisEnlem!: number;
   varisBoylam!: number;
   nakliye!: TransportRequestJobSummaryResponseDto | null;
+  images?: RequestImageResponseDto[];
+  primaryImageId?: number | null;
 }

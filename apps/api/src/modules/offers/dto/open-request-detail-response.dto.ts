@@ -1,3 +1,4 @@
+import { RequestImageResponseDto } from "../../../common/dto/request-image-response.dto";
 import { OpenRequestListItemResponseDto } from "./open-request-list-item-response.dto";
 
 export class OpenRequestDetailResponseDto extends OpenRequestListItemResponseDto {
@@ -11,4 +12,6 @@ export class OpenRequestDetailResponseDto extends OpenRequestListItemResponseDto
   normalizeVarisIlce!: string | null;
   hasActiveVehicle!: boolean;
   hasExistingOffer!: boolean;
+  images?: RequestImageResponseDto[];
+  primaryImageId?: number | null;
 }

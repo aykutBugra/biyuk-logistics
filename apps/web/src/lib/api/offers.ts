@@ -1,5 +1,17 @@
 import { apiFetch } from "./api-client";
 
+export type OpenOfferRequestImageSummary = {
+  id: number;
+  thumbnailUrl: string;
+  width: number;
+  height: number;
+};
+
+export type OpenOfferRequestImage = OpenOfferRequestImageSummary & {
+  url: string;
+  isPrimary: boolean;
+};
+
 export type OpenOfferRequestFilters = {
   carrierRouteId?: number;
   baslangicSehir?: string;
@@ -42,6 +54,8 @@ export type OpenOfferRequestListItem = {
   durum: string;
   alreadyOffered: boolean;
   rotaUyumu: OpenOfferRequestRouteCompatibility | null;
+  primaryImage?: OpenOfferRequestImageSummary;
+  imageCount?: number;
 };
 
 export type OpenOfferRequestDetail = OpenOfferRequestListItem & {
@@ -55,6 +69,8 @@ export type OpenOfferRequestDetail = OpenOfferRequestListItem & {
   normalizeVarisIlce: string | null;
   hasActiveVehicle: boolean;
   hasExistingOffer: boolean;
+  images?: OpenOfferRequestImage[];
+  primaryImageId?: number | null;
 };
 
 export type CreateOfferInput = {

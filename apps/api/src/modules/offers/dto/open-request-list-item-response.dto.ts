@@ -1,3 +1,4 @@
+import { RequestImageSummaryResponseDto } from "../../../common/dto/request-image-summary-response.dto";
 import { OpenRequestRouteCompatibilityResponseDto } from "./open-request-route-compatibility-response.dto";
 
 export class OpenRequestListItemResponseDto {
@@ -22,4 +23,6 @@ export class OpenRequestListItemResponseDto {
   durum!: string;
   alreadyOffered!: boolean;
   rotaUyumu!: OpenRequestRouteCompatibilityResponseDto | null;
+  primaryImage?: RequestImageSummaryResponseDto;
+  imageCount?: number;
 }

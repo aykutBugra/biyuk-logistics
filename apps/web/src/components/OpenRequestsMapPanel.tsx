@@ -6,6 +6,11 @@ import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CarrierRouteDetail } from "@/lib/api/carrier-routes";
 import type { OpenOfferRequestListItem } from "@/lib/api/offers";
+import {
+  formatLocationLabel,
+  formatRouteDistanceKm,
+  formatRouteDuration,
+} from "@/lib/logistics";
 
 type OpenRequestsMapPanelProps = {
   requests: OpenOfferRequestListItem[];
@@ -31,9 +36,7 @@ let googleMapsLoaderPromise: Promise<typeof google> | null = null;
 
 function loadGoogleMaps(): Promise<typeof google> {
   if (!GOOGLE_MAPS_BROWSER_API_KEY) {
-    return Promise.reject(
-      new Error("Maps JavaScript API key is not configured.")
-    );
+    return Promise.reject(new Error("Maps JavaScript API key is not configured."));
   }
 
   if (!googleMapsLoaderPromise) {
@@ -116,6 +119,16 @@ export default function OpenRequestsMapPanel({
     [requests, selectedRequestId]
   );
 
+  const renderableRequestCount = useMemo(
+    () =>
+      requests.filter(
+        (request) =>
+          hasValidCoordinate(request.baslangicEnlem, request.baslangicBoylam) &&
+          hasValidCoordinate(request.varisEnlem, request.varisBoylam)
+      ).length,
+    [requests]
+  );
+
   useEffect(() => {
     let isMounted = true;
 
@@ -151,7 +164,7 @@ export default function OpenRequestsMapPanel({
         }
 
         setLoadErrorMessage(
-          "Harita şu anda yüklenemiyor. Listeyi kullanmaya devam edebilirsin."
+          "Harita su anda yuklenemiyor. Listeyi kullanmaya devam edebilirsin."
         );
       }
     };
@@ -364,7 +377,7 @@ export default function OpenRequestsMapPanel({
         }
 
         setLoadErrorMessage(
-          "Harita şu anda yüklenemiyor. Listeyi kullanmaya devam edebilirsin."
+          "Harita su anda yuklenemiyor. Listeyi kullanmaya devam edebilirsin."
         );
       }
     };
@@ -417,7 +430,7 @@ export default function OpenRequestsMapPanel({
         }
 
         setLoadErrorMessage(
-          "Harita ÅŸu anda yÃ¼klenemiyor. Listeyi kullanmaya devam edebilirsin."
+          "Harita su anda yuklenemiyor. Listeyi kullanmaya devam edebilirsin."
         );
       }
     };
@@ -430,7 +443,7 @@ export default function OpenRequestsMapPanel({
   }, [isMapReady, isVisible, requests, selectedCarrierRoute, selectedRequestId]);
 
   const hasRenderableContent =
-    requests.length > 0 ||
+    renderableRequestCount > 0 ||
     (selectedCarrierRoute &&
       hasValidCoordinate(
         selectedCarrierRoute.baslangicEnlem,
@@ -440,38 +453,80 @@ export default function OpenRequestsMapPanel({
         selectedCarrierRoute.varisEnlem,
         selectedCarrierRoute.varisBoylam
       ));
+
   const mapFallbackMessage = IS_GOOGLE_MAPS_BROWSER_KEY_MISSING
-    ? "Harita anahtarı tanımlı değil. Listeyi kullanmaya devam edebilirsin."
+    ? "Harita anahtari tanimli degil. Sonuclari liste uzerinden inceleyebilirsin."
     : loadErrorMessage;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="app-surface rounded-[1.15rem] border border-slate-200 p-4">
       {!hideHeader ? (
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-0.5">
-            <h2 className="text-sm font-black tracking-tight text-slate-950">
-              Harita görünümü
-            </h2>
-            <p className="text-xs text-slate-500">
-              Alış ve teslim noktaları listelenen isteklere göre güncellenir.
-            </p>
+        <div className="flex flex-col gap-2.5 border-b border-slate-200 pb-3">
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Harita paneli
+              </p>
+              <h2 className="text-base font-black tracking-tight text-slate-950 md:text-lg">
+                Rota ve aktif talepler
+              </h2>
+              <p className="text-sm leading-5 text-slate-600">
+                Secili talepler haritada birlikte gorunur.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
+              <span className="rounded-full bg-emerald-50 px-2.5 py-1 ring-1 ring-emerald-100">
+                Alis
+              </span>
+              <span className="rounded-full bg-orange-50 px-2.5 py-1 ring-1 ring-orange-100">
+                Teslim
+              </span>
+              {selectedCarrierRoute ? (
+                <>
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 ring-1 ring-blue-100">
+                    Rota baslangici
+                  </span>
+                  <span className="rounded-full bg-indigo-50 px-2.5 py-1 ring-1 ring-indigo-100">
+                    Rota varisi
+                  </span>
+                </>
+              ) : null}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1.5 text-xs font-semibold text-slate-700">
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700 ring-1 ring-emerald-100">
-              Alış
-            </span>
-            <span className="rounded-full bg-orange-50 px-2 py-0.5 text-orange-700 ring-1 ring-orange-100">
-              Teslim
-            </span>
-            {selectedCarrierRoute ? (
-              <>
-                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700 ring-1 ring-blue-100">
-                  Rota başlangıcı
+
+          <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
+              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                {renderableRequestCount} harita kaydi
+              </span>
+              {selectedCarrierRoute ? (
+                <>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {selectedCarrierRoute.baslangicSehri} - {selectedCarrierRoute.varisSehri}
+                  </span>
+                  {selectedCarrierRoute.rotaMesafeMetre !== null ? (
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                      {formatRouteDistanceKm(selectedCarrierRoute.rotaMesafeMetre)}
+                    </span>
+                  ) : null}
+                  {selectedCarrierRoute.rotaSureSaniye !== null ? (
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                      {formatRouteDuration(selectedCarrierRoute.rotaSureSaniye)}
+                    </span>
+                  ) : null}
+                </>
+              ) : (
+                <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                  Rota secimi olmadan genel dagilim
                 </span>
-                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-700 ring-1 ring-indigo-100">
-                  Rota varışı
-                </span>
-              </>
+              )}
+            </div>
+
+            {selectedRequest ? (
+              <p className="text-sm font-medium text-slate-600">
+                Secili istek: #{selectedRequest.id}
+              </p>
             ) : null}
           </div>
         </div>
@@ -479,7 +534,7 @@ export default function OpenRequestsMapPanel({
 
       {mapFallbackMessage ? (
         <div
-          className={`${hideHeader ? "" : "mt-3 "}rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800`}
+          className={`${hideHeader ? "" : "mt-3 "}rounded-[0.95rem] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800`}
         >
           {mapFallbackMessage}
         </div>
@@ -487,18 +542,18 @@ export default function OpenRequestsMapPanel({
 
       {!mapFallbackMessage && !hasRenderableContent ? (
         <div
-          className={`${hideHeader ? "" : "mt-3 "}rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500`}
+          className={`${hideHeader ? "" : "mt-3 "}rounded-[0.95rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-7 text-center text-sm text-slate-500`}
         >
-          Haritada gösterilecek açık istek yok.
+          Haritada gosterilecek uygun koordinatli istek bulunmuyor.
         </div>
       ) : null}
 
       {!mapFallbackMessage && hasRenderableContent ? (
         <div
           ref={mapElementRef}
-          className={`${hideHeader ? "" : "mt-3 "}h-[340px] rounded-xl border border-slate-200 bg-slate-100 md:h-[420px] xl:h-[520px]`}
+          className={`${hideHeader ? "" : "mt-3 "}h-[300px] rounded-[0.95rem] border border-slate-200 bg-slate-100 md:h-[340px] xl:h-[360px]`}
         />
       ) : null}
-    </div>
+    </section>
   );
 }

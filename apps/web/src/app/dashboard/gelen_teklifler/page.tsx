@@ -16,10 +16,14 @@ import {
 } from "@/lib/api/offers";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCustomerPageAccess } from "@/lib/auth/use-customer-page-access";
+import { useConfirm } from "@/lib/confirm/confirm-context";
+import { useToast } from "@/lib/toast/toast-context";
 
 export default function MyIncomingOffersPage() {
   const router = useRouter();
   const { accessToken, status } = useCustomerPageAccess();
+  const confirm = useConfirm();
+  const showToast = useToast();
   const [offers, setOffers] = useState<MyIncomingOfferItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -97,7 +101,18 @@ export default function MyIncomingOffersPage() {
         ? "Bu teklifi kabul etmek istedigine emin misin?"
         : "Bu teklifi reddetmek istedigine emin misin?";
 
-    if (!window.confirm(confirmMessage)) {
+    const isConfirmed = await confirm({
+      title:
+        action === "accept" ? "Teklifi kabul et" : "Teklifi reddet",
+      message: confirmMessage,
+      tone: action === "reject" ? "danger" : "default",
+      confirmLabel: action === "accept" ? "Kabul Et" : "Reddet",
+      cancelLabel: "Vazgec",
+      defaultFocus: action === "reject" ? "reject" : "accept",
+      dismissableMask: action !== "reject",
+    });
+
+    if (!isConfirmed) {
       return;
     }
 
@@ -106,38 +121,69 @@ export default function MyIncomingOffersPage() {
 
       if (action === "accept") {
         await acceptOffer(offer.id, accessToken);
-        window.alert("Teklif kabul edildi ve nakliye olusturuldu.");
+        showToast({
+          severity: "success",
+          summary: "Teklif kabul edildi",
+          detail: "Nakliye kaydi olusturuldu.",
+        });
       } else {
         await rejectOffer(offer.id, accessToken);
-        window.alert("Teklif reddedildi.");
+        showToast({
+          severity: "info",
+          summary: "Teklif reddedildi",
+          detail: "Teklif durumu guncellendi.",
+        });
       }
 
       setReloadKey((currentKey) => currentKey + 1);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
-        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        showToast({
+          severity: "error",
+          summary: "Oturum sona erdi",
+          detail: "Lutfen yeniden giris yapin.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/login");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 403) {
-        window.alert("Bu islem icin yetkin yok.");
+        showToast({
+          severity: "error",
+          summary: "Yetki yok",
+          detail: "Bu islem icin yetkin yok.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-        window.alert("Bu teklif artik bulunamiyor.");
+        showToast({
+          severity: "warn",
+          summary: "Teklif bulunamadi",
+          detail: "Liste guncellenecek.",
+          life: 3200,
+          closable: true,
+        });
         setReloadKey((currentKey) => currentKey + 1);
         return;
       }
 
-      window.alert(
-        error instanceof ApiClientError
-          ? error.message
-          : "Teklif karari verilirken beklenmeyen bir hata olustu."
-      );
+      showToast({
+        severity: "error",
+        summary: "Teklif guncellenemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Teklif karari verilirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
       setReloadKey((currentKey) => currentKey + 1);
     } finally {
       setActingOfferId(null);
@@ -160,43 +206,55 @@ export default function MyIncomingOffersPage() {
     <CustomerTransportRequestsShell
       title="Gelen Teklifler"
       description="Nakliyecilerden gelen teklifleri incele ve karar ver."
+      headerVariant="compact"
+      motionPreset="operational"
+      cardMotionLimit={6}
       headerActions={<InlineHelpTrigger helpKey="incoming-offers" />}
     >
       {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
+        <div
+          data-dashboard-primary
+          className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700"
+        >
           {errorMessage}
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && offers.length === 0 ? (
-        <EmptyStateCard
-          title="Bekleyen teklif yok"
-          description="Nakliyecilerden teklif geldiginde burada goreceksin. Teklif almak icin once tasima istegi olusturmani gerekiyor."
-          actionHref="/dashboard/isteklerim"
-          actionLabel="Isteklerime git"
-        />
+        <div data-dashboard-primary>
+          <EmptyStateCard
+            title="Bekleyen teklif yok"
+            description="Nakliyecilerden teklif geldiginde burada goreceksin. Teklif almak icin once tasima istegi olusturmani gerekiyor."
+            actionHref="/dashboard/isteklerim"
+            actionLabel="Isteklerime git"
+          />
+        </div>
       ) : null}
 
       {!isLoading && !errorMessage && offers.length > 0 ? (
         <div className="grid gap-4">
           {pendingCount > 0 ? (
-            <p className="text-sm font-medium text-slate-500">
-              {pendingCount} teklif karar bekleniyor.
-            </p>
+            <div data-dashboard-stats>
+              <p className="text-sm font-medium text-slate-500">
+                {pendingCount} teklif karar bekleniyor.
+              </p>
+            </div>
           ) : null}
 
-          {offers.map((offer) => (
-            <IncomingOfferCard
-              key={offer.id}
-              offer={offer}
-              isProcessingThis={actingOfferId === offer.id}
-              isAnyProcessing={actingOfferId !== null}
-              onAccept={(o) => void handleOfferDecision(o, "accept")}
-              onReject={(o) => void handleOfferDecision(o, "reject")}
-            />
-          ))}
+          <div data-dashboard-primary className="grid gap-4">
+            {offers.map((offer) => (
+              <IncomingOfferCard
+                key={offer.id}
+                offer={offer}
+                isProcessingThis={actingOfferId === offer.id}
+                isAnyProcessing={actingOfferId !== null}
+                onAccept={(o) => void handleOfferDecision(o, "accept")}
+                onReject={(o) => void handleOfferDecision(o, "reject")}
+              />
+            ))}
+          </div>
         </div>
       ) : null}
     </CustomerTransportRequestsShell>

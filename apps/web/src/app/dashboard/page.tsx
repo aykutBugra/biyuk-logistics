@@ -294,33 +294,6 @@ export default function DashboardLandingPage() {
                       density="tight"
                     />
                   </div>
-
-                  {!hasCarrierRole ? (
-                    <div className="rounded-[1.45rem] border border-amber-200 bg-amber-50/70 p-4">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="space-y-1">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
-                            Hesabı genişlet
-                          </p>
-                          <h3 className="text-base font-black tracking-tight text-slate-950 md:text-lg">
-                            Aynı hesapta nakliyeci tarafını da açabilirsin
-                          </h3>
-                          <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                            İkinci hesap açmadan ilk aracını tanımla, keşif ve teklif tarafına geç.
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 flex-wrap gap-3">
-                          <InlineHelpTrigger helpKey="add-carrier-role" />
-                          <Link
-                            href="/dashboard/profil/nakliyeci-rolu-ekle"
-                            className="inline-flex items-center justify-center rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-600"
-                          >
-                            Nakliyeci rolünü ekle
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
                 </DashboardHomeSection>
               ) : null}
 

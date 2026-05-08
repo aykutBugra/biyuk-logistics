@@ -23,6 +23,7 @@
 /build
 /apps/api/dist
 /apps/api/coverage
+/apps/api/uploads
 
 # misc
 .DS_Store

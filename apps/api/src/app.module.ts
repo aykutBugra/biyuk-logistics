@@ -6,7 +6,9 @@ import appConfig from "./config/app.config";
 import authConfig from "./config/auth.config";
 import { getEnvFilePaths } from "./config/env";
 import mapsConfig from "./config/maps.config";
+import mediaConfig from "./config/media.config";
 import { PrismaModule } from "./infrastructure/prisma/prisma.module";
+import { MediaModule } from "./infrastructure/media/media.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { CarrierRoutesModule } from "./modules/carrier-routes/carrier-routes.module";
 import { JobsModule } from "./modules/jobs/jobs.module";
@@ -26,10 +28,11 @@ import { VehiclesModule } from "./modules/vehicles/vehicles.module";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, authConfig, mapsConfig, aiConfig],
+      load: [appConfig, authConfig, mapsConfig, aiConfig, mediaConfig],
       envFilePath: getEnvFilePaths(),
     }),
     PrismaModule,
+    MediaModule,
     RolesModule,
     UsersModule,
     AuthModule,

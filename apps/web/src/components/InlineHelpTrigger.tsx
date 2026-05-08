@@ -1,22 +1,32 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   DASHBOARD_HELP_CONTENT,
   type DashboardHelpKey,
 } from "@/lib/dashboard/help-content";
+import { gsap } from "@/lib/motion/gsap-client";
+import {
+  MOTION_DISTANCES,
+  MOTION_DURATIONS,
+  MOTION_EASES,
+} from "@/lib/motion/motion-tokens";
+import { useReducedMotion } from "@/lib/motion/useReducedMotion";
 
 type InlineHelpTriggerProps = {
   helpKey: DashboardHelpKey;
   buttonLabel?: string;
 };
 
+type HelpPanelPlacement = "above" | "below";
+
 type HelpPanelStyle = {
   top: number;
   left: number;
   width: number;
   ready: boolean;
+  placement: HelpPanelPlacement;
 };
 
 const DEFAULT_PANEL_STYLE: HelpPanelStyle = {
@@ -24,22 +34,28 @@ const DEFAULT_PANEL_STYLE: HelpPanelStyle = {
   left: 0,
   width: 352,
   ready: false,
+  placement: "below",
 };
 
 export default function InlineHelpTrigger({
   helpKey,
-  buttonLabel = "Yardım",
+  buttonLabel = "Yardim",
 }: InlineHelpTriggerProps) {
+  const reducedMotion = useReducedMotion();
+  const panelId = useId();
+  const panelTitleId = useId();
   const [isOpen, setIsOpen] = useState(false);
+  const [isPresent, setIsPresent] = useState(false);
   const [panelStyle, setPanelStyle] = useState<HelpPanelStyle>(
     DEFAULT_PANEL_STYLE
   );
   const containerRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const hasAnimatedOpenRef = useRef(false);
   const content = DASHBOARD_HELP_CONTENT[helpKey];
 
-  const updatePanelPosition = () => {
+  const updatePanelPosition = useCallback(() => {
     if (!buttonRef.current) {
       return;
     }
@@ -70,8 +86,44 @@ export default function InlineHelpTrigger({
       left: nextLeft,
       width: nextWidth,
       ready: true,
+      placement: shouldOpenAbove ? "above" : "below",
     });
-  };
+  }, []);
+
+  const closePanel = useCallback(() => {
+    if (!isPresent) {
+      return;
+    }
+
+    setIsOpen(false);
+    hasAnimatedOpenRef.current = false;
+
+    const panel = panelRef.current;
+
+    if (reducedMotion || !panel) {
+      setIsPresent(false);
+      setPanelStyle(DEFAULT_PANEL_STYLE);
+      return;
+    }
+
+    const exitY =
+      panelStyle.placement === "above"
+        ? -(MOTION_DISTANCES.overlayRevealY / 2)
+        : MOTION_DISTANCES.overlayRevealY / 2;
+
+    gsap.killTweensOf(panel);
+    gsap.to(panel, {
+      autoAlpha: 0,
+      y: exitY,
+      duration: MOTION_DURATIONS.overlayExit,
+      ease: MOTION_EASES.standard,
+      overwrite: "auto",
+      onComplete: () => {
+        setIsPresent(false);
+        setPanelStyle(DEFAULT_PANEL_STYLE);
+      },
+    });
+  }, [isPresent, panelStyle.placement, reducedMotion]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -85,13 +137,13 @@ export default function InlineHelpTrigger({
         !containerRef.current?.contains(targetNode) &&
         !panelRef.current?.contains(targetNode)
       ) {
-        setIsOpen(false);
+        closePanel();
       }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setIsOpen(false);
+        closePanel();
       }
     };
 
@@ -102,10 +154,10 @@ export default function InlineHelpTrigger({
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen]);
+  }, [closePanel, isOpen]);
 
   useLayoutEffect(() => {
-    if (!isOpen) {
+    if (!isPresent || !isOpen) {
       return;
     }
 
@@ -122,7 +174,57 @@ export default function InlineHelpTrigger({
       window.removeEventListener("resize", handleViewportChange);
       document.removeEventListener("scroll", handleViewportChange, true);
     };
-  }, [isOpen]);
+  }, [isOpen, isPresent, updatePanelPosition]);
+
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+
+    if (!panel || !isPresent || !isOpen || !panelStyle.ready) {
+      return;
+    }
+
+    if (hasAnimatedOpenRef.current) {
+      return;
+    }
+
+    hasAnimatedOpenRef.current = true;
+
+    if (reducedMotion) {
+      gsap.set(panel, {
+        autoAlpha: 1,
+        y: 0,
+      });
+      return;
+    }
+
+    const entryY =
+      panelStyle.placement === "above"
+        ? -MOTION_DISTANCES.overlayRevealY
+        : MOTION_DISTANCES.overlayRevealY;
+
+    gsap.killTweensOf(panel);
+    gsap.set(panel, {
+      autoAlpha: 0,
+      y: entryY,
+    });
+    gsap.to(panel, {
+      autoAlpha: 1,
+      y: 0,
+      duration: MOTION_DURATIONS.overlayEnter,
+      ease: MOTION_EASES.standard,
+      overwrite: "auto",
+    });
+  }, [isOpen, isPresent, panelStyle.placement, panelStyle.ready, reducedMotion]);
+
+  useEffect(() => {
+    const panel = panelRef.current;
+
+    return () => {
+      if (panel) {
+        gsap.killTweensOf(panel);
+      }
+    };
+  }, [isPresent]);
 
   return (
     <div ref={containerRef} className="relative inline-flex">
@@ -130,27 +232,50 @@ export default function InlineHelpTrigger({
         ref={buttonRef}
         type="button"
         onClick={() => {
-          if (!isOpen) {
-            setPanelStyle(DEFAULT_PANEL_STYLE);
+          if (isOpen) {
+            closePanel();
+            return;
           }
 
-          setIsOpen((currentState) => !currentState);
+          if (panelRef.current) {
+            gsap.killTweensOf(panelRef.current);
+          }
+
+          hasAnimatedOpenRef.current = false;
+          setPanelStyle(DEFAULT_PANEL_STYLE);
+          setIsPresent(true);
+          setIsOpen(true);
         }}
         aria-expanded={isOpen}
+        aria-controls={panelId}
         aria-label={buttonLabel}
-        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+        className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm transition ${
+          isOpen
+            ? "border-blue-200 bg-blue-50 text-blue-700"
+            : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+        }`}
       >
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-700">
+        <span
+          className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-black transition ${
+            isOpen
+              ? "bg-blue-100 text-blue-700"
+              : "bg-slate-100 text-slate-700"
+          }`}
+        >
           i
         </span>
         <span>{buttonLabel}</span>
       </button>
 
-      {isOpen
+      {isPresent
         ? createPortal(
             <div className="pointer-events-none fixed inset-0 z-[70]">
               <div
+                id={panelId}
                 ref={panelRef}
+                role="dialog"
+                aria-modal="false"
+                aria-labelledby={panelTitleId}
                 className="pointer-events-auto fixed rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-900/12"
                 style={{
                   top: `${panelStyle.top}px`,
@@ -160,9 +285,12 @@ export default function InlineHelpTrigger({
                 }}
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">
-                  Bu bölüm hakkında
+                  Bu bolum hakkinda
                 </p>
-                <h3 className="mt-2 text-lg font-black tracking-tight text-slate-950">
+                <h3
+                  id={panelTitleId}
+                  className="mt-2 text-lg font-black tracking-tight text-slate-950"
+                >
                   {content.title}
                 </h3>
                 <p className="mt-3 text-sm leading-6 text-slate-600">

@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import RatingComposerCard from "@/components/RatingComposerCard";
+import RequestImageGallery from "@/components/RequestImageGallery";
 import StatusBadge from "@/components/StatusBadge";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
@@ -22,12 +23,14 @@ import {
 } from "@/lib/api/transport-requests";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCustomerPageAccess } from "@/lib/auth/use-customer-page-access";
+import { useConfirm } from "@/lib/confirm/confirm-context";
 import {
   formatLocationLabel,
   formatVolumeM3,
   formatWeightKg,
   getCargoTypeLabel,
 } from "@/lib/logistics";
+import { useToast } from "@/lib/toast/toast-context";
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("tr-TR", {
@@ -115,6 +118,8 @@ function getJobStatusCopy(status: string): { title: string; description: string 
 export default function TransportRequestDetailPage() {
   const router = useRouter();
   const { accessToken, status } = useCustomerPageAccess();
+  const confirm = useConfirm();
+  const showToast = useToast();
   const params = useParams<{ id: string }>();
   const requestId = Number(params.id);
   const [request, setRequest] = useState<TransportRequestDetail | null>(null);
@@ -251,9 +256,15 @@ export default function TransportRequestDetailPage() {
       return;
     }
 
-    const isConfirmed = window.confirm(
-      "Bu tasima istegini silmek istedigine emin misin?"
-    );
+    const isConfirmed = await confirm({
+      title: "Tasima istegini sil",
+      message: "Bu tasima istegini silmek istedigine emin misin?",
+      tone: "danger",
+      confirmLabel: "Sil",
+      cancelLabel: "Vazgec",
+      defaultFocus: "reject",
+      dismissableMask: false,
+    });
 
     if (!isConfirmed) {
       return;
@@ -262,32 +273,60 @@ export default function TransportRequestDetailPage() {
     try {
       setIsDeleting(true);
       await deleteTransportRequest(request.id, accessToken);
+      showToast({
+        severity: "success",
+        summary: "Istek silindi",
+        detail: "Tasima istegi listeden kaldirildi.",
+      });
       router.replace("/dashboard/isteklerim");
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
-        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        showToast({
+          severity: "error",
+          summary: "Oturum sona erdi",
+          detail: "Lutfen yeniden giris yapin.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/login");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 403) {
-        window.alert("Bu islem icin yetkin yok.");
+        showToast({
+          severity: "error",
+          summary: "Yetki yok",
+          detail: "Bu islem icin yetkin yok.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-        window.alert("Bu istek bulunamadi.");
+        showToast({
+          severity: "warn",
+          summary: "Istek bulunamadi",
+          detail: "Listeye yonlendiriliyorsun.",
+          life: 3200,
+          closable: true,
+        });
         router.replace("/dashboard/isteklerim");
         return;
       }
 
-      window.alert(
-        error instanceof ApiClientError
-          ? error.message
-          : "Istek silinirken beklenmeyen bir hata olustu."
-      );
+      showToast({
+        severity: "error",
+        summary: "Istek silinemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Istek silinirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -303,7 +342,18 @@ export default function TransportRequestDetailPage() {
         ? "Bu teklifi kabul etmek istedigine emin misin?"
         : "Bu teklifi reddetmek istedigine emin misin?";
 
-    if (!window.confirm(confirmMessage)) {
+    const isConfirmed = await confirm({
+      title:
+        action === "accept" ? "Teklifi kabul et" : "Teklifi reddet",
+      message: confirmMessage,
+      tone: action === "reject" ? "danger" : "default",
+      confirmLabel: action === "accept" ? "Kabul Et" : "Reddet",
+      cancelLabel: "Vazgec",
+      defaultFocus: action === "reject" ? "reject" : "accept",
+      dismissableMask: action !== "reject",
+    });
+
+    if (!isConfirmed) {
       return;
     }
 
@@ -312,38 +362,69 @@ export default function TransportRequestDetailPage() {
 
       if (action === "accept") {
         await acceptOffer(offer.id, accessToken);
-        window.alert("Teklif kabul edildi ve nakliye olusturuldu.");
+        showToast({
+          severity: "success",
+          summary: "Teklif kabul edildi",
+          detail: "Nakliye kaydi olusturuldu.",
+        });
       } else {
         await rejectOffer(offer.id, accessToken);
-        window.alert("Teklif reddedildi.");
+        showToast({
+          severity: "info",
+          summary: "Teklif reddedildi",
+          detail: "Teklif durumu guncellendi.",
+        });
       }
 
       setReloadKey((currentKey) => currentKey + 1);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
-        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        showToast({
+          severity: "error",
+          summary: "Oturum sona erdi",
+          detail: "Lutfen yeniden giris yapin.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/login");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 403) {
-        window.alert("Bu islem icin yetkin yok.");
+        showToast({
+          severity: "error",
+          summary: "Yetki yok",
+          detail: "Bu islem icin yetkin yok.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-        window.alert("Bu teklif artik bulunamiyor.");
+        showToast({
+          severity: "warn",
+          summary: "Teklif bulunamadi",
+          detail: "Liste guncellenecek.",
+          life: 3200,
+          closable: true,
+        });
         setReloadKey((currentKey) => currentKey + 1);
         return;
       }
 
-      window.alert(
-        error instanceof ApiClientError
-          ? error.message
-          : "Teklif karari verilirken beklenmeyen bir hata olustu."
-      );
+      showToast({
+        severity: "error",
+        summary: "Teklif guncellenemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Teklif karari verilirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
       setReloadKey((currentKey) => currentKey + 1);
     } finally {
       setActingOfferId(null);
@@ -358,33 +439,60 @@ export default function TransportRequestDetailPage() {
     try {
       setIsSubmittingRating(true);
       await createRatingForJob(request.nakliye.id, input, accessToken);
-      window.alert("Puanin kaydedildi.");
+      showToast({
+        severity: "success",
+        summary: "Puan kaydedildi",
+        detail: "Degerlendirmen basariyla gonderildi.",
+      });
       setReloadKey((currentKey) => currentKey + 1);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
-        window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
+        showToast({
+          severity: "error",
+          summary: "Oturum sona erdi",
+          detail: "Lutfen yeniden giris yapin.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/login");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 403) {
-        window.alert("Bu islem icin yetkin yok.");
+        showToast({
+          severity: "error",
+          summary: "Yetki yok",
+          detail: "Bu islem icin yetkin yok.",
+          life: 3400,
+          closable: true,
+        });
         router.replace("/");
         return;
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-        window.alert("Bu nakliye artik bulunamiyor.");
+        showToast({
+          severity: "warn",
+          summary: "Nakliye bulunamadi",
+          detail: "Kayit guncellenecek.",
+          life: 3200,
+          closable: true,
+        });
         setReloadKey((currentKey) => currentKey + 1);
         return;
       }
 
-      window.alert(
-        error instanceof ApiClientError
-          ? error.message
-          : "Puan gonderilirken beklenmeyen bir hata olustu."
-      );
+      showToast({
+        severity: "error",
+        summary: "Puan gonderilemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Puan gonderilirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
       setReloadKey((currentKey) => currentKey + 1);
     } finally {
       setIsSubmittingRating(false);
@@ -491,6 +599,14 @@ export default function TransportRequestDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Photo gallery */}
+          {request.images && request.images.length > 0 ? (
+            <RequestImageGallery
+              images={request.images}
+              primaryImageId={request.primaryImageId}
+            />
+          ) : null}
 
           {/* Active shipment banner */}
           {request.nakliye ? (

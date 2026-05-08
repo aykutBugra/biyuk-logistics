@@ -8,6 +8,9 @@ type CustomerTransportRequestsShellProps = {
   description?: string;
   children: ReactNode;
   headerActions?: ReactNode;
+  headerVariant?: "default" | "compact";
+  motionPreset?: "default" | "operational" | "form";
+  cardMotionLimit?: number;
 };
 
 export default function CustomerTransportRequestsShell({
@@ -15,6 +18,9 @@ export default function CustomerTransportRequestsShell({
   description,
   children,
   headerActions,
+  headerVariant,
+  motionPreset,
+  cardMotionLimit,
 }: CustomerTransportRequestsShellProps) {
   return (
     <DashboardShell
@@ -22,6 +28,9 @@ export default function CustomerTransportRequestsShell({
       description={description}
       workspaceHint="customer"
       headerActions={headerActions}
+      headerVariant={headerVariant}
+      motionPreset={motionPreset}
+      cardMotionLimit={cardMotionLimit}
     >
       {children}
     </DashboardShell>

@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSurfaceReveal } from "@/lib/motion/useSurfaceReveal";
 import {
   STORED_ROLE_NAMES,
   getStoredAuth,
@@ -22,10 +24,10 @@ function ActionLink({ href, label, variant }: HomeAction) {
       href={href}
       className={
         variant === "primary"
-          ? "app-button-primary"
+          ? "app-button-primary app-pressable"
           : variant === "secondary"
-            ? "app-button-secondary"
-            : "app-button-ghost"
+            ? "app-button-secondary app-pressable"
+            : "app-button-ghost app-pressable"
       }
     >
       {label}
@@ -33,9 +35,41 @@ function ActionLink({ href, label, variant }: HomeAction) {
   );
 }
 
+function LaunchpadSurface({
+  eyebrow,
+  title,
+  description,
+  actions,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  actions: ReactNode;
+}) {
+  return (
+    <div className="app-surface rounded-[1.2rem] border border-slate-200 p-6">
+      <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">
+        {eyebrow}
+      </p>
+      <h2 className="mt-3 text-xl font-black tracking-tight text-slate-950 md:text-2xl">
+        {title}
+      </h2>
+      <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+      <div className="mt-5 flex flex-wrap gap-3">{actions}</div>
+    </div>
+  );
+}
+
 export default function HomeCustomerActions() {
   const [auth, setAuth] = useState<StoredAuth | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+
+  useSurfaceReveal(contentRef, {
+    disabled: !isReady,
+    rememberKey: "public-home-customer-actions",
+    delay: 0.04,
+  });
 
   useEffect(() => {
     const syncAuth = () => {
@@ -49,170 +83,115 @@ export default function HomeCustomerActions() {
   }, []);
 
   if (!isReady) {
-    return <div className="app-surface h-64 rounded-[2rem]" />;
+    return <div className="app-surface h-52 rounded-[1.25rem]" data-motion-skip />;
   }
 
   const isCarrier = storedAuthHasRole(auth, STORED_ROLE_NAMES.NAKLIYECI);
   const isCustomer = storedAuthHasRole(auth, STORED_ROLE_NAMES.MUSTERI);
   const hasDualBusinessRoles = isCarrier && isCustomer;
 
+  let content: ReactNode;
+
   if (!isCarrier && !isCustomer) {
-    return (
+    content = (
       <div className="grid gap-5 lg:grid-cols-2">
-        <div className="app-surface-strong rounded-[2rem] p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">
-            Musteri girisi
-          </p>
-          <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
-            Yuk gondermek istiyorum
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Tasima talebini olustur, gelen teklifleri karsilastir ve anlasilan
-            isi ayni panelden takip et.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <ActionLink href="/register" label="Hemen kayit ol" variant="primary" />
-            <ActionLink href="/login" label="Giris yap" variant="secondary" />
-          </div>
-        </div>
-
-        <div className="app-surface-strong rounded-[2rem] p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">
-            Nakliyeci girisi
-          </p>
-          <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
-            Tasima isi bulmak istiyorum
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Acik istekleri incele, araclarinla uygun teklifleri ver ve
-            anlasilan nakliyeleri operasyon akisi icinde yurut.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <ActionLink
-              href="/register"
-              label="Nakliyeci olarak kayit ol"
-              variant="primary"
-            />
-            <ActionLink href="/login" label="Giris yap" variant="secondary" />
-          </div>
-        </div>
+        <LaunchpadSurface
+          eyebrow="Musteri girisi"
+          title="Yuk gondermek istiyorum"
+          description="Tasima talebini olustur, teklifleri karsilastir ve anlasilan isi ayni panelden takip et."
+          actions={
+            <>
+              <ActionLink href="/register" label="Hemen kayit ol" variant="primary" />
+              <ActionLink href="/login" label="Giris yap" variant="secondary" />
+            </>
+          }
+        />
+        <LaunchpadSurface
+          eyebrow="Nakliyeci girisi"
+          title="Tasima isi bulmak istiyorum"
+          description="Acik istekleri incele, uygun teklifleri ver ve anlasilan nakliyeleri operasyon akisi icinde yurut."
+          actions={
+            <>
+              <ActionLink
+                href="/register"
+                label="Nakliyeci olarak kayit ol"
+                variant="primary"
+              />
+              <ActionLink href="/login" label="Giris yap" variant="secondary" />
+            </>
+          }
+        />
       </div>
     );
-  }
-
-  if (hasDualBusinessRoles) {
-    return (
+  } else if (hasDualBusinessRoles) {
+    content = (
       <div className="grid gap-5 lg:grid-cols-2">
-        <div className="app-surface-strong rounded-[2rem] p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-amber-700">
-            Musteri workspace
-          </p>
-          <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
-            Istek ve teklif tarafina gec
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Yonetmek istedigin baglami sec. Musteri modunda isteklerini ve gelen
-            tekliflerini one cikarirsin.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <ActionLink href="/dashboard" label="Workspace sec" variant="primary" />
-          </div>
-        </div>
-
-        <div className="app-surface-strong rounded-[2rem] p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-700">
-            Nakliyeci workspace
-          </p>
-          <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
-            Kesif ve operasyon tarafina gec
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Nakliyeci modunda acik istekler, rotalar, araclar ve nakliye
-            operasyonu one cikar.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <ActionLink href="/dashboard" label="Workspace sec" variant="secondary" />
-          </div>
-        </div>
+        <LaunchpadSurface
+          eyebrow="Musteri workspace"
+          title="Istek ve teklif tarafina gec"
+          description="Musteri modunda isteklerini, gelen teklifleri ve sonrasindaki karar akislarini one cikarirsin."
+          actions={<ActionLink href="/dashboard" label="Workspace sec" variant="primary" />}
+        />
+        <LaunchpadSurface
+          eyebrow="Nakliyeci workspace"
+          title="Kesif ve operasyon tarafina gec"
+          description="Nakliyeci modunda acik istekler, rotalar, araclar ve aktif operasyon tarafini one cikarirsin."
+          actions={<ActionLink href="/dashboard" label="Workspace sec" variant="secondary" />}
+        />
       </div>
     );
-  }
-
-  if (isCarrier) {
-    return (
-      <div className="app-surface-strong rounded-[2rem] p-6">
+  } else if (isCarrier) {
+    content = (
+      <div className="app-surface rounded-[1.2rem] border border-slate-200 p-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">
               Nakliyeci launchpad
             </p>
-            <h2 className="text-3xl font-black tracking-tight text-slate-950">
+            <h2 className="text-2xl font-black tracking-tight text-slate-950">
               Bugun ne yapmak istiyorsun?
             </h2>
             <p className="text-sm leading-6 text-slate-600">
-              Kesif akisindan acik istek bul, tekliflerini takip et ve
-              anlasilan nakliyeleri yonet. Arac ekleme bu panelde yardimci
-              onboarding aksiyonu olarak kalir.
+              Kesif akisindan acik istek bul, tekliflerini takip et ve anlasilan
+              nakliyeleri yonet. Arac ekleme yardimci onboarding aksiyonu olarak kalir.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <ActionLink
-              href="/dashboard/acik_istekler"
-              label="Acik Istekler"
-              variant="primary"
-            />
-            <ActionLink
-              href="/dashboard/tekliflerim"
-              label="Tekliflerim"
-              variant="secondary"
-            />
-            <ActionLink
-              href="/dashboard/nakliyelerim"
-              label="Nakliyelerim"
-              variant="secondary"
-            />
-            <ActionLink
-              href="/dashboard/araclarim"
-              label="Araclarim"
-              variant="secondary"
-            />
-            <ActionLink
-              href="/dashboard/arac_ekle"
-              label="Arac Ekle"
-              variant="secondary"
-            />
+            <ActionLink href="/dashboard/acik_istekler" label="Acik Istekler" variant="primary" />
+            <ActionLink href="/dashboard/tekliflerim" label="Tekliflerim" variant="secondary" />
+            <ActionLink href="/dashboard/nakliyelerim" label="Nakliyelerim" variant="secondary" />
+            <ActionLink href="/dashboard/araclarim" label="Araclarim" variant="secondary" />
+            <ActionLink href="/dashboard/arac_ekle" label="Arac Ekle" variant="secondary" />
+          </div>
+        </div>
+      </div>
+    );
+  } else {
+    content = (
+      <div className="app-surface rounded-[1.2rem] border border-slate-200 p-6">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-2xl space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">
+              Musteri launchpad
+            </p>
+            <h2 className="text-2xl font-black tracking-tight text-slate-950">
+              Tasima talebini hizli sekilde yonet
+            </h2>
+            <p className="text-sm leading-6 text-slate-600">
+              Yeni istek olustur, mevcut taleplerini gor ve anlasilan nakliye durumunu
+              talep detayindan takip et.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ActionLink href="/dashboard/istek_ekle" label="Istek Ekle" variant="primary" />
+            <ActionLink href="/dashboard/isteklerim" label="Isteklerim" variant="secondary" />
           </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="app-surface-strong rounded-[2rem] p-6">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-        <div className="max-w-2xl space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">
-            Musteri launchpad
-          </p>
-          <h2 className="text-3xl font-black tracking-tight text-slate-950">
-            Tasima talebini hizli sekilde yonet
-          </h2>
-          <p className="text-sm leading-6 text-slate-600">
-            Yeni istek olustur, mevcut taleplerini gor ve anlasilan nakliye
-            durumunu request detayi icinden takip et.
-          </p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <ActionLink href="/dashboard/istek_ekle" label="Istek Ekle" variant="primary" />
-          <ActionLink
-            href="/dashboard/isteklerim"
-            label="Isteklerim"
-            variant="secondary"
-          />
-        </div>
-      </div>
-    </div>
-  );
+  return <div ref={contentRef}>{content}</div>;
 }

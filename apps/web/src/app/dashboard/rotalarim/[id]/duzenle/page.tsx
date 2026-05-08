@@ -38,6 +38,8 @@ export default function EditCarrierRoutePage() {
   );
   const [varisKonum, setVarisKonum] = useState<SelectedLocation | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
+  const [locationValidationActive, setLocationValidationActive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -143,6 +145,7 @@ export default function EditCarrierRoutePage() {
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
+    setSubmitErrorMessage(null);
     setForm((currentForm) => ({
       ...currentForm,
       [name]: value,
@@ -162,10 +165,11 @@ export default function EditCarrierRoutePage() {
     }
 
     if (!baslangicKonum || !varisKonum) {
-      window.alert("Baslangic ve varis konumunu listeden secmelisin.");
+      setLocationValidationActive(true);
       return;
     }
 
+    setSubmitErrorMessage(null);
     setIsSubmitting(true);
 
     const payload: UpdateCarrierRouteInput = {
@@ -209,9 +213,9 @@ export default function EditCarrierRoutePage() {
       }
 
       if (error instanceof ApiClientError) {
-        window.alert(error.message);
+        setSubmitErrorMessage(error.message);
       } else {
-        window.alert("Rota guncellenirken beklenmeyen bir hata olustu.");
+        setSubmitErrorMessage("Rota guncellenirken beklenmeyen bir hata olustu.");
       }
     } finally {
       setIsSubmitting(false);
@@ -230,6 +234,8 @@ export default function EditCarrierRoutePage() {
     <CarrierVehiclesShell
       title="Rotayi duzenle"
       description="Mevcut rotanin bilgilerini guncelle. Degisiklikler kaydedildiginde detay sayfasina yonlendirileceksin."
+      headerVariant="compact"
+      motionPreset="form"
     >
       {isLoading ? <DashboardPageSkeleton /> : null}
 
@@ -243,28 +249,54 @@ export default function EditCarrierRoutePage() {
       {!isLoading && !errorMessage ? (
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+          data-dashboard-form-surface
+          className="app-form-surface app-surface-strong space-y-6"
         >
-          <div className="grid gap-4 md:grid-cols-2">
+          {submitErrorMessage ? (
+            <div data-dashboard-form-error className="app-form-error-banner" role="alert">
+              <p className="text-sm font-semibold">Degisiklikler kaydedilemedi</p>
+              <p className="mt-1 text-sm">{submitErrorMessage}</p>
+            </div>
+          ) : null}
+
+          <div data-dashboard-form-section className="grid gap-4 md:grid-cols-2">
             <LocationAutocompleteField
               label="Baslangic konumu"
               placeholder="Sefer baslangicini ara"
               accessToken={accessToken ?? ""}
               value={baslangicKonum}
-              onSelect={setBaslangicKonum}
+              onSelect={(value) => {
+                setBaslangicKonum(value);
+                setSubmitErrorMessage(null);
+              }}
               disabled={isSubmitting}
+              invalid={locationValidationActive && !baslangicKonum}
+              validationMessage={
+                locationValidationActive && !baslangicKonum
+                  ? "Listeden bir baslangic konumu sec."
+                  : null
+              }
             />
             <LocationAutocompleteField
               label="Varis konumu"
               placeholder="Sefer varisini ara"
               accessToken={accessToken ?? ""}
               value={varisKonum}
-              onSelect={setVarisKonum}
+              onSelect={(value) => {
+                setVarisKonum(value);
+                setSubmitErrorMessage(null);
+              }}
               disabled={isSubmitting}
+              invalid={locationValidationActive && !varisKonum}
+              validationMessage={
+                locationValidationActive && !varisKonum
+                  ? "Listeden bir varis konumu sec."
+                  : null
+              }
             />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div data-dashboard-form-section className="grid gap-4 md:grid-cols-2">
             <InputField
               name="planlananTarih"
               label="Planlanan tarih"
@@ -287,11 +319,14 @@ export default function EditCarrierRoutePage() {
             />
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            data-dashboard-form-submit
+            className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"
+          >
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="app-button-primary app-form-submit-button app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? "Rota guncelleniyor..." : "Degisiklikleri kaydet"}
             </button>

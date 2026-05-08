@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
+import { useOperationalCardMotion } from "@/lib/motion/useOperationalCardMotion";
 import type { OfferItem } from "@/lib/api/offers";
 
 type MyOfferCardProps = {
@@ -49,12 +52,17 @@ export default function MyOfferCard({ offer }: MyOfferCardProps) {
   const isResolved =
     offer.durum.trim().toUpperCase() === "REDDEDILDI" ||
     offer.durum.trim().toUpperCase() === "IPTAL_EDILDI";
+  const { elementRef, motionProps } =
+    useOperationalCardMotion<HTMLElement>();
 
   return (
     <article
+      ref={elementRef}
+      data-dashboard-card
+      {...motionProps}
       className={`rounded-2xl border bg-white shadow-sm transition-colors hover:border-blue-200 ${
         isResolved ? "border-slate-100 opacity-75" : "border-slate-200"
-      }`}
+      } will-change-transform`}
     >
       {/* Header row: status + IDs + price */}
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5">
@@ -112,13 +120,13 @@ export default function MyOfferCard({ offer }: MyOfferCardProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/dashboard/konusmalar/teklif/${offer.id}`}
-            className="inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+            className="app-pressable inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
           >
             Konusmaya git
           </Link>
           <Link
             href={`/dashboard/acik_istekler/${offer.requestId}`}
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            className="app-pressable inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
           >
             Istek Detayi
           </Link>

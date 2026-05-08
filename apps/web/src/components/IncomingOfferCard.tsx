@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
+import { useOperationalCardMotion } from "@/lib/motion/useOperationalCardMotion";
 import type { MyIncomingOfferItem } from "@/lib/api/offers";
 import {
   formatLocationLabel,
@@ -47,9 +50,16 @@ export default function IncomingOfferCard({
   onReject,
 }: IncomingOfferCardProps) {
   const canDecide = offer.durum.trim().toUpperCase() === "OLUSTURULDU";
+  const { elementRef, motionProps } =
+    useOperationalCardMotion<HTMLElement>();
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-blue-200">
+    <article
+      ref={elementRef}
+      data-dashboard-card
+      {...motionProps}
+      className="rounded-2xl border border-slate-200 bg-white shadow-sm transition-colors will-change-transform hover:border-blue-200"
+    >
       {/* Request context band */}
       <div className="border-b border-slate-100 px-5 py-4">
         <div className="mb-2 flex flex-wrap items-center gap-1.5">
@@ -135,7 +145,7 @@ export default function IncomingOfferCard({
                   type="button"
                   onClick={() => onAccept(offer)}
                   disabled={isAnyProcessing}
-                  className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="app-pressable inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isProcessingThis ? "Isleniyor..." : "Kabul Et"}
                 </button>
@@ -143,14 +153,14 @@ export default function IncomingOfferCard({
 
               <Link
                 href={`/dashboard/konusmalar/teklif/${offer.id}`}
-                className="inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+                className="app-pressable inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
               >
                 Konusmaya git
               </Link>
 
               <Link
                 href={`/dashboard/isteklerim/${offer.requestId}`}
-                className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                className="app-pressable inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
               >
                 Istek Detayi
               </Link>
@@ -160,7 +170,7 @@ export default function IncomingOfferCard({
                   type="button"
                   onClick={() => onReject(offer)}
                   disabled={isAnyProcessing}
-                  className="text-sm font-semibold text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="app-pressable text-sm font-semibold text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isProcessingThis ? "Isleniyor..." : "Reddet"}
                 </button>

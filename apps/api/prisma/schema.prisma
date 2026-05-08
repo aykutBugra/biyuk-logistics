@@ -186,6 +186,26 @@ model Istek {
   offerThreads              OfferThread[]
   nakliye                   Nakliye?
   capacityReservations      VehicleCapacityReservation[]
+  gorseller                 IstekGorsel[]
+}
+
+model IstekGorsel {
+  id                  Int      @id @default(autoincrement())
+  istekId             Int
+  istek               Istek    @relation(fields: [istekId], references: [id])
+  storageKey          String   @db.VarChar(500)
+  thumbnailStorageKey String   @db.VarChar(500)
+  mimeType            String   @db.VarChar(100)
+  sizeBytes           Int
+  width               Int
+  height              Int
+  sortOrder           Int
+  isPrimary           Boolean  @default(false)
+  originalFileName    String   @db.VarChar(255)
+  createdAt           DateTime @default(now())
+  silmeTarihi         DateTime?
+
+  @@index([istekId, silmeTarihi, sortOrder])
 }
 
 model Teklif {
