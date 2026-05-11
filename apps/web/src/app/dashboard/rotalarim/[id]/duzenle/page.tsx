@@ -19,12 +19,10 @@ import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
 
 type UpdateCarrierRouteForm = {
   planlananTarih: string;
-  maksimumSapmaKm: string;
 };
 
 const initialForm: UpdateCarrierRouteForm = {
   planlananTarih: "",
-  maksimumSapmaKm: "",
 };
 
 export default function EditCarrierRoutePage() {
@@ -71,10 +69,6 @@ export default function EditCarrierRoutePage() {
 
         setForm({
           planlananTarih: response.planlananTarih,
-          maksimumSapmaKm:
-            response.maksimumSapmaKm === null
-              ? ""
-              : String(response.maksimumSapmaKm),
         });
         setBaslangicKonum({
           provider: response.baslangicProvider ?? "",
@@ -184,9 +178,6 @@ export default function EditCarrierRoutePage() {
         sessionToken: varisKonum.sessionToken,
       },
       planlananTarih: form.planlananTarih,
-      maksimumSapmaKm: form.maksimumSapmaKm
-        ? Number(form.maksimumSapmaKm)
-        : undefined,
     };
 
     try {
@@ -233,7 +224,7 @@ export default function EditCarrierRoutePage() {
   return (
     <CarrierVehiclesShell
       title="Rotayi duzenle"
-      description="Mevcut rotanin bilgilerini guncelle. Degisiklikler kaydedildiginde detay sayfasina yonlendirileceksin."
+      description="Mevcut rotanin ana guzergah bilgisini guncelle. Sapma limiti artik Acik Istekler ekraninda secilir."
       headerVariant="compact"
       motionPreset="form"
     >
@@ -304,18 +295,6 @@ export default function EditCarrierRoutePage() {
               value={form.planlananTarih}
               onChange={handleChange}
               disabled={isSubmitting}
-            />
-            <InputField
-              name="maksimumSapmaKm"
-              label="Maksimum sapma (km)"
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.maksimumSapmaKm}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              required={false}
-              placeholder="Opsiyonel"
             />
           </div>
 

@@ -5,7 +5,6 @@ export type CreateCarrierRouteInput = {
   baslangicKonum: LocationSelectionInput;
   varisKonum: LocationSelectionInput;
   planlananTarih: string;
-  maksimumSapmaKm?: number;
 };
 
 export type UpdateCarrierRouteInput = CreateCarrierRouteInput;

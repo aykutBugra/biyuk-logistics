@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -95,6 +96,7 @@ export class OffersService {
     query: OpenRequestQueryDto
   ): Promise<OpenRequestListItemResponseDto[]> {
     this.assertCarrierRole(currentUser);
+    this.assertRouteFilterContext(query.carrierRouteId, query.maxSapmaKm);
 
     // Route filtresi yalnizca carrierRouteId secildiyse devreye girer; route secimi
     // yoksa ekran klasik discovery havuzu ile calisir.
@@ -131,7 +133,8 @@ export class OffersService {
       const routeEvaluations =
         await this.openRequestRouteAwareEvaluator.evaluateMany(
           selectedCarrierRoute,
-          requests
+          requests,
+          query.maxSapmaKm
         );
 
       if (this.hasUnavailableRouteService(routeEvaluations)) {
@@ -168,6 +171,7 @@ export class OffersService {
     // Detail ekraninda da ayni route filtresi zorlanir; secili route'a uymayan bir
     // request detay seviyesinde goruntulenemez.
     this.assertCarrierRole(currentUser);
+    this.assertRouteFilterContext(query.carrierRouteId, query.maxSapmaKm);
 
     const request = await this.offersRepository.findOpenRequestByIdForCarrier(
       requestId,
@@ -201,7 +205,8 @@ export class OffersService {
       // 503 veya compatibility nesnesi olarak yorumlanir.
       const routeEvaluation = await this.openRequestRouteAwareEvaluator.evaluateOne(
         selectedCarrierRoute,
-        request
+        request,
+        query.maxSapmaKm
       );
 
       switch (routeEvaluation.status) {
@@ -658,6 +663,17 @@ export class OffersService {
     }
 
     throw new ForbiddenException("Only customers can access incoming offers.");
+  }
+
+  private assertRouteFilterContext(
+    carrierRouteId: number | undefined,
+    maxSapmaKm: number | undefined
+  ) {
+    if (typeof maxSapmaKm === "number" && typeof carrierRouteId !== "number") {
+      throw new BadRequestException(
+        "maxSapmaKm can only be used when carrierRouteId is provided."
+      );
+    }
   }
 
   private toOpenRequestListItemResponse(

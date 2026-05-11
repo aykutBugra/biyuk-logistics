@@ -17,12 +17,10 @@ import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
 
 type CreateCarrierRouteForm = {
   planlananTarih: string;
-  maksimumSapmaKm: string;
 };
 
 const initialForm: CreateCarrierRouteForm = {
   planlananTarih: "",
-  maksimumSapmaKm: "",
 };
 
 export default function CreateCarrierRoutePage() {
@@ -74,9 +72,6 @@ export default function CreateCarrierRoutePage() {
         sessionToken: varisKonum.sessionToken,
       },
       planlananTarih: form.planlananTarih,
-      maksimumSapmaKm: form.maksimumSapmaKm
-        ? Number(form.maksimumSapmaKm)
-        : undefined,
     };
 
     try {
@@ -117,7 +112,7 @@ export default function CreateCarrierRoutePage() {
   return (
     <CarrierVehiclesShell
       title="Yeni rota tanimla"
-      description="Planladigin ana hatti kaydet. Bu adim mevcut discovery'yi degistirmez, sonraki route-aware faz icin veri uretir."
+      description="Planladigin ana hatti kaydet. Acik Istekler ekraninda bu rotayi secip sapma limitini ayrica belirleyeceksin."
       headerVariant="compact"
       motionPreset="form"
     >
@@ -179,27 +174,15 @@ export default function CreateCarrierRoutePage() {
             onChange={handleChange}
             disabled={isSubmitting}
           />
-          <InputField
-            name="maksimumSapmaKm"
-            label="Maksimum sapma (km)"
-            type="number"
-            min="0"
-            step="0.01"
-            value={form.maksimumSapmaKm}
-            onChange={handleChange}
-            disabled={isSubmitting}
-            required={false}
-            placeholder="Opsiyonel"
-          />
         </div>
 
         <div
           data-dashboard-form-section
           className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
         >
-          Sistem bu adimda sadece rota tanimini ve ana rota mesafe/sure snapshot'ini
-          saklar. Extra km, extra sure ve route-aware skor daha sonraki fazda
-          acilacak.
+          Sistem bu adimda rota tanimini ve ana rota mesafe-sure snapshot'ini
+          saklar. Sapma limiti Acik Istekler kesif ekraninda rota secildikten
+          sonra anlik filtre olarak belirlenir.
         </div>
 
         <div

@@ -133,7 +133,10 @@ export class CarrierRoutesService {
       {
         ...locationFields,
         planlananTarih: updateCarrierRouteDto.planlananTarih,
-        maksimumSapmaKm: updateCarrierRouteDto.maksimumSapmaKm ?? null,
+        maksimumSapmaKm:
+          updateCarrierRouteDto.maksimumSapmaKm === undefined
+            ? existingCarrierRoute.maksimumSapmaKm
+            : (updateCarrierRouteDto.maksimumSapmaKm ?? null),
       }
     );
 

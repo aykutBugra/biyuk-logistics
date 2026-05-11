@@ -44,6 +44,8 @@ import {
   hasActiveFilters,
 } from "@/lib/logistics";
 
+const DEFAULT_MAX_SAPMA_KM = 50;
+
 const initialFilters: CarrierDiscoveryFilterForm = {
   baslangicSehir: "",
   varisSehir: "",
@@ -71,17 +73,34 @@ function parsePositiveInteger(value: string | null): number | null {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+function parsePositiveNumber(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 function buildCarrierRouteSelectionPath(
   pathname: string,
   searchParams: ReadonlyURLSearchParams | null,
-  carrierRouteId: number | null
+  carrierRouteId: number | null,
+  maxSapmaKm: number | null
 ): string {
   const nextSearchParams = new URLSearchParams(searchParams?.toString() ?? "");
 
   if (carrierRouteId === null) {
     nextSearchParams.delete("carrierRouteId");
+    nextSearchParams.delete("maxSapmaKm");
   } else {
     nextSearchParams.set("carrierRouteId", String(carrierRouteId));
+
+    if (typeof maxSapmaKm === "number") {
+      nextSearchParams.set("maxSapmaKm", String(maxSapmaKm));
+    } else {
+      nextSearchParams.delete("maxSapmaKm");
+    }
   }
 
   const nextQuery = nextSearchParams.toString();
@@ -90,21 +109,35 @@ function buildCarrierRouteSelectionPath(
 
 function buildRequestDetailHref(
   requestId: number,
-  carrierRouteId: number | null
+  carrierRouteId: number | null,
+  maxSapmaKm: number | null
 ): string {
   if (carrierRouteId === null) {
     return `/dashboard/acik_istekler/${requestId}`;
   }
 
-  return `/dashboard/acik_istekler/${requestId}?carrierRouteId=${carrierRouteId}`;
+  const searchParams = new URLSearchParams({
+    carrierRouteId: String(carrierRouteId),
+  });
+
+  if (typeof maxSapmaKm === "number") {
+    searchParams.set("maxSapmaKm", String(maxSapmaKm));
+  }
+
+  return `/dashboard/acik_istekler/${requestId}?${searchParams.toString()}`;
 }
 
 function toApiFilters(
   values: CarrierDiscoveryFilterForm,
-  carrierRouteId: number | null
+  carrierRouteId: number | null,
+  maxSapmaKm: number | null
 ): OpenOfferRequestFilters {
   return {
     carrierRouteId: carrierRouteId ?? undefined,
+    maxSapmaKm:
+      carrierRouteId !== null && typeof maxSapmaKm === "number"
+        ? maxSapmaKm
+        : undefined,
     baslangicSehir: values.baslangicSehir.trim() || undefined,
     varisSehir: values.varisSehir.trim() || undefined,
     tekTasimaIstiyor:
@@ -127,15 +160,6 @@ function hasRenderableRequestCoordinates(request: OpenOfferRequestListItem): boo
     Number.isFinite(request.varisEnlem) &&
     Number.isFinite(request.varisBoylam)
   );
-}
-
-function buildRouteDeviationOptions(maxDeviationKm: number | null): number[] {
-  const fallback = maxDeviationKm !== null && maxDeviationKm > 0 ? maxDeviationKm : 20;
-  const normalized = Math.max(5, Math.round(fallback));
-  const baseOptions = [10, 25, 50, 100, 150].filter((value) => value < normalized);
-  const options = new Set<number>(baseOptions);
-  options.add(normalized);
-  return Array.from(options).sort((left, right) => left - right);
 }
 
 function getRouteCompatPriority(
@@ -216,6 +240,10 @@ function OpenTransportRequestsPageContent() {
   const selectedCarrierRouteId = parsePositiveInteger(
     searchParams?.get("carrierRouteId") ?? null
   );
+  const selectedMaxSapmaKm =
+    selectedCarrierRouteId !== null
+      ? parsePositiveNumber(searchParams?.get("maxSapmaKm") ?? null)
+      : null;
   const requestCardRefs = useRef(new Map<number, HTMLDivElement | null>());
   const [filters, setFilters] = useState<CarrierDiscoveryFilterForm>(initialFilters);
   const [appliedFilters, setAppliedFilters] =
@@ -233,9 +261,6 @@ function OpenTransportRequestsPageContent() {
   const [hasMountedMap, setHasMountedMap] = useState(false);
   const [hasLoadedRequestsOnce, setHasLoadedRequestsOnce] = useState(false);
   const [sortMode, setSortMode] = useState<DiscoverySortMode>("recommended");
-  const [routeDeviationRefinementKm, setRouteDeviationRefinementKm] = useState<number | null>(
-    null
-  );
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -246,6 +271,38 @@ function OpenTransportRequestsPageContent() {
     setIsMapVisible(shouldOpenMap);
     setHasMountedMap(shouldOpenMap);
   }, []);
+
+  useEffect(() => {
+    if (!searchParams) {
+      return;
+    }
+
+    if (selectedCarrierRouteId === null) {
+      if (searchParams.get("maxSapmaKm")) {
+        router.replace(
+          buildCarrierRouteSelectionPath(pathname, searchParams, null, null)
+        );
+      }
+      return;
+    }
+
+    if (selectedMaxSapmaKm === null) {
+      router.replace(
+        buildCarrierRouteSelectionPath(
+          pathname,
+          searchParams,
+          selectedCarrierRouteId,
+          DEFAULT_MAX_SAPMA_KM
+        )
+      );
+    }
+  }, [
+    pathname,
+    router,
+    searchParams,
+    selectedCarrierRouteId,
+    selectedMaxSapmaKm,
+  ]);
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
@@ -345,7 +402,7 @@ function OpenTransportRequestsPageContent() {
 
         if (error instanceof ApiClientError && error.status === 404) {
           router.replace(
-            buildCarrierRouteSelectionPath(pathname, searchParams, null)
+            buildCarrierRouteSelectionPath(pathname, searchParams, null, null)
           );
         }
       }
@@ -366,7 +423,10 @@ function OpenTransportRequestsPageContent() {
   ]);
 
   useEffect(() => {
-    if (status !== "ready" || !accessToken) {
+    const hasPendingRouteContext =
+      selectedCarrierRouteId !== null && selectedMaxSapmaKm === null;
+
+    if (status !== "ready" || !accessToken || hasPendingRouteContext) {
       if (status === "checking") {
         setIsRequestsLoading(true);
       }
@@ -382,7 +442,7 @@ function OpenTransportRequestsPageContent() {
 
         const response = await getOpenOfferRequests(
           accessToken,
-          toApiFilters(appliedFilters, selectedCarrierRouteId)
+          toApiFilters(appliedFilters, selectedCarrierRouteId, selectedMaxSapmaKm)
         );
 
         if (!isMounted) {
@@ -412,7 +472,18 @@ function OpenTransportRequestsPageContent() {
           selectedCarrierRouteId !== null
         ) {
           router.replace(
-            buildCarrierRouteSelectionPath(pathname, searchParams, null)
+            buildCarrierRouteSelectionPath(pathname, searchParams, null, null)
+          );
+          return;
+        }
+
+        if (
+          error instanceof ApiClientError &&
+          error.status === 400 &&
+          selectedCarrierRouteId === null
+        ) {
+          router.replace(
+            buildCarrierRouteSelectionPath(pathname, searchParams, null, null)
           );
           return;
         }
@@ -453,36 +524,17 @@ function OpenTransportRequestsPageContent() {
     router,
     searchParams,
     selectedCarrierRouteId,
+    selectedMaxSapmaKm,
     status,
   ]);
 
   const selectedCarrierRoute =
     routes.find((route) => route.id === selectedCarrierRouteId) ?? null;
   const hasRouteContext = selectedCarrierRouteId !== null;
-  const effectiveMaxSapmaKm =
-    hasRouteContext && selectedCarrierRoute
-      ? selectedCarrierRoute.maksimumSapmaKm ?? 20
-      : null;
-  const routeDeviationOptions =
-    hasRouteContext && selectedCarrierRoute
-      ? buildRouteDeviationOptions(effectiveMaxSapmaKm)
-      : [];
 
   const refinedRequests = useMemo(() => {
-    const routeRefinedRequests =
-      hasRouteContext && routeDeviationRefinementKm !== null
-        ? requests.filter((request) => {
-            const extraDistance = request.rotaUyumu?.extraMesafeMetre;
-            if (typeof extraDistance !== "number") {
-              return false;
-            }
-
-            return extraDistance / 1000 <= routeDeviationRefinementKm;
-          })
-        : requests;
-
-    return sortRequests(routeRefinedRequests, sortMode, hasRouteContext);
-  }, [hasRouteContext, requests, routeDeviationRefinementKm, sortMode]);
+    return sortRequests(requests, sortMode, hasRouteContext);
+  }, [hasRouteContext, requests, sortMode]);
 
   useEffect(() => {
     if (selectedRequestId === null) {
@@ -529,7 +581,6 @@ function OpenTransportRequestsPageContent() {
   const handleApplyFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSelectedRequestId(null);
-    setRouteDeviationRefinementKm(null);
     setAppliedFilters(filters);
   };
 
@@ -537,16 +588,43 @@ function OpenTransportRequestsPageContent() {
     setFilters(initialFilters);
     setAppliedFilters(initialFilters);
     setSelectedRequestId(null);
-    setRouteDeviationRefinementKm(null);
+    router.replace(
+      buildCarrierRouteSelectionPath(
+        pathname,
+        searchParams,
+        selectedCarrierRouteId,
+        selectedCarrierRouteId === null ? null : DEFAULT_MAX_SAPMA_KM
+      )
+    );
   };
 
   const handleCarrierRouteChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const nextCarrierRouteId = parsePositiveInteger(event.target.value);
     setSelectedRequestId(null);
-    setRouteDeviationRefinementKm(null);
 
     router.replace(
-      buildCarrierRouteSelectionPath(pathname, searchParams, nextCarrierRouteId)
+      buildCarrierRouteSelectionPath(
+        pathname,
+        searchParams,
+        nextCarrierRouteId,
+        nextCarrierRouteId === null ? null : DEFAULT_MAX_SAPMA_KM
+      )
+    );
+  };
+
+  const handleMaxSapmaKmChange = (value: number) => {
+    if (selectedCarrierRouteId === null) {
+      return;
+    }
+
+    setSelectedRequestId(null);
+    router.replace(
+      buildCarrierRouteSelectionPath(
+        pathname,
+        searchParams,
+        selectedCarrierRouteId,
+        value
+      )
     );
   };
 
@@ -607,8 +685,10 @@ function OpenTransportRequestsPageContent() {
         ? ""
         : appliedFilters.tekTasimaIstiyor,
   });
-  const activeRefinementLabel =
-    routeDeviationRefinementKm !== null ? `Ek sapma <= ${routeDeviationRefinementKm} km` : undefined;
+  const activeRouteFilterLabel =
+    hasRouteContext && selectedMaxSapmaKm !== null
+      ? `Maks. sapma ${selectedMaxSapmaKm} km`
+      : undefined;
   const isRefreshingRequests = isRequestsLoading && hasLoadedRequestsOnce;
 
   const summaryCards = hasRouteContext
@@ -680,9 +760,11 @@ function OpenTransportRequestsPageContent() {
           <span className="text-slate-950">
             {selectedCarrierRoute.baslangicSehri} - {selectedCarrierRoute.varisSehri}
           </span>
-          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">
-            Max {effectiveMaxSapmaKm ?? 20} km
-          </span>
+          {selectedMaxSapmaKm !== null ? (
+            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">
+              Maks. sapma {selectedMaxSapmaKm} km
+            </span>
+          ) : null}
         </div>
       ) : null}
       <InlineHelpTrigger helpKey="open-requests" />
@@ -722,9 +804,7 @@ function OpenTransportRequestsPageContent() {
             routeErrorMessage={routeErrorMessage}
             filters={filters}
             filtersActive={filtersActive}
-            effectiveMaxSapmaKm={effectiveMaxSapmaKm}
-            routeDeviationRefinementKm={routeDeviationRefinementKm}
-            routeDeviationOptions={routeDeviationOptions}
+            maxSapmaKm={selectedMaxSapmaKm}
             onFilterChange={handleFilterChange}
             onApplyFilters={handleApplyFilters}
             onResetFilters={handleResetFilters}
@@ -735,10 +815,7 @@ function OpenTransportRequestsPageContent() {
             onVarisSehirChange={(value) =>
               handleCityFilterChange("varisSehir", value)
             }
-            onRouteDeviationChange={(value) => {
-              setRouteDeviationRefinementKm(value);
-              setSelectedRequestId(null);
-            }}
+            onMaxSapmaChange={handleMaxSapmaKmChange}
           />
 
           <div data-dashboard-primary className="space-y-3">
@@ -747,6 +824,7 @@ function OpenTransportRequestsPageContent() {
                 <OpenRequestsMapPanel
                   requests={refinedRequests}
                   selectedCarrierRoute={selectedCarrierRouteDetail}
+                  maxSapmaKm={selectedMaxSapmaKm}
                   selectedRequestId={selectedRequestId}
                   onRequestSelect={handleRequestMarkerSelect}
                   isVisible={isMapVisible}
@@ -761,7 +839,7 @@ function OpenTransportRequestsPageContent() {
               isMapVisible={isMapVisible}
               onMapToggle={handleMapToggle}
               hasRouteContext={hasRouteContext}
-              activeRefinementLabel={activeRefinementLabel}
+              activeFilterLabel={activeRouteFilterLabel}
             />
 
             <div className={isRefreshingRequests ? "opacity-70 transition" : undefined}>
@@ -794,7 +872,8 @@ function OpenTransportRequestsPageContent() {
                       isSelected={request.id === selectedRequestId}
                       detailHref={buildRequestDetailHref(
                         request.id,
-                        selectedCarrierRouteId
+                        selectedCarrierRouteId,
+                        selectedMaxSapmaKm
                       )}
                       selectedCarrierRouteId={selectedCarrierRouteId}
                       onCardClick={handleRequestCardClick}

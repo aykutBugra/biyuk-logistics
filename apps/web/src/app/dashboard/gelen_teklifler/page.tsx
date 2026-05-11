@@ -1,8 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import CustomerMetricCard from "@/components/CustomerMetricCard";
+import CustomerSectionSurface from "@/components/CustomerSectionSurface";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
+import CustomerWorkspaceSignalPill from "@/components/CustomerWorkspaceSignalPill";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import EmptyStateCard from "@/components/EmptyStateCard";
 import IncomingOfferCard from "@/components/IncomingOfferCard";
@@ -18,6 +22,33 @@ import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCustomerPageAccess } from "@/lib/auth/use-customer-page-access";
 import { useConfirm } from "@/lib/confirm/confirm-context";
 import { useToast } from "@/lib/toast/toast-context";
+
+function normalizeStatus(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("tr-TR", {
+    style: "currency",
+    currency: "TRY",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function getStatusPriority(status: string): number {
+  switch (normalizeStatus(status)) {
+    case "OLUSTURULDU":
+      return 0;
+    case "KABUL_EDILDI":
+      return 1;
+    case "REDDEDILDI":
+      return 2;
+    case "IPTAL_EDILDI":
+      return 3;
+    default:
+      return 4;
+  }
+}
 
 export default function MyIncomingOffersPage() {
   const router = useRouter();
@@ -102,8 +133,7 @@ export default function MyIncomingOffersPage() {
         : "Bu teklifi reddetmek istedigine emin misin?";
 
     const isConfirmed = await confirm({
-      title:
-        action === "accept" ? "Teklifi kabul et" : "Teklifi reddet",
+      title: action === "accept" ? "Teklifi kabul et" : "Teklifi reddet",
       message: confirmMessage,
       tone: action === "reject" ? "danger" : "default",
       confirmLabel: action === "accept" ? "Kabul Et" : "Reddet",
@@ -198,14 +228,49 @@ export default function MyIncomingOffersPage() {
     );
   }
 
-  const pendingCount = offers.filter(
-    (o) => o.durum.trim().toUpperCase() === "OLUSTURULDU"
-  ).length;
+  const pendingOffers = offers.filter((offer) => normalizeStatus(offer.durum) === "OLUSTURULDU");
+  const acceptedOffers = offers.filter(
+    (offer) => normalizeStatus(offer.durum) === "KABUL_EDILDI"
+  );
+  const rejectedOffers = offers.filter(
+    (offer) => normalizeStatus(offer.durum) === "REDDEDILDI"
+  );
+  const bestPrice = offers.reduce(
+    (currentMin, offer) => Math.min(currentMin, offer.fiyat),
+    offers.length > 0 ? offers[0].fiyat : 0
+  );
+  const featuredPendingOffer =
+    [...pendingOffers].sort((left, right) => left.fiyat - right.fiyat || left.id - right.id)[0] ??
+    null;
+  const featuredOfferId = featuredPendingOffer?.id ?? null;
+  const sortedOffers = [...offers].sort((left, right) => {
+    if (left.id === featuredOfferId && right.id !== featuredOfferId) {
+      return -1;
+    }
+
+    if (right.id === featuredOfferId && left.id !== featuredOfferId) {
+      return 1;
+    }
+
+    const priorityDifference =
+      getStatusPriority(left.durum) - getStatusPriority(right.durum);
+
+    if (priorityDifference !== 0) {
+      return priorityDifference;
+    }
+
+    if (normalizeStatus(left.durum) === "OLUSTURULDU" && left.fiyat !== right.fiyat) {
+      return left.fiyat - right.fiyat;
+    }
+
+    return right.id - left.id;
+  });
 
   return (
     <CustomerTransportRequestsShell
       title="Gelen Teklifler"
-      description="Nakliyecilerden gelen teklifleri incele ve karar ver."
+      description="Nakliyecilerden gelen teklifleri inceleyin, karsilastirin ve en uygun karari verin."
+      pageEyebrow="Calisma alani"
       headerVariant="compact"
       motionPreset="operational"
       cardMotionLimit={6}
@@ -222,39 +287,85 @@ export default function MyIncomingOffersPage() {
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && offers.length === 0 ? (
-        <div data-dashboard-primary>
-          <EmptyStateCard
-            title="Bekleyen teklif yok"
-            description="Nakliyecilerden teklif geldiginde burada goreceksin. Teklif almak icin once tasima istegi olusturmani gerekiyor."
-            actionHref="/dashboard/isteklerim"
-            actionLabel="Isteklerime git"
+      {!isLoading && !errorMessage ? (
+        <div data-dashboard-stats className="grid gap-4 md:grid-cols-3">
+          <CustomerMetricCard
+            label="Karar Bekleyen"
+            value={pendingOffers.length}
+            hint="Teklifinizin yanitini bekleyen kayitlar"
+            tone="amber"
+            icon={<i className="pi pi-clock text-lg" />}
+          />
+          <CustomerMetricCard
+            label="Toplam Teklif"
+            value={offers.length}
+            hint="Tum talepleriniz icin gelen teklifler"
+            tone="emerald"
+            icon={<i className="pi pi-wallet text-lg" />}
+          />
+          <CustomerMetricCard
+            label="En Iyi Fiyat"
+            value={formatCurrency(bestPrice)}
+            hint="En dusuk gelen teklif"
+            tone="violet"
+            icon={<i className="pi pi-tag text-lg" />}
           />
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && offers.length > 0 ? (
-        <div className="grid gap-4">
-          {pendingCount > 0 ? (
-            <div data-dashboard-stats>
-              <p className="text-sm font-medium text-slate-500">
-                {pendingCount} teklif karar bekleniyor.
-              </p>
-            </div>
-          ) : null}
-
-          <div data-dashboard-primary className="grid gap-4">
-            {offers.map((offer) => (
-              <IncomingOfferCard
-                key={offer.id}
-                offer={offer}
-                isProcessingThis={actingOfferId === offer.id}
-                isAnyProcessing={actingOfferId !== null}
-                onAccept={(o) => void handleOfferDecision(o, "accept")}
-                onReject={(o) => void handleOfferDecision(o, "reject")}
+      {!isLoading && !errorMessage ? (
+        <div className="mt-6">
+          <CustomerSectionSurface
+            title="Tum teklifler"
+            count={offers.length}
+            description="Mevcut teklifleri talep baglami, tasima ozeti ve karar aksiyonlariyla birlikte goruntuleyin."
+            action={
+              offers.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  <CustomerWorkspaceSignalPill
+                    tone="amber"
+                    label={`${pendingOffers.length} bekleyen`}
+                  />
+                  <CustomerWorkspaceSignalPill
+                    tone="emerald"
+                    label={`${acceptedOffers.length} cevaplanan`}
+                  />
+                  <CustomerWorkspaceSignalPill
+                    tone="slate"
+                    label={`${rejectedOffers.length} reddedilen`}
+                  />
+                </div>
+              ) : (
+                <Link href="/dashboard/isteklerim" className="app-button-secondary">
+                  Isteklerime git
+                </Link>
+              )
+            }
+            contentClassName={offers.length > 0 ? "p-5 md:p-6" : "p-5 md:p-6"}
+          >
+            {offers.length === 0 ? (
+              <EmptyStateCard
+                title="Bekleyen teklif yok"
+                description="Nakliyecilerden teklif geldiginde burada goruntuleyeceksin. Teklif almak icin once tasima istegi olusturman gerekiyor."
+                actionHref="/dashboard/isteklerim"
+                actionLabel="Isteklerime git"
               />
-            ))}
-          </div>
+            ) : (
+              <div className="grid gap-4">
+                {sortedOffers.map((offer) => (
+                  <IncomingOfferCard
+                    key={offer.id}
+                    offer={offer}
+                    isFeatured={offer.id === featuredOfferId}
+                    isProcessingThis={actingOfferId === offer.id}
+                    isAnyProcessing={actingOfferId !== null}
+                    onAccept={(currentOffer) => void handleOfferDecision(currentOffer, "accept")}
+                    onReject={(currentOffer) => void handleOfferDecision(currentOffer, "reject")}
+                  />
+                ))}
+              </div>
+            )}
+          </CustomerSectionSurface>
         </div>
       ) : null}
     </CustomerTransportRequestsShell>

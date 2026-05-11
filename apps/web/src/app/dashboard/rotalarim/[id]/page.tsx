@@ -228,11 +228,6 @@ export default function CarrierRouteDetailPage() {
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                     {formatPlannedDate(route.planlananTarih)}
                   </span>
-                  {route.maksimumSapmaKm !== null ? (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                      Max sapma {route.maksimumSapmaKm.toFixed(1)} km
-                    </span>
-                  ) : null}
                 </div>
                 <h2 className="text-2xl font-black tracking-tight text-slate-950">
                   {formatLocationLabel(
@@ -267,7 +262,7 @@ export default function CarrierRouteDetailPage() {
           </div>
 
           {/* Metrics cards */}
-          <div className="grid gap-4 md:grid-cols-3 mb-6">
+          <div className="mb-6 grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <h3 className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                 Mesafe
@@ -282,16 +277,6 @@ export default function CarrierRouteDetailPage() {
               </h3>
               <p className="mt-3 text-2xl font-black tracking-tight text-slate-950">
                 {formatRouteDuration(route.rotaSureSaniye)}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                Max sapma
-              </h3>
-              <p className="mt-3 text-2xl font-black tracking-tight text-slate-950">
-                {route.maksimumSapmaKm === null
-                  ? "Belirtilmedi"
-                  : `${route.maksimumSapmaKm.toFixed(1)} km`}
               </p>
             </div>
           </div>

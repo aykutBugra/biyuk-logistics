@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import CustomerMetricCard from "@/components/CustomerMetricCard";
+import CustomerSectionSurface from "@/components/CustomerSectionSurface";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
+import DashboardActionCard from "@/components/DashboardActionCard";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import EmptyStateCard from "@/components/EmptyStateCard";
 import InlineHelpTrigger from "@/components/InlineHelpTrigger";
 import MyRequestCard from "@/components/MyRequestCard";
-import SummaryStatCard from "@/components/SummaryStatCard";
 import { ApiClientError } from "@/lib/api/api-client";
+import { getMyIncomingOffers, type MyIncomingOfferItem } from "@/lib/api/offers";
 import {
   deleteTransportRequest,
   getMyTransportRequests,
@@ -20,12 +23,35 @@ import { useCustomerPageAccess } from "@/lib/auth/use-customer-page-access";
 import { useConfirm } from "@/lib/confirm/confirm-context";
 import { useToast } from "@/lib/toast/toast-context";
 
+function normalizeStatus(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+function buildOfferCountMap(offers: MyIncomingOfferItem[]): Map<number, number> {
+  return offers.reduce((map, offer) => {
+    const currentCount = map.get(offer.requestId) ?? 0;
+    map.set(offer.requestId, currentCount + 1);
+    return map;
+  }, new Map<number, number>());
+}
+
+function buildPendingOfferRequestCount(offers: MyIncomingOfferItem[]): number {
+  const requestIds = new Set(
+    offers
+      .filter((offer) => normalizeStatus(offer.durum) === "OLUSTURULDU")
+      .map((offer) => offer.requestId)
+  );
+
+  return requestIds.size;
+}
+
 export default function MyTransportRequestsPage() {
   const router = useRouter();
   const { accessToken, status } = useCustomerPageAccess();
   const confirm = useConfirm();
   const showToast = useToast();
   const [requests, setRequests] = useState<TransportRequestListItem[]>([]);
+  const [incomingOffers, setIncomingOffers] = useState<MyIncomingOfferItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingRequestId, setDeletingRequestId] = useState<number | null>(null);
@@ -44,13 +70,45 @@ export default function MyTransportRequestsPage() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
-        const response = await getMyTransportRequests(accessToken);
+
+        const [requestsResult, offersResult] = await Promise.allSettled([
+          getMyTransportRequests(accessToken),
+          getMyIncomingOffers(accessToken),
+        ]);
 
         if (!isMounted) {
           return;
         }
 
-        setRequests(response);
+        if (requestsResult.status === "rejected") {
+          throw requestsResult.reason;
+        }
+
+        setRequests(requestsResult.value);
+
+        if (offersResult.status === "fulfilled") {
+          setIncomingOffers(offersResult.value);
+          return;
+        }
+
+        if (
+          offersResult.reason instanceof ApiClientError &&
+          offersResult.reason.status === 401
+        ) {
+          clearStoredAuth();
+          router.replace("/login");
+          return;
+        }
+
+        if (
+          offersResult.reason instanceof ApiClientError &&
+          offersResult.reason.status === 403
+        ) {
+          router.replace("/");
+          return;
+        }
+
+        setIncomingOffers([]);
       } catch (error) {
         if (!isMounted) {
           return;
@@ -113,6 +171,9 @@ export default function MyTransportRequestsPage() {
       setRequests((currentRequests) =>
         currentRequests.filter((request) => request.id !== requestId)
       );
+      setIncomingOffers((currentOffers) =>
+        currentOffers.filter((offer) => offer.requestId !== requestId)
+      );
       showToast({
         severity: "success",
         summary: "Istek silindi",
@@ -147,6 +208,9 @@ export default function MyTransportRequestsPage() {
       if (error instanceof ApiClientError && error.status === 404) {
         setRequests((currentRequests) =>
           currentRequests.filter((request) => request.id !== requestId)
+        );
+        setIncomingOffers((currentOffers) =>
+          currentOffers.filter((offer) => offer.requestId !== requestId)
         );
         showToast({
           severity: "warn",
@@ -191,16 +255,26 @@ export default function MyTransportRequestsPage() {
     );
   }
 
+  const offerCountMap = buildOfferCountMap(incomingOffers);
+  const sortedRequests = [...requests].sort(
+    (left, right) =>
+      new Date(right.olusturmaTarihi).getTime() - new Date(left.olusturmaTarihi).getTime()
+  );
+  const totalRequestCount = requests.length;
+  const openFlowCount = requests.filter(
+    (request) => normalizeStatus(request.durum) === "OLUSTURULDU"
+  ).length;
   const agreementCount = requests.filter((request) => {
-    const normalizedStatus = request.durum.trim().toUpperCase();
+    const normalizedStatus = normalizeStatus(request.durum);
     return normalizedStatus === "ANLASILDI" || normalizedStatus === "TAMAMLANDI";
   }).length;
-  const activeCount = requests.length - agreementCount;
+  const pendingOfferRequestCount = buildPendingOfferRequestCount(incomingOffers);
 
   return (
     <CustomerTransportRequestsShell
       title="Isteklerim"
-      description="Olusturdugun tasima taleplerini ve her birinin aktif akis durumunu buradan takip et."
+      description="Olusturdugunuz tasima taleplerini ve aktif akislarini buradan takip edebilirsiniz."
+      pageEyebrow="Calisma alani"
       headerVariant="compact"
       motionPreset="operational"
       cardMotionLimit={6}
@@ -209,7 +283,7 @@ export default function MyTransportRequestsPage() {
           <InlineHelpTrigger helpKey="my-requests" />
           <Link
             href="/dashboard/istek_ekle"
-            className="app-pressable inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            className="app-button-primary app-pressable inline-flex items-center gap-2"
           >
             <i className="pi pi-plus text-xs" />
             Yeni istek
@@ -228,35 +302,96 @@ export default function MyTransportRequestsPage() {
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && requests.length > 0 ? (
-        <div data-dashboard-stats className="mb-6 grid gap-4 md:grid-cols-3">
-          <SummaryStatCard label="Toplam istek" value={requests.length} density="compact" />
-          <SummaryStatCard label="Acik akista" value={activeCount} density="compact" />
-          <SummaryStatCard label="Anlasilan is" value={agreementCount} density="compact" />
-        </div>
-      ) : null}
-
-      {!isLoading && !errorMessage && requests.length === 0 ? (
-        <div data-dashboard-primary>
-          <EmptyStateCard
-            title="Henuz istek yok"
-            description="Ilk istegini olusturdugunda burada goreceksin."
-            actionHref="/dashboard/istek_ekle"
-            actionLabel="Ilk istegi olustur"
+      {!isLoading && !errorMessage ? (
+        <div data-dashboard-stats className="grid gap-4 md:grid-cols-3">
+          <CustomerMetricCard
+            label="Toplam istek"
+            value={totalRequestCount}
+            hint="Bugune kadar olusturdugun tum talepler"
+            tone="blue"
+            icon={<i className="pi pi-file text-lg" />}
+          />
+          <CustomerMetricCard
+            label="Acik akista"
+            value={openFlowCount}
+            hint="Teklif bekleyen aktif talepler"
+            tone="emerald"
+            icon={<i className="pi pi-refresh text-lg" />}
+          />
+          <CustomerMetricCard
+            label="Anlasilan is"
+            value={agreementCount}
+            hint="Sonuca ulasan tasima talepleri"
+            tone="amber"
+            icon={<i className="pi pi-check-circle text-lg" />}
           />
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && requests.length > 0 ? (
-        <div data-dashboard-primary className="grid gap-4">
-          {requests.map((request) => (
-            <MyRequestCard
-              key={request.id}
-              request={request}
-              isDeleting={deletingRequestId === request.id}
-              onDelete={() => void handleDelete(request.id)}
-            />
-          ))}
+      {!isLoading && !errorMessage ? (
+        <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <CustomerSectionSurface
+            title="Tum istekler"
+            count={totalRequestCount}
+            description="Taleplerini fotoğraf, durum ve teklif akisiyla birlikte tek listede izle."
+            action={
+              totalRequestCount > 0 ? (
+                <Link href="/dashboard/gelen_teklifler" className="app-button-secondary">
+                  Gelen teklifleri gor
+                </Link>
+              ) : null
+            }
+            contentClassName={totalRequestCount > 0 ? "p-0" : "p-5 md:p-6"}
+          >
+            {totalRequestCount === 0 ? (
+              <EmptyStateCard
+                title="Henuz istek yok"
+                description="Ilk istegini olusturdugunda burada durumunu, gelen teklifleri ve sonraki adimlari daha guclu bir ozetle goreceksin."
+                actionHref="/dashboard/istek_ekle"
+                actionLabel="Ilk istegi olustur"
+              />
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {sortedRequests.map((request) => (
+                  <div key={request.id} className="p-5 md:p-6">
+                    <MyRequestCard
+                      request={request}
+                      offerCount={offerCountMap.get(request.id) ?? 0}
+                      isDeleting={deletingRequestId === request.id}
+                      onDelete={() => void handleDelete(request.id)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </CustomerSectionSurface>
+
+          <div className="space-y-4">
+            <CustomerSectionSurface
+              title="Hizli islemler"
+              description="Mevcut musteri akislarini kisa yoldan ac."
+              contentClassName="p-4 md:p-5"
+            >
+              <div className="grid gap-3">
+                <DashboardActionCard
+                  href="/dashboard/istek_ekle"
+                  title="Yeni tasima talebi olustur"
+                  variant="quiet"
+                />
+                <DashboardActionCard
+                  href="/dashboard/gelen_teklifler"
+                  title="Teklif bekleyen talepler"
+                  meta={pendingOfferRequestCount > 0 ? String(pendingOfferRequestCount) : undefined}
+                  variant="quiet"
+                />
+                <DashboardActionCard
+                  href="/dashboard/konusmalar"
+                  title="Konusmalari ac"
+                  variant="quiet"
+                />
+              </div>
+            </CustomerSectionSurface>
+          </div>
         </div>
       ) : null}
     </CustomerTransportRequestsShell>

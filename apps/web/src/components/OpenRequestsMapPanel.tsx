@@ -15,6 +15,7 @@ import {
 type OpenRequestsMapPanelProps = {
   requests: OpenOfferRequestListItem[];
   selectedCarrierRoute: CarrierRouteDetail | null;
+  maxSapmaKm?: number | null;
   selectedRequestId: number | null;
   onRequestSelect: (requestId: number) => void;
   hideHeader?: boolean;
@@ -101,6 +102,7 @@ function fitMapToPoints(
 export default function OpenRequestsMapPanel({
   requests,
   selectedCarrierRoute,
+  maxSapmaKm = null,
   selectedRequestId,
   onRequestSelect,
   hideHeader = false,
@@ -505,6 +507,11 @@ export default function OpenRequestsMapPanel({
                   <span className="rounded-full bg-slate-100 px-2.5 py-1">
                     {selectedCarrierRoute.baslangicSehri} - {selectedCarrierRoute.varisSehri}
                   </span>
+                  {typeof maxSapmaKm === "number" ? (
+                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700 ring-1 ring-blue-100">
+                      Maks. sapma {maxSapmaKm} km
+                    </span>
+                  ) : null}
                   {selectedCarrierRoute.rotaMesafeMetre !== null ? (
                     <span className="rounded-full bg-slate-100 px-2.5 py-1">
                       {formatRouteDistanceKm(selectedCarrierRoute.rotaMesafeMetre)}

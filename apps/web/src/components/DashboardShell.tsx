@@ -49,11 +49,10 @@ function resolveSidebarVariant(
 
   const normalizedPathname = normalizePathname(pathname);
 
-  if (normalizedPathname === "/dashboard") {
-    return "default";
-  }
-
-  if (normalizedPathname.startsWith("/dashboard/")) {
+  if (
+    normalizedPathname === "/dashboard" ||
+    normalizedPathname.startsWith("/dashboard/")
+  ) {
     return "icon-rail";
   }
 

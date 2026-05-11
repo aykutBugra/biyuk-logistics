@@ -68,7 +68,8 @@ export class OpenRequestRouteAwareEvaluator {
   // tek tek degerlendirir ve sonucunu request id bazli bir map olarak toplar.
   async evaluateMany(
     carrierRoute: CarrierRouteDetailResponseDto,
-    requests: OpenRequestListItemRecord[]
+    requests: OpenRequestListItemRecord[],
+    maxSapmaKm?: number | null
   ): Promise<Map<number, OpenRequestRouteFilterEvaluation>> {
     const results = new Map<number, OpenRequestRouteFilterEvaluation>();
 
@@ -88,7 +89,10 @@ export class OpenRequestRouteAwareEvaluator {
           continue;
         }
 
-        results.set(request.id, await this.evaluateOne(carrierRoute, request));
+        results.set(
+          request.id,
+          await this.evaluateOne(carrierRoute, request, maxSapmaKm)
+        );
       }
     };
 
@@ -102,9 +106,11 @@ export class OpenRequestRouteAwareEvaluator {
   // Once ucuz bir kusbakisi alt sinir hesaplar, sonra gerekirse gercek rota cagrisi yapar.
   async evaluateOne(
     carrierRoute: CarrierRouteDetailResponseDto,
-    request: OpenRequestDetailRecord | OpenRequestListItemRecord
+    request: OpenRequestDetailRecord | OpenRequestListItemRecord,
+    maxSapmaKm?: number | null
   ): Promise<OpenRequestRouteFilterEvaluation> {
     const effectiveMaxSapmaKm = this.resolveEffectiveMaxSapmaKm(
+      maxSapmaKm,
       carrierRoute.maksimumSapmaKm
     );
 
@@ -271,9 +277,16 @@ export class OpenRequestRouteAwareEvaluator {
     return provider;
   }
 
-  // Route ustunde sapma limiti tanimliysa onu kullanir; yoksa discovery icin
-  // guvenli bir default sapma limiti uygular.
-  private resolveEffectiveMaxSapmaKm(maksimumSapmaKm: number | null): number {
+  // Query tarafinda acik bir sapma limiti geldiyse onu kullanir; aksi halde
+  // deprecated route alanina, sonra da legacy default limite dusulur.
+  private resolveEffectiveMaxSapmaKm(
+    maxSapmaKm: number | null | undefined,
+    maksimumSapmaKm: number | null
+  ): number {
+    if (typeof maxSapmaKm === "number" && Number.isFinite(maxSapmaKm)) {
+      return Math.max(0, maxSapmaKm);
+    }
+
     if (typeof maksimumSapmaKm === "number" && Number.isFinite(maksimumSapmaKm)) {
       return Math.max(0, maksimumSapmaKm);
     }

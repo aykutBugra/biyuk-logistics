@@ -63,6 +63,13 @@ export class OpenRequestQueryDto {
   @Min(1)
   carrierRouteId?: number;
 
+  @Transform(toNumber)
+  @IsOptional()
+  @IsNumber({ allowInfinity: false, allowNaN: false, maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(5000)
+  maxSapmaKm?: number;
+
   @Transform(trimString)
   @IsOptional()
   @IsString()

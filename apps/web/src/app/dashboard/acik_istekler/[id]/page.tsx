@@ -1,10 +1,9 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, use, useEffect, useState } from "react";
 import {
   type ReadonlyURLSearchParams,
-  useParams,
   usePathname,
   useRouter,
   useSearchParams,
@@ -71,29 +70,57 @@ function parsePositiveInteger(value: string | null): number | null {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+function parsePositiveNumber(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 function buildCarrierRouteSelectionPath(
   pathname: string,
   searchParams: ReadonlyURLSearchParams | null,
-  carrierRouteId: number | null
+  carrierRouteId: number | null,
+  maxSapmaKm: number | null
 ): string {
   const nextSearchParams = new URLSearchParams(searchParams?.toString() ?? "");
 
   if (carrierRouteId === null) {
     nextSearchParams.delete("carrierRouteId");
+    nextSearchParams.delete("maxSapmaKm");
   } else {
     nextSearchParams.set("carrierRouteId", String(carrierRouteId));
+
+    if (typeof maxSapmaKm === "number") {
+      nextSearchParams.set("maxSapmaKm", String(maxSapmaKm));
+    } else {
+      nextSearchParams.delete("maxSapmaKm");
+    }
   }
 
   const nextQuery = nextSearchParams.toString();
   return nextQuery ? `${pathname}?${nextQuery}` : pathname;
 }
 
-function buildOpenRequestsListPath(carrierRouteId: number | null): string {
+function buildOpenRequestsListPath(
+  carrierRouteId: number | null,
+  maxSapmaKm: number | null
+): string {
   if (carrierRouteId === null) {
     return "/dashboard/acik_istekler";
   }
 
-  return `/dashboard/acik_istekler?carrierRouteId=${carrierRouteId}`;
+  const searchParams = new URLSearchParams({
+    carrierRouteId: String(carrierRouteId),
+  });
+
+  if (typeof maxSapmaKm === "number") {
+    searchParams.set("maxSapmaKm", String(maxSapmaKm));
+  }
+
+  return `/dashboard/acik_istekler?${searchParams.toString()}`;
 }
 
 function getRouteCompatibilityLabelText(
@@ -134,16 +161,24 @@ function OpenTransportRequestDetailPageFallback() {
   );
 }
 
-function OpenTransportRequestDetailPageContent() {
+function OpenTransportRequestDetailPageContent({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { accessToken, status } = useCarrierPageAccess();
-  const params = useParams<{ id: string }>();
-  const requestId = Number(params.id);
+  const { id } = use(params);
+  const requestId = Number(id);
   const selectedCarrierRouteId = parsePositiveInteger(
     searchParams?.get("carrierRouteId") ?? null
   );
+  const selectedMaxSapmaKm =
+    selectedCarrierRouteId !== null
+      ? parsePositiveNumber(searchParams?.get("maxSapmaKm") ?? null)
+      : null;
   const [request, setRequest] = useState<OpenOfferRequestDetail | null>(null);
   const [selectedCarrierRoute, setSelectedCarrierRoute] =
     useState<CarrierRouteDetail | null>(null);
@@ -157,7 +192,42 @@ function OpenTransportRequestDetailPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (status !== "ready" || !accessToken) {
+    if (!searchParams) {
+      return;
+    }
+
+    if (selectedCarrierRouteId === null) {
+      if (searchParams.get("maxSapmaKm")) {
+        router.replace(
+          buildCarrierRouteSelectionPath(pathname, searchParams, null, null)
+        );
+      }
+      return;
+    }
+
+    if (selectedMaxSapmaKm === null) {
+      router.replace(
+        buildCarrierRouteSelectionPath(
+          pathname,
+          searchParams,
+          selectedCarrierRouteId,
+          50
+        )
+      );
+    }
+  }, [
+    pathname,
+    router,
+    searchParams,
+    selectedCarrierRouteId,
+    selectedMaxSapmaKm,
+  ]);
+
+  useEffect(() => {
+    const hasPendingRouteContext =
+      selectedCarrierRouteId !== null && selectedMaxSapmaKm === null;
+
+    if (status !== "ready" || !accessToken || hasPendingRouteContext) {
       if (status === "checking") {
         setIsLoading(true);
       }
@@ -190,7 +260,10 @@ function OpenTransportRequestDetailPageContent() {
           getOpenOfferRequestDetail(
             requestId,
             accessToken,
-            selectedCarrierRouteId ?? undefined
+            {
+              carrierRouteId: selectedCarrierRouteId ?? undefined,
+              maxSapmaKm: selectedMaxSapmaKm ?? undefined,
+            }
           ),
           getMyVehicles(accessToken),
         ]);
@@ -231,12 +304,19 @@ function OpenTransportRequestDetailPageContent() {
         ) {
           if (hasValidatedSelectedRoute) {
             window.alert("Bu istek secili rota filtresine uymuyor.");
-            router.replace(buildOpenRequestsListPath(selectedCarrierRouteId));
+            router.replace(
+              buildOpenRequestsListPath(
+                selectedCarrierRouteId,
+                selectedMaxSapmaKm
+              )
+            );
             return;
           }
 
           setSelectedCarrierRoute(null);
-          router.replace(buildCarrierRouteSelectionPath(pathname, searchParams, null));
+          router.replace(
+            buildCarrierRouteSelectionPath(pathname, searchParams, null, null)
+          );
           return;
         }
 
@@ -280,6 +360,7 @@ function OpenTransportRequestDetailPageContent() {
     router,
     searchParams,
     selectedCarrierRouteId,
+    selectedMaxSapmaKm,
     status,
   ]);
 
@@ -345,10 +426,12 @@ function OpenTransportRequestDetailPageContent() {
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-        window.alert("Bu istek artik teklif vermeye uygun degil.");
-        router.replace(buildOpenRequestsListPath(selectedCarrierRouteId));
-        return;
-      }
+          window.alert("Bu istek artik teklif vermeye uygun degil.");
+          router.replace(
+            buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm)
+          );
+          return;
+        }
 
       if (error instanceof ApiClientError && error.status === 409) {
         if (
@@ -363,7 +446,9 @@ function OpenTransportRequestDetailPageContent() {
           error.message === "This transport request is no longer open for offers."
         ) {
           window.alert("Bu istek artik teklif kabul etmiyor.");
-          router.replace(buildOpenRequestsListPath(selectedCarrierRouteId));
+          router.replace(
+            buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm)
+          );
           return;
         }
 
@@ -539,9 +624,9 @@ function OpenTransportRequestDetailPageContent() {
                   <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
                     {formatRouteDuration(selectedCarrierRoute.rotaSureSaniye)}
                   </span>
-                  {selectedCarrierRoute.maksimumSapmaKm !== null ? (
+                  {typeof selectedMaxSapmaKm === "number" ? (
                     <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
-                      Max sapma {selectedCarrierRoute.maksimumSapmaKm.toFixed(1)} km
+                      Maks. sapma {selectedMaxSapmaKm} km
                     </span>
                   ) : null}
                 </div>
@@ -905,10 +990,14 @@ function OpenTransportRequestDetailPageContent() {
   );
 }
 
-export default function OpenTransportRequestDetailPage() {
+export default function OpenTransportRequestDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   return (
     <Suspense fallback={<OpenTransportRequestDetailPageFallback />}>
-      <OpenTransportRequestDetailPageContent />
+      <OpenTransportRequestDetailPageContent params={params} />
     </Suspense>
   );
 }

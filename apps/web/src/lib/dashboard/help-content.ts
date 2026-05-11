@@ -109,8 +109,8 @@ export const DASHBOARD_HELP_CONTENT: Record<
     description:
       "Rotaların kayıtlı taşıma hatlarını tutar ve sana uygun işleri daha görünür hale getirir.",
     bullets: [
-      "Planlanan tarih ve sapma sınırı keşif filtrelerini daha isabetli yapar.",
-      "Rota önce tanımlanır, sonra Açık İstekler ekranında seçilerek kullanılır.",
+      "Rota once ana guzergah olarak tanimlanir, sonra Acik Istekler ekraninda secilerek kullanilir.",
+      "Sapma limiti rota kaydina degil, Acik Istekler kesif ekranindaki aktif filtreye baglidir.",
     ],
   },
   "offer-create": {

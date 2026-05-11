@@ -7,6 +7,7 @@ type CustomerTransportRequestsShellProps = {
   title: string;
   description?: string;
   children: ReactNode;
+  pageEyebrow?: string;
   headerActions?: ReactNode;
   headerVariant?: "default" | "compact";
   motionPreset?: "default" | "operational" | "form";
@@ -17,6 +18,7 @@ export default function CustomerTransportRequestsShell({
   title,
   description,
   children,
+  pageEyebrow,
   headerActions,
   headerVariant,
   motionPreset,
@@ -26,6 +28,7 @@ export default function CustomerTransportRequestsShell({
     <DashboardShell
       title={title}
       description={description}
+      pageEyebrow={pageEyebrow}
       workspaceHint="customer"
       headerActions={headerActions}
       headerVariant={headerVariant}

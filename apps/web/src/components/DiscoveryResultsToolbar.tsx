@@ -9,7 +9,7 @@ type DiscoveryResultsToolbarProps = {
   isMapVisible: boolean;
   onMapToggle: () => void;
   hasRouteContext: boolean;
-  activeRefinementLabel?: string;
+  activeFilterLabel?: string;
 };
 
 const SORT_OPTIONS: Array<{ value: DiscoverySortMode; label: string }> = [
@@ -25,7 +25,7 @@ export default function DiscoveryResultsToolbar({
   isMapVisible,
   onMapToggle,
   hasRouteContext,
-  activeRefinementLabel,
+  activeFilterLabel,
 }: DiscoveryResultsToolbarProps) {
   return (
     <section className="app-surface rounded-[1.05rem] border border-slate-200 px-4 py-3.5">
@@ -35,15 +35,15 @@ export default function DiscoveryResultsToolbar({
             <h2 className="text-base font-black tracking-tight text-slate-950 md:text-lg">
               {resultsCount} acik istek bulundu
             </h2>
-            {activeRefinementLabel ? (
+            {activeFilterLabel ? (
               <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                {activeRefinementLabel}
+                {activeFilterLabel}
               </span>
             ) : null}
           </div>
           <p className="text-xs leading-5 text-slate-500">
             {hasRouteContext
-              ? "Rota uyumu ve sapma mesafesine gore siralaniyor."
+              ? "Secili rota ve aktif sapma filtresine gore listeleniyor."
               : "Guncel kesif sonuc listesi."}
           </p>
         </div>

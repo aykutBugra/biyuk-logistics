@@ -2,9 +2,14 @@
 
 import type { ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
+import { useState } from "react";
 import CitySelectField from "@/components/CitySelectField";
 import type { CarrierRouteListItem } from "@/lib/api/carrier-routes";
-import { CARGO_TYPE_OPTIONS, formatRouteDistanceKm, formatRouteDuration } from "@/lib/logistics";
+import {
+  CARGO_TYPE_OPTIONS,
+  formatRouteDistanceKm,
+  formatRouteDuration,
+} from "@/lib/logistics";
 import { TURKEY_CITY_OPTIONS } from "@/lib/turkey-cities";
 
 export type CarrierDiscoveryFilterForm = {
@@ -28,9 +33,7 @@ type CarrierDiscoveryFiltersProps = {
   routeErrorMessage: string | null;
   filters: CarrierDiscoveryFilterForm;
   filtersActive: boolean;
-  effectiveMaxSapmaKm: number | null;
-  routeDeviationRefinementKm: number | null;
-  routeDeviationOptions: number[];
+  maxSapmaKm: number | null;
   onFilterChange: (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => void;
@@ -39,23 +42,15 @@ type CarrierDiscoveryFiltersProps = {
   onCarrierRouteChange: (event: ChangeEvent<HTMLSelectElement>) => void;
   onBaslangicSehirChange: (value: string) => void;
   onVarisSehirChange: (value: string) => void;
-  onRouteDeviationChange: (value: number | null) => void;
+  onMaxSapmaChange: (value: number) => void;
 };
+
+const MAX_SAPMA_PRESETS = [25, 50, 100, 150] as const;
 
 function formatPlannedDate(value: string): string {
   return new Intl.DateTimeFormat("tr-TR", {
     dateStyle: "medium",
   }).format(new Date(`${value}T00:00:00`));
-}
-
-function formatMaxSapma(value: number | null): string {
-  if (value === null) {
-    return "Varsayilan sapma";
-  }
-
-  return `Max sapma ${new Intl.NumberFormat("tr-TR", {
-    maximumFractionDigits: 0,
-  }).format(value)} km`;
 }
 
 export default function CarrierDiscoveryFilters({
@@ -67,18 +62,46 @@ export default function CarrierDiscoveryFilters({
   routeErrorMessage,
   filters,
   filtersActive,
-  effectiveMaxSapmaKm,
-  routeDeviationRefinementKm,
-  routeDeviationOptions,
+  maxSapmaKm,
   onFilterChange,
   onApplyFilters,
   onResetFilters,
   onCarrierRouteChange,
   onBaslangicSehirChange,
   onVarisSehirChange,
-  onRouteDeviationChange,
+  onMaxSapmaChange,
 }: CarrierDiscoveryFiltersProps) {
   const hasRouteContext = selectedCarrierRouteId !== null && selectedCarrierRoute !== null;
+  const isCustomSapmaSelected =
+    hasRouteContext &&
+    typeof maxSapmaKm === "number" &&
+    !MAX_SAPMA_PRESETS.includes(maxSapmaKm as (typeof MAX_SAPMA_PRESETS)[number]);
+  const [customSapmaInput, setCustomSapmaInput] = useState("");
+  const [isCustomSapmaEditorOpen, setIsCustomSapmaEditorOpen] = useState(false);
+  const isCustomSapmaEditorVisible =
+    hasRouteContext && (isCustomSapmaSelected || isCustomSapmaEditorOpen);
+  const resolvedCustomSapmaInput =
+    customSapmaInput.trim().length > 0
+      ? customSapmaInput
+      : !isCustomSapmaEditorOpen &&
+          isCustomSapmaSelected &&
+          typeof maxSapmaKm === "number"
+        ? String(maxSapmaKm)
+        : "";
+
+  const parsedCustomSapmaValue = Number(resolvedCustomSapmaInput);
+  const isCustomSapmaValid =
+    resolvedCustomSapmaInput.trim().length > 0 &&
+    Number.isFinite(parsedCustomSapmaValue) &&
+    parsedCustomSapmaValue > 0;
+
+  const handleCustomSapmaApply = () => {
+    if (!hasRouteContext || !isCustomSapmaValid) {
+      return;
+    }
+
+    onMaxSapmaChange(parsedCustomSapmaValue);
+  };
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-[calc(var(--topbar-height)+0.85rem)]">
@@ -92,7 +115,7 @@ export default function CarrierDiscoveryFilters({
               Filtreler
             </h2>
             <p className="text-sm leading-5 text-slate-600">
-              Rota secip sonuclari daralt.
+              Rota secip sonucu canli sapma limitiyle daralt.
             </p>
           </div>
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
@@ -171,55 +194,98 @@ export default function CarrierDiscoveryFilters({
                       <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
                         {formatRouteDuration(selectedCarrierRoute.rotaSureSaniye)}
                       </span>
-                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
-                        {formatMaxSapma(effectiveMaxSapmaKm)}
-                      </span>
                     </div>
                   </div>
                 </div>
               ) : null}
 
-              {selectedCarrierRouteId !== null && routeDeviationOptions.length > 0 ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-slate-700">Ek sapma daraltma</p>
+              <div
+                className={`rounded-[0.95rem] border px-3.5 py-3 ${
+                  hasRouteContext
+                    ? "border-slate-200 bg-white"
+                    : "border-dashed border-slate-300 bg-white/80"
+                }`}
+              >
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Sapma limiti
+                  </p>
+                  <p className="text-sm font-medium text-slate-700">
+                    Maksimum sapma mesafesi
+                  </p>
+                  <p className="text-xs leading-5 text-slate-500">
+                    {hasRouteContext
+                      ? "Secili rota icin uygun talepler bu backend filtresine gore listelenir."
+                      : "Sapma limiti kullanmak icin once kayitli rota sec."}
+                  </p>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {MAX_SAPMA_PRESETS.map((option) => (
                     <button
+                      key={option}
                       type="button"
-                      onClick={() => onRouteDeviationChange(null)}
-                      className="text-xs font-semibold text-slate-500 transition hover:text-slate-700"
-                    >
-                      Temizle
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onRouteDeviationChange(null)}
+                      onClick={() => {
+                        setIsCustomSapmaEditorOpen(false);
+                        onMaxSapmaChange(option);
+                      }}
+                      disabled={!hasRouteContext}
                       className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                        routeDeviationRefinementKm === null
+                        maxSapmaKm === option
                           ? "bg-blue-600 text-white"
-                          : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
+                          : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                       }`}
                     >
-                      Tum uygunlar
+                      {option} km
                     </button>
-                    {routeDeviationOptions.map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() => onRouteDeviationChange(option)}
-                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                          routeDeviationRefinementKm === option
-                            ? "bg-blue-600 text-white"
-                            : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
-                        }`}
-                      >
-                        {option} km
-                      </button>
-                    ))}
-                  </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!hasRouteContext) {
+                        return;
+                      }
+
+                      setIsCustomSapmaEditorOpen(true);
+                      setCustomSapmaInput(
+                        isCustomSapmaSelected && typeof maxSapmaKm === "number"
+                          ? String(maxSapmaKm)
+                          : ""
+                      );
+                    }}
+                    disabled={!hasRouteContext}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      isCustomSapmaSelected
+                        ? "bg-slate-900 text-white"
+                        : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                    }`}
+                  >
+                    Ozel
+                  </button>
                 </div>
-              ) : null}
+
+                {isCustomSapmaEditorVisible ? (
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={resolvedCustomSapmaInput}
+                      onChange={(event) => setCustomSapmaInput(event.target.value)}
+                      placeholder="Ozel km"
+                      className="app-input w-full sm:max-w-[9rem]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCustomSapmaApply}
+                      disabled={!isCustomSapmaValid}
+                      className="app-button-secondary app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Uygula
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
 

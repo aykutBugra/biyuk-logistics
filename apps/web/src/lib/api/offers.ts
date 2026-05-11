@@ -14,6 +14,7 @@ export type OpenOfferRequestImage = OpenOfferRequestImageSummary & {
 
 export type OpenOfferRequestFilters = {
   carrierRouteId?: number;
+  maxSapmaKm?: number;
   baslangicSehir?: string;
   varisSehir?: string;
   tekTasimaIstiyor?: boolean;
@@ -131,6 +132,10 @@ function buildSearchParams(filters: OpenOfferRequestFilters = {}): string {
 
   if (typeof filters.carrierRouteId === "number") {
     searchParams.set("carrierRouteId", String(filters.carrierRouteId));
+
+    if (typeof filters.maxSapmaKm === "number") {
+      searchParams.set("maxSapmaKm", String(filters.maxSapmaKm));
+    }
   }
 
   if (filters.baslangicSehir) {
@@ -190,12 +195,28 @@ export function getOpenOfferRequests(
 export function getOpenOfferRequestDetail(
   requestId: number,
   accessToken: string,
-  carrierRouteId?: number
+  routeContext:
+    | number
+    | Pick<OpenOfferRequestFilters, "carrierRouteId" | "maxSapmaKm">
+    | undefined = {}
 ) {
   const searchParams = new URLSearchParams();
+  const normalizedRouteContext =
+    typeof routeContext === "number"
+      ? {
+          carrierRouteId: routeContext,
+        }
+      : (routeContext ?? {});
 
-  if (typeof carrierRouteId === "number") {
-    searchParams.set("carrierRouteId", String(carrierRouteId));
+  if (typeof normalizedRouteContext.carrierRouteId === "number") {
+    searchParams.set(
+      "carrierRouteId",
+      String(normalizedRouteContext.carrierRouteId)
+    );
+
+    if (typeof normalizedRouteContext.maxSapmaKm === "number") {
+      searchParams.set("maxSapmaKm", String(normalizedRouteContext.maxSapmaKm));
+    }
   }
 
   const path = searchParams.toString()

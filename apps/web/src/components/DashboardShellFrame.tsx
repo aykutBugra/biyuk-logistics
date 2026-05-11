@@ -36,52 +36,76 @@ type DashboardShellFrameProps = {
   cardMotionLimit?: number;
 };
 
-let rememberedDashboardChildSidebarExpanded = false;
-const dashboardChildSidebarListeners = new Set<() => void>();
+const DASHBOARD_SIDEBAR_EXPANDED_STORAGE_KEY = "nakliye-dashboard-sidebar-expanded";
+const DASHBOARD_SIDEBAR_EXPANDED_EVENT = "nakliye-dashboard-sidebar-expanded-change";
 
-function subscribeToDashboardChildSidebarExpanded(listener: () => void) {
-  dashboardChildSidebarListeners.add(listener);
+function isBrowser(): boolean {
+  return typeof window !== "undefined";
+}
+
+function subscribeToDashboardSidebarExpanded(listener: () => void) {
+  if (!isBrowser()) {
+    return () => {};
+  }
+
+  const handleCustomEvent = () => {
+    listener();
+  };
+
+  const handleStorageEvent = (event: StorageEvent) => {
+    if (event.key === DASHBOARD_SIDEBAR_EXPANDED_STORAGE_KEY || event.key === null) {
+      listener();
+    }
+  };
+
+  window.addEventListener(DASHBOARD_SIDEBAR_EXPANDED_EVENT, handleCustomEvent);
+  window.addEventListener("storage", handleStorageEvent);
+
   return () => {
-    dashboardChildSidebarListeners.delete(listener);
+    window.removeEventListener(DASHBOARD_SIDEBAR_EXPANDED_EVENT, handleCustomEvent);
+    window.removeEventListener("storage", handleStorageEvent);
   };
 }
 
-function getDashboardChildSidebarExpandedSnapshot(): boolean {
-  return rememberedDashboardChildSidebarExpanded;
+function getDashboardSidebarExpandedSnapshot(): boolean {
+  if (!isBrowser()) {
+    return true;
+  }
+
+  const rawValue = window.localStorage.getItem(DASHBOARD_SIDEBAR_EXPANDED_STORAGE_KEY);
+
+  if (rawValue === "false") {
+    return false;
+  }
+
+  return true;
 }
 
-function setRememberedDashboardChildSidebarExpanded(nextValue: boolean) {
-  if (rememberedDashboardChildSidebarExpanded === nextValue) {
+function getServerDashboardSidebarExpandedSnapshot(): boolean {
+  return true;
+}
+
+function setStoredDashboardSidebarExpanded(nextValue: boolean) {
+  if (!isBrowser()) {
     return;
   }
 
-  rememberedDashboardChildSidebarExpanded = nextValue;
-
-  dashboardChildSidebarListeners.forEach((listener) => {
-    listener();
-  });
+  window.localStorage.setItem(
+    DASHBOARD_SIDEBAR_EXPANDED_STORAGE_KEY,
+    nextValue ? "true" : "false"
+  );
+  window.dispatchEvent(new Event(DASHBOARD_SIDEBAR_EXPANDED_EVENT));
 }
 
 function resolveDesktopSidebarExpanded(
   sidebarVariant: "default" | "icon-rail",
-  sidebarBehaviorScope: "home" | "child" | "other",
-  rememberedChildSidebarExpanded: boolean
+  storedSidebarExpanded: boolean
 ): boolean {
-  if (sidebarBehaviorScope === "home") {
-    return true;
-  }
-
-  if (sidebarBehaviorScope === "child") {
-    return sidebarVariant === "icon-rail"
-      ? rememberedChildSidebarExpanded
-      : true;
-  }
-
   if (sidebarVariant !== "icon-rail") {
     return true;
   }
 
-  return false;
+  return storedSidebarExpanded;
 }
 
 export default function DashboardShellFrame({
@@ -101,7 +125,6 @@ export default function DashboardShellFrame({
   headerActions,
   headerVariant = "default",
   sidebarVariant = "default",
-  sidebarBehaviorScope = "other",
   motionPreset = "default",
   cardMotionLimit = 6,
 }: DashboardShellFrameProps) {
@@ -113,15 +136,14 @@ export default function DashboardShellFrame({
   const contentRef = useRef<HTMLDivElement | null>(null);
   const hasMountedSidebarMotionRef = useRef(false);
   const routeTransitionId = useDashboardRouteTransitionId();
-  const rememberedChildSidebarExpanded = useSyncExternalStore(
-    subscribeToDashboardChildSidebarExpanded,
-    getDashboardChildSidebarExpandedSnapshot,
-    getDashboardChildSidebarExpandedSnapshot
+  const storedSidebarExpanded = useSyncExternalStore(
+    subscribeToDashboardSidebarExpanded,
+    getDashboardSidebarExpandedSnapshot,
+    getServerDashboardSidebarExpandedSnapshot
   );
   const isDesktopSidebarExpanded = resolveDesktopSidebarExpanded(
     sidebarVariant,
-    sidebarBehaviorScope,
-    rememberedChildSidebarExpanded
+    storedSidebarExpanded
   );
 
   useSurfaceReveal(headerRef, {
@@ -139,12 +161,6 @@ export default function DashboardShellFrame({
     enabled: motionPreset === "form",
     routeTransitionId,
   });
-
-  useEffect(() => {
-    if (sidebarBehaviorScope === "home") {
-      setRememberedDashboardChildSidebarExpanded(false);
-    }
-  }, [sidebarBehaviorScope]);
 
   const isIconRail = sidebarVariant === "icon-rail";
   const desktopSidebarWidth = isIconRail
@@ -188,11 +204,11 @@ export default function DashboardShellFrame({
   }, [isDesktopSidebarExpanded, isIconRail, reducedMotion]);
 
   const handleDesktopSidebarToggle = () => {
-    if (sidebarBehaviorScope !== "child") {
+    if (!isIconRail) {
       return;
     }
 
-    setRememberedDashboardChildSidebarExpanded(!rememberedChildSidebarExpanded);
+    setStoredDashboardSidebarExpanded(!isDesktopSidebarExpanded);
   };
 
   return (
