@@ -1,12 +1,16 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { ImageProcessingService } from "../../infrastructure/media/image-processing.service";
+import { MediaStorageService } from "../../infrastructure/media/media-storage.service";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
   type VehicleCapacitySummary,
@@ -27,12 +31,21 @@ import {
   resolveVehicleLibraryId,
 } from "./vehicle-write.helpers";
 
+const VEHICLE_IMAGE_ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const MAX_VEHICLE_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
 @Injectable()
 export class VehiclesService {
   constructor(
     private readonly vehiclesRepository: VehiclesRepository,
     private readonly vehicleCapacityService: VehicleCapacityService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly mediaStorageService: MediaStorageService,
+    private readonly imageProcessingService: ImageProcessingService
   ) {}
 
   async create(
@@ -192,6 +205,127 @@ export class VehiclesService {
     }
   }
 
+  async updateImage(
+    currentUser: AuthenticatedUser,
+    id: number,
+    file: Express.Multer.File | undefined
+  ): Promise<VehicleDetailResponseDto> {
+    this.assertCarrierRole(currentUser);
+
+    if (!file) {
+      throw new BadRequestException("Arac fotografi secmelisin.");
+    }
+
+    this.assertValidVehicleImageFile(file);
+
+    const existingVehicle = await this.vehiclesRepository.findByIdAndOwnerId(
+      id,
+      currentUser.id
+    );
+
+    if (!existingVehicle) {
+      throw new NotFoundException("Vehicle not found.");
+    }
+
+    const processedImage = await this.imageProcessingService.processVehicleImage(
+      file.buffer
+    );
+    const storageKey = `vehicle-images/${id}/${randomUUID()}.webp`;
+
+    await this.mediaStorageService.saveFile({
+      storageKey,
+      buffer: processedImage.buffer,
+      contentType: processedImage.mimeType,
+    });
+
+    try {
+      const updatedVehicle =
+        await this.vehiclesRepository.updateImageStorageKeyByIdAndOwnerId(
+          id,
+          currentUser.id,
+          storageKey
+        );
+
+      if (!updatedVehicle) {
+        throw new NotFoundException("Vehicle not found.");
+      }
+
+      if (existingVehicle.aracFotografiStorageKey) {
+        await this.mediaStorageService.deleteFile(
+          existingVehicle.aracFotografiStorageKey
+        );
+      }
+
+      const capacitySummaries =
+        await this.vehicleCapacityService.getCapacitySummaryMapForVehicles([
+          updatedVehicle,
+        ]);
+
+      return this.toDetailResponse(
+        updatedVehicle,
+        capacitySummaries.get(updatedVehicle.id) ??
+          this.createEmptyCapacitySummary(updatedVehicle)
+      );
+    } catch (error) {
+      await this.mediaStorageService.deleteFile(storageKey);
+      throw error;
+    }
+  }
+
+  async deleteImage(
+    currentUser: AuthenticatedUser,
+    id: number
+  ): Promise<VehicleDetailResponseDto> {
+    this.assertCarrierRole(currentUser);
+
+    const existingVehicle = await this.vehiclesRepository.findByIdAndOwnerId(
+      id,
+      currentUser.id
+    );
+
+    if (!existingVehicle) {
+      throw new NotFoundException("Vehicle not found.");
+    }
+
+    if (!existingVehicle.aracFotografiStorageKey) {
+      const capacitySummaries =
+        await this.vehicleCapacityService.getCapacitySummaryMapForVehicles([
+          existingVehicle,
+        ]);
+
+      return this.toDetailResponse(
+        existingVehicle,
+        capacitySummaries.get(existingVehicle.id) ??
+          this.createEmptyCapacitySummary(existingVehicle)
+      );
+    }
+
+    const previousStorageKey = existingVehicle.aracFotografiStorageKey;
+    const updatedVehicle =
+      await this.vehiclesRepository.updateImageStorageKeyByIdAndOwnerId(
+        id,
+        currentUser.id,
+        null
+      );
+
+    if (!updatedVehicle) {
+      throw new NotFoundException("Vehicle not found.");
+    }
+
+    await this.mediaStorageService.deleteFile(previousStorageKey);
+
+    const capacitySummaries =
+      await this.vehicleCapacityService.getCapacitySummaryMapForVehicles([
+        updatedVehicle,
+      ]);
+
+    return this.toDetailResponse(
+      updatedVehicle,
+      capacitySummaries.get(updatedVehicle.id) ??
+        this.createEmptyCapacitySummary(updatedVehicle)
+    );
+  }
+
   private assertCarrierRole(currentUser: AuthenticatedUser) {
     if (currentUser.roles.includes(ROLE_NAMES.NAKLIYECI)) {
       return;
@@ -232,6 +366,7 @@ export class VehiclesService {
       uzunlukCm: vehicle.uzunlukCm,
       genislikCm: vehicle.genislikCm,
       yukseklikCm: vehicle.yukseklikCm,
+      vehicleImageUrl: this.toPublicMediaUrl(vehicle.aracFotografiStorageKey),
       capacitySummary: this.toCapacitySummaryResponse(capacitySummary),
     };
   }
@@ -274,5 +409,25 @@ export class VehiclesService {
       aktifTekTasimaRezervasyonuVar: false,
       hesapEksigiVar: vehicle.maksimumHacimM3 === null,
     };
+  }
+
+  private assertValidVehicleImageFile(file: Express.Multer.File): void {
+    if (!file.buffer || file.buffer.length === 0) {
+      throw new BadRequestException("Dosya icerigi okunamadi.");
+    }
+
+    if (!VEHICLE_IMAGE_ALLOWED_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException(
+        "Yalnizca JPEG, PNG veya WEBP gorseller yuklenebilir."
+      );
+    }
+
+    if (file.size > MAX_VEHICLE_IMAGE_FILE_SIZE_BYTES) {
+      throw new BadRequestException("Gorsel boyutu en fazla 5 MB olabilir.");
+    }
+  }
+
+  private toPublicMediaUrl(storageKey: string | null): string | undefined {
+    return storageKey ? this.mediaStorageService.toPublicUrl(storageKey) : undefined;
   }
 }

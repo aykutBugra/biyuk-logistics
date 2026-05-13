@@ -1,6 +1,7 @@
 type CustomerInitialsAvatarProps = {
   name?: string | null;
   fallback?: string;
+  imageUrl?: string | null;
   size?: "sm" | "md" | "lg";
   tone?: "blue" | "slate" | "amber";
   className?: string;
@@ -13,6 +14,15 @@ const SIZE_STYLES: Record<
   sm: "h-10 w-10 text-xs",
   md: "h-12 w-12 text-sm",
   lg: "h-16 w-16 text-xl",
+};
+
+const IMAGE_SIZE_STYLES: Record<
+  NonNullable<CustomerInitialsAvatarProps["size"]>,
+  string
+> = {
+  sm: "h-10 w-10",
+  md: "h-12 w-12",
+  lg: "h-16 w-16",
 };
 
 const TONE_STYLES: Record<
@@ -41,10 +51,24 @@ function getInitials(name: string | null | undefined, fallback: string): string 
 export default function CustomerInitialsAvatar({
   name,
   fallback = "NA",
+  imageUrl,
   size = "md",
   tone = "blue",
   className,
 }: CustomerInitialsAvatarProps) {
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt=""
+        className={`inline-flex shrink-0 rounded-full border border-slate-200 bg-slate-100 object-cover shadow-sm ${
+          IMAGE_SIZE_STYLES[size]
+        } ${className ?? ""}`.trim()}
+        aria-hidden="true"
+      />
+    );
+  }
+
   return (
     <div
       className={`inline-flex shrink-0 items-center justify-center rounded-full border font-black tracking-tight shadow-sm ${

@@ -76,6 +76,7 @@ export default function CustomerConversationCard({
           <CustomerInitialsAvatar
             name={thread.karsiTarafAdSoyad}
             fallback={thread.karsiTarafKullaniciAdi}
+            imageUrl={thread.karsiTarafProfileImageUrl}
             tone={thread.isClosed ? "slate" : "blue"}
           />
 

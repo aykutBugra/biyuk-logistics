@@ -115,7 +115,7 @@ export default function MyRequestCard({
                 <img
                   src={request.primaryImage.thumbnailUrl}
                   alt="Tasima istegi fotografi"
-                  className="h-full w-full object-cover"
+                  className="h-full w-full bg-slate-100 object-contain p-2"
                 />
                 {request.imageCount && request.imageCount > 1 ? (
                   <span className="absolute bottom-2 right-2 rounded-full bg-slate-900/80 px-2 py-1 text-[10px] font-semibold text-white">

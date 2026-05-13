@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import CustomerWorkspaceSignalPill from "@/components/CustomerWorkspaceSignalPill";
 import StatusBadge from "@/components/StatusBadge";
 import type { MyIncomingOfferItem } from "@/lib/api/offers";
@@ -44,20 +45,6 @@ function getOfferStatusLabel(status: string): string {
   }
 }
 
-function getInitials(name: string): string {
-  const parts = name
-    .split(" ")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .slice(0, 2);
-
-  if (!parts.length) {
-    return "NK";
-  }
-
-  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
-}
-
 export default function IncomingOfferCard({
   offer,
   isFeatured = false,
@@ -80,7 +67,7 @@ export default function IncomingOfferCard({
           : "border-slate-200 hover:border-blue-200"
       }`}
     >
-      <div className="border-b border-slate-100 px-5 py-4">
+      <div className="border-b border-slate-100 px-4 py-3.5">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={offer.durum} label={getOfferStatusLabel(offer.durum)} />
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
@@ -99,7 +86,7 @@ export default function IncomingOfferCard({
           ) : null}
         </div>
 
-        <h2 className="mt-3 text-[1.8rem] font-black tracking-tight text-slate-950">
+        <h2 className="mt-2 text-[1.55rem] font-black tracking-tight text-slate-950">
           {`${offer.baslangicSehri} -> ${offer.varisSehri}`}
         </h2>
 
@@ -137,12 +124,16 @@ export default function IncomingOfferCard({
         </div>
       </div>
 
-      <div className="px-5 py-5">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_240px]">
+      <div className="px-4 py-4">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_240px]">
           <div className="flex min-w-0 gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-black text-white">
-              {getInitials(offer.carrierName)}
-            </div>
+            <CustomerInitialsAvatar
+              name={offer.carrierName}
+              fallback={offer.carrierUsername}
+              imageUrl={offer.carrierProfileImageUrl}
+              size="lg"
+              tone="blue"
+            />
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -170,7 +161,7 @@ export default function IncomingOfferCard({
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                 Teklif fiyati
               </p>
-              <p className="mt-2 text-[2.35rem] font-black leading-none tracking-tight text-emerald-600">
+              <p className="mt-2 text-[2rem] font-black leading-none tracking-tight text-emerald-600">
                 {formatCurrency(offer.fiyat)}
               </p>
             </div>

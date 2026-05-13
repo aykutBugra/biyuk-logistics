@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import type { MyIncomingOfferItem } from "@/lib/api/offers";
 
 type CustomerOffersPreviewPanelProps = {
@@ -17,20 +18,6 @@ function formatCurrency(value: number): string {
     currency: "TRY",
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-function getInitials(name: string): string {
-  const parts = name
-    .split(" ")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .slice(0, 2);
-
-  if (!parts.length) {
-    return "NK";
-  }
-
-  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
 }
 
 function formatDate(value: string | null): string | null {
@@ -58,10 +45,10 @@ export default function CustomerOffersPreviewPanel({
   const formattedDate = previewOffer ? formatDate(previewOffer.tasimaTarihi) : null;
 
   return (
-    <section className="app-surface-strong rounded-[1.6rem] border border-slate-200 p-5 shadow-sm md:p-6">
+    <section className="app-surface-strong rounded-[1.6rem] border border-slate-200 p-4 shadow-sm md:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-[1.7rem] font-black tracking-tight text-slate-950">
+          <h2 className="text-[1.5rem] font-black tracking-tight text-slate-950">
             Gelen teklifler
           </h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -80,12 +67,16 @@ export default function CustomerOffersPreviewPanel({
       </div>
 
       {previewOffer ? (
-        <div className="mt-5 rounded-[1.45rem] border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mt-4 rounded-[1.45rem] border border-slate-200 bg-white p-3.5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-black text-white">
-                {getInitials(previewOffer.carrierName)}
-              </div>
+              <CustomerInitialsAvatar
+                name={previewOffer.carrierName}
+                fallback={previewOffer.carrierUsername}
+                imageUrl={previewOffer.carrierProfileImageUrl}
+                size="md"
+                tone="blue"
+              />
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
@@ -103,7 +94,7 @@ export default function CustomerOffersPreviewPanel({
             </div>
 
             <div className="flex flex-col gap-3 sm:items-end">
-              <p className="text-[2rem] font-black leading-none tracking-tight text-emerald-600">
+              <p className="text-[1.8rem] font-black leading-none tracking-tight text-emerald-600">
                 {formatCurrency(previewOffer.fiyat)}
               </p>
               {formattedDate ? (
@@ -116,7 +107,7 @@ export default function CustomerOffersPreviewPanel({
           </div>
         </div>
       ) : (
-        <div className="mt-5 rounded-[1.45rem] border border-dashed border-slate-200 bg-slate-50/70 p-6">
+        <div className="mt-4 rounded-[1.45rem] border border-dashed border-slate-200 bg-slate-50/70 p-5">
           <p className="text-base font-semibold text-slate-900">Karar bekleyen teklif yok.</p>
           <p className="mt-2 text-sm leading-6 text-slate-500">
             Nakliyeciler teklif gonderdiginde burada en guncel fiyatlari ve karar
@@ -127,7 +118,7 @@ export default function CustomerOffersPreviewPanel({
 
       <Link
         href="/dashboard/gelen_teklifler"
-        className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 transition hover:text-blue-800"
+        className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 transition hover:text-blue-800"
       >
         Tum teklifleri gor
         <i className="pi pi-arrow-right text-xs" />

@@ -12,6 +12,7 @@ export type OfferThreadMessage = {
   senderUserId: number | null;
   senderName: string | null;
   senderUsername: string | null;
+  senderProfileImageUrl?: string;
   isMine: boolean;
 };
 
@@ -27,6 +28,7 @@ export type OfferThreadSummary = {
   karsiTarafId: number;
   karsiTarafAdSoyad: string;
   karsiTarafKullaniciAdi: string;
+  karsiTarafProfileImageUrl?: string;
   fiyat: number;
   durum: string;
   isClosed: boolean;
@@ -49,6 +51,7 @@ export type OfferThreadDetail = {
   karsiTarafId: number;
   karsiTarafAdSoyad: string;
   karsiTarafKullaniciAdi: string;
+  karsiTarafProfileImageUrl?: string;
   fiyat: number;
   durum: string;
   isClosed: boolean;

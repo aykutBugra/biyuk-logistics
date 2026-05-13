@@ -12,6 +12,7 @@ const vehicleSelect = {
   uzunlukCm: true,
   genislikCm: true,
   yukseklikCm: true,
+  aracFotografiStorageKey: true,
   aracBilgisi: {
     select: {
       marka: true,
@@ -56,6 +57,7 @@ export type StoredVehicleRecord = {
   uzunlukCm: number | null;
   genislikCm: number | null;
   yukseklikCm: number | null;
+  aracFotografiStorageKey: string | null;
 };
 
 @Injectable()
@@ -239,6 +241,29 @@ export class VehiclesRepository {
     return vehicle ? this.mapStoredVehicle(vehicle) : null;
   }
 
+  async updateImageStorageKeyByIdAndOwnerId(
+    id: number,
+    sahipId: number,
+    storageKey: string | null
+  ): Promise<StoredVehicleRecord | null> {
+    const result = await this.prisma.client.arac.updateMany({
+      where: {
+        id,
+        sahipId,
+        silmeTarihi: null,
+      },
+      data: {
+        aracFotografiStorageKey: storageKey,
+      },
+    });
+
+    if (result.count === 0) {
+      return null;
+    }
+
+    return this.findByIdAndOwnerId(id, sahipId);
+  }
+
   private mapStoredVehicle(vehicle: StoredVehicleQuery): StoredVehicleRecord {
     return {
       id: vehicle.id,
@@ -252,6 +277,7 @@ export class VehiclesRepository {
       uzunlukCm: vehicle.uzunlukCm,
       genislikCm: vehicle.genislikCm,
       yukseklikCm: vehicle.yukseklikCm,
+      aracFotografiStorageKey: vehicle.aracFotografiStorageKey,
     };
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
+import Link from "next/link";
 import { Suspense, use, useEffect, useState } from "react";
 import {
   type ReadonlyURLSearchParams,
@@ -9,17 +10,25 @@ import {
   useSearchParams,
 } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
+import CustomerMetricCard from "@/components/CustomerMetricCard";
+import CustomerSectionSurface from "@/components/CustomerSectionSurface";
+import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
+import EmptyStateCard from "@/components/EmptyStateCard";
 import InlineHelpTrigger from "@/components/InlineHelpTrigger";
 import MotionCollapse from "@/components/MotionCollapse";
 import RequestImageGallery from "@/components/RequestImageGallery";
+import StatusBadge from "@/components/StatusBadge";
 import { ApiClientError } from "@/lib/api/api-client";
+import { getMyOfferThreads, type OfferThreadSummary } from "@/lib/api/offer-threads";
 import {
   getCarrierRouteDetail,
   type CarrierRouteDetail,
 } from "@/lib/api/carrier-routes";
 import {
   createOffer,
+  getMyOffers,
   getOpenOfferRequestDetail,
+  type OfferItem,
   type OpenOfferRequestDetail,
   type OpenOfferRequestRouteCompatibility,
 } from "@/lib/api/offers";
@@ -34,7 +43,7 @@ import {
   formatWeightKg,
   getCargoTypeLabel,
 } from "@/lib/logistics";
-import { TeklifFiyatÖnerisiHesaplama } from "@/lib/pricing/offer-price-suggestion";
+import { TeklifFiyatÖnerisiHesaplama as teklifFiyatOnerisiHesaplama } from "@/lib/pricing/offer-price-suggestion";
 
 type OfferForm = {
   aracId: string;
@@ -59,6 +68,29 @@ function formatPlannedDate(value: string): string {
   return new Intl.DateTimeFormat("tr-TR", {
     dateStyle: "medium",
   }).format(new Date(`${value}T00:00:00`));
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("tr-TR", {
+    style: "currency",
+    currency: "TRY",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatOfferStatusLabel(status: string): string {
+  switch (status.trim().toUpperCase()) {
+    case "OLUSTURULDU":
+      return "Bekliyor";
+    case "KABUL_EDILDI":
+      return "Kabul edildi";
+    case "REDDEDILDI":
+      return "Reddedildi";
+    case "IPTAL_EDILDI":
+      return "Iptal edildi";
+    default:
+      return status;
+  }
 }
 
 function parsePositiveInteger(value: string | null): number | null {
@@ -153,6 +185,191 @@ function getRouteCompatibilityBadgeClassName(
   }
 }
 
+function getPreferredOfferForRequest(
+  offers: OfferItem[],
+  requestId: number
+): OfferItem | null {
+  const matchingOffers = offers.filter((offer) => offer.requestId === requestId);
+
+  if (matchingOffers.length === 0) {
+    return null;
+  }
+
+  const activeOffer =
+    matchingOffers.find((offer) => offer.durum.trim().toUpperCase() === "OLUSTURULDU") ??
+    matchingOffers.find((offer) => offer.durum.trim().toUpperCase() === "KABUL_EDILDI");
+
+  if (activeOffer) {
+    return activeOffer;
+  }
+
+  return matchingOffers.sort((left, right) => right.id - left.id)[0] ?? null;
+}
+
+function DetailInfoRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
+      <dt className="text-sm font-semibold text-slate-700">{label}</dt>
+      <dd className="text-right text-sm font-medium text-slate-900">{value}</dd>
+    </div>
+  );
+}
+
+function DetailAddressCard({
+  title,
+  location,
+  city,
+  district,
+}: {
+  title: string;
+  location: string;
+  city: string;
+  district: string | null;
+}) {
+  return (
+    <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+        {title}
+      </p>
+      <p className="mt-2 text-base font-bold text-slate-950">{location}</p>
+      <dl className="mt-4 space-y-3">
+        <DetailInfoRow label="Sehir" value={city} />
+        {district ? <DetailInfoRow label="Ilce" value={district} /> : null}
+      </dl>
+    </div>
+  );
+}
+
+function InfoBanner({
+  tone,
+  children,
+}: {
+  tone: "amber" | "emerald" | "rose" | "blue" | "slate";
+  children: ReactNode;
+}) {
+  const classes: Record<typeof tone, string> = {
+    amber: "border-amber-200 bg-amber-50 text-amber-800",
+    emerald: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    rose: "border-rose-200 bg-rose-50 text-rose-800",
+    blue: "border-blue-200 bg-blue-50 text-blue-800",
+    slate: "border-slate-200 bg-slate-50 text-slate-700",
+  };
+
+  return (
+    <div className={`rounded-[1.2rem] border px-4 py-3 text-sm ${classes[tone]}`}>
+      {children}
+    </div>
+  );
+}
+
+function OfferSummaryPanel({
+  offer,
+  thread,
+  backHref,
+}: {
+  offer: OfferItem | null;
+  thread: OfferThreadSummary | null;
+  backHref: string;
+}) {
+  if (!offer) {
+    return (
+      <CustomerSectionSurface
+        title="Teklif ozeti"
+        description="Bu istek icin acik teklifin var; detaylar gec yuklenirse Tekliflerim ekranindan akisa donebilirsin."
+      >
+        <div className="space-y-4">
+          <InfoBanner tone="emerald">
+            Bu istek icin acik teklifin var. Guncel fiyat ve durum detaylari yuklenemedi.
+          </InfoBanner>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/tekliflerim" className="app-button-primary">
+              Tekliflerime git
+            </Link>
+            <Link href={backHref} className="app-button-secondary">
+              Listeye don
+            </Link>
+          </div>
+        </div>
+      </CustomerSectionSurface>
+    );
+  }
+
+  const conversationHref = thread
+    ? `/dashboard/konusmalar/teklif/${thread.offerId}`
+    : `/dashboard/konusmalar/teklif/${offer.id}`;
+
+  return (
+    <CustomerSectionSurface
+      title="Teklif ozeti"
+      description="Bu istek icin acik teklifin ve ilgili konusma akisin."
+      action={
+        <div className="flex flex-wrap gap-2">
+          {thread?.hasUnread ? (
+            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+              {thread.unreadCount} okunmamis
+            </span>
+          ) : null}
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div className="rounded-[1.2rem] border border-emerald-200 bg-emerald-50/80 px-4 py-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+            Teklif tutari
+          </p>
+          <p className="mt-2 text-2xl font-black tracking-tight text-emerald-800">
+            {formatCurrency(offer.fiyat)}
+          </p>
+        </div>
+
+        <div className="grid gap-3">
+          <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              Durum
+            </p>
+            <div className="mt-2">
+              <StatusBadge
+                status={offer.durum}
+                label={formatOfferStatusLabel(offer.durum)}
+              />
+            </div>
+          </div>
+          <DetailInfoRow label="Teklif no" value={`#${offer.id}`} />
+          <DetailInfoRow label="Arac" value={offer.aracPlaka ?? "Belirtilmedi"} />
+          <DetailInfoRow
+            label="Son hareket"
+            value={thread?.lastMessageAt ? formatDate(thread.lastMessageAt) : "Henuz yok"}
+          />
+        </div>
+
+        <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Durum notu
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            {thread?.lastMessageSummary ?? offer.not ?? "Bu teklif icin ek not bulunmuyor."}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
+          <Link href={conversationHref} className="app-button-primary w-full justify-center">
+            Konusmaya git
+          </Link>
+          <Link href="/dashboard/tekliflerim" className="app-button-secondary w-full justify-center">
+            Tekliflerime don
+          </Link>
+        </div>
+      </div>
+    </CustomerSectionSurface>
+  );
+}
+
 function OpenTransportRequestDetailPageFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
@@ -179,10 +396,15 @@ function OpenTransportRequestDetailPageContent({
     selectedCarrierRouteId !== null
       ? parsePositiveNumber(searchParams?.get("maxSapmaKm") ?? null)
       : null;
+
   const [request, setRequest] = useState<OpenOfferRequestDetail | null>(null);
   const [selectedCarrierRoute, setSelectedCarrierRoute] =
     useState<CarrierRouteDetail | null>(null);
   const [vehicles, setVehicles] = useState<VehicleListItem[]>([]);
+  const [currentOffer, setCurrentOffer] = useState<OfferItem | null>(null);
+  const [currentOfferThread, setCurrentOfferThread] = useState<OfferThreadSummary | null>(
+    null
+  );
   const [form, setForm] = useState<OfferForm>(initialForm);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
@@ -198,9 +420,7 @@ function OpenTransportRequestDetailPageContent({
 
     if (selectedCarrierRouteId === null) {
       if (searchParams.get("maxSapmaKm")) {
-        router.replace(
-          buildCarrierRouteSelectionPath(pathname, searchParams, null, null)
-        );
+        router.replace(buildCarrierRouteSelectionPath(pathname, searchParams, null, null));
       }
       return;
     }
@@ -257,14 +477,10 @@ function OpenTransportRequestDetailPageContent({
         hasValidatedSelectedRoute = selectedCarrierRouteId !== null;
 
         const [requestResponse, vehicleResponse] = await Promise.all([
-          getOpenOfferRequestDetail(
-            requestId,
-            accessToken,
-            {
-              carrierRouteId: selectedCarrierRouteId ?? undefined,
-              maxSapmaKm: selectedMaxSapmaKm ?? undefined,
-            }
-          ),
+          getOpenOfferRequestDetail(requestId, accessToken, {
+            carrierRouteId: selectedCarrierRouteId ?? undefined,
+            maxSapmaKm: selectedMaxSapmaKm ?? undefined,
+          }),
           getMyVehicles(accessToken),
         ]);
 
@@ -281,6 +497,56 @@ function OpenTransportRequestDetailPageContent({
             currentForm.aracId ||
             (vehicleResponse.length === 1 ? String(vehicleResponse[0].id) : ""),
         }));
+
+        if (requestResponse.hasExistingOffer) {
+          const [offersResult, threadsResult] = await Promise.allSettled([
+            getMyOffers(accessToken),
+            getMyOfferThreads(accessToken, { as: "carrier" }),
+          ]);
+
+          if (!isMounted) {
+            return;
+          }
+
+          if (
+            offersResult.status === "rejected" &&
+            offersResult.reason instanceof ApiClientError &&
+            offersResult.reason.status === 401
+          ) {
+            clearStoredAuth();
+            router.replace("/login");
+            return;
+          }
+
+          if (
+            offersResult.status === "rejected" &&
+            offersResult.reason instanceof ApiClientError &&
+            offersResult.reason.status === 403
+          ) {
+            router.replace("/");
+            return;
+          }
+
+          const matchedOffer =
+            offersResult.status === "fulfilled"
+              ? getPreferredOfferForRequest(offersResult.value, requestId)
+              : null;
+
+          const matchedThread =
+            threadsResult.status === "fulfilled"
+              ? threadsResult.value.find((thread) =>
+                  matchedOffer
+                    ? thread.offerId === matchedOffer.id
+                    : thread.requestId === requestId
+                ) ?? null
+              : null;
+
+          setCurrentOffer(matchedOffer);
+          setCurrentOfferThread(matchedThread);
+        } else {
+          setCurrentOffer(null);
+          setCurrentOfferThread(null);
+        }
       } catch (error) {
         if (!isMounted) {
           return;
@@ -305,18 +571,13 @@ function OpenTransportRequestDetailPageContent({
           if (hasValidatedSelectedRoute) {
             window.alert("Bu istek secili rota filtresine uymuyor.");
             router.replace(
-              buildOpenRequestsListPath(
-                selectedCarrierRouteId,
-                selectedMaxSapmaKm
-              )
+              buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm)
             );
             return;
           }
 
           setSelectedCarrierRoute(null);
-          router.replace(
-            buildCarrierRouteSelectionPath(pathname, searchParams, null, null)
-          );
+          router.replace(buildCarrierRouteSelectionPath(pathname, searchParams, null, null));
           return;
         }
 
@@ -426,12 +687,10 @@ function OpenTransportRequestDetailPageContent({
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-          window.alert("Bu istek artik teklif vermeye uygun degil.");
-          router.replace(
-            buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm)
-          );
-          return;
-        }
+        window.alert("Bu istek artik teklif vermeye uygun degil.");
+        router.replace(buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm));
+        return;
+      }
 
       if (error instanceof ApiClientError && error.status === 409) {
         if (
@@ -442,13 +701,9 @@ function OpenTransportRequestDetailPageContent({
           return;
         }
 
-        if (
-          error.message === "This transport request is no longer open for offers."
-        ) {
+        if (error.message === "This transport request is no longer open for offers.") {
           window.alert("Bu istek artik teklif kabul etmiyor.");
-          router.replace(
-            buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm)
-          );
+          router.replace(buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm));
           return;
         }
 
@@ -505,7 +760,7 @@ function OpenTransportRequestDetailPageContent({
 
   const priceSuggestion =
     request && !needsVehicleForSuggestion
-      ? TeklifFiyatÖnerisiHesaplama({
+      ? teklifFiyatOnerisiHesaplama({
           rotaMesafeMetre: request.rotaMesafeMetre,
           agirlikKg: request.agirlikKg,
           hacimM3: request.hacimM3,
@@ -518,471 +773,600 @@ function OpenTransportRequestDetailPageContent({
     return <OpenTransportRequestDetailPageFallback />;
   }
 
+  const backHref = request?.hasExistingOffer
+    ? "/dashboard/tekliflerim"
+    : buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm);
+  const routeTitle = request ? `${request.baslangicSehri} -> ${request.varisSehri}` : "";
+  const routeMeta =
+    request &&
+    `${formatLocationLabel(request.baslangicKonumMetni, request.baslangicSehri)} -> ${formatLocationLabel(
+      request.varisKonumMetni,
+      request.varisSehri
+    )}`;
+  const compatibilityLabel = request?.rotaUyumu
+    ? getRouteCompatibilityLabelText(request.rotaUyumu.uygunlukEtiketi)
+    : "Filtre yok";
+
   return (
     <CarrierVehiclesShell
-      title="Istek detayi ve teklif"
+      title={request?.hasExistingOffer ? "Teklif detayi" : "Istek detayi ve teklif"}
+      description={
+        request?.hasExistingOffer
+          ? "Verdigin teklifin durumunu ve ilgili istek baglamini tek ekranda takip et."
+          : "Yuk baglamini inceleyip teklifini ayni ekrandan profesyonelce hazirla."
+      }
       headerActions={<InlineHelpTrigger helpKey="offer-create" />}
+      headerVariant="compact"
+      motionPreset="operational"
+      cardMotionLimit={6}
     >
-      {isLoading ? (
-        <div className="app-surface rounded-[1.15rem] border border-slate-200 p-6 text-slate-600">
-          Istek detayi yukleniyor...
-        </div>
-      ) : null}
+      {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="app-surface rounded-[1.15rem] border border-slate-200 p-6">
-          <h2 className="text-lg font-black tracking-tight text-slate-950">Kayit goruntulenemedi</h2>
-          <p className="mt-2 text-sm text-slate-600">{errorMessage}</p>
+        <div className="rounded-[1.6rem] border border-rose-200 bg-rose-50/70 p-6 text-sm text-rose-700 shadow-sm">
+          <h2 className="text-base font-bold text-rose-800">Kayit goruntulenemedi</h2>
+          <p className="mt-1.5 leading-6">{errorMessage}</p>
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && request ? (
-        <div className="grid gap-6">
-          <div className="app-surface rounded-[1.15rem] border border-slate-200 p-6">
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                  <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
-                    {request.durum}
+        <div className="space-y-6">
+          <section
+            data-dashboard-primary
+            className="app-surface-strong rounded-[1.85rem] border border-slate-200/80 px-5 py-5 shadow-sm md:px-6 md:py-6"
+          >
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+              <div className="min-w-0 flex-1 space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={request.durum} />
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                    Istek #{request.id}
                   </span>
-                  <span>#{request.id}</span>
+                  {currentOffer ? (
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                      Teklif #{currentOffer.id}
+                    </span>
+                  ) : null}
                   {request.hasExistingOffer ? (
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                       Acik teklifin var
                     </span>
                   ) : null}
                 </div>
-                <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                  {formatLocationLabel(
-                    request.baslangicKonumMetni,
-                    request.baslangicSehri
-                  )}{" "}
-                  {"->"}{" "}
-                  {formatLocationLabel(request.varisKonumMetni, request.varisSehri)}
-                </h2>
-                <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+
+                <div className="space-y-2">
+                  <h1 className="text-[2rem] font-black tracking-tight text-slate-950 md:text-[2.35rem]">
+                    {routeTitle}
+                  </h1>
+                  <p className="max-w-3xl text-sm leading-6 text-slate-500">{routeMeta}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                     {getCargoTypeLabel(request.yukTipi)}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                     {formatWeightKg(request.agirlikKg)}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                     {formatVolumeM3(request.hacimM3)}
                   </span>
+                  {request.tasimaTarihi ? (
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                      {formatPlannedDate(request.tasimaTarihi)}
+                    </span>
+                  ) : null}
                   {request.tekTasimaIstiyor ? (
-                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">
+                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
                       Tek tasima
                     </span>
                   ) : null}
-                  {request.tasimaTarihi ? (
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                      {request.tasimaTarihi}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-              <div className="text-sm text-slate-500">
-                {formatDate(request.olusturmaTarihi)}
-              </div>
-            </div>
-          </div>
-
-          {request.images && request.images.length > 0 ? (
-            <RequestImageGallery
-              images={request.images}
-              primaryImageId={request.primaryImageId ?? null}
-            />
-          ) : (
-            <div className="app-surface rounded-[1.15rem] border border-slate-200 p-5 text-sm text-slate-500">
-              Bu istek icin henuz fotograf paylasilmamis.
-            </div>
-          )}
-
-          {selectedCarrierRoute ? (
-            <div className="grid gap-4 xl:grid-cols-2">
-              <div className="app-surface rounded-[1.15rem] border border-blue-200 bg-blue-50/60 p-6">
-                <h3 className="text-lg font-black tracking-tight text-slate-950">Secili rota</h3>
-                <p className="mt-3 text-sm text-slate-700">
-                  {formatLocationLabel(
-                    selectedCarrierRoute.baslangicKonumMetni,
-                    selectedCarrierRoute.baslangicSehri
-                  )}{" "}
-                  {"->"}{" "}
-                  {formatLocationLabel(
-                    selectedCarrierRoute.varisKonumMetni,
-                    selectedCarrierRoute.varisSehri
-                  )}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
-                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
-                    {formatPlannedDate(selectedCarrierRoute.planlananTarih)}
-                  </span>
-                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
-                    {formatRouteDistanceKm(selectedCarrierRoute.rotaMesafeMetre)}
-                  </span>
-                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
-                    {formatRouteDuration(selectedCarrierRoute.rotaSureSaniye)}
-                  </span>
-                  {typeof selectedMaxSapmaKm === "number" ? (
-                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
-                      Maks. sapma {selectedMaxSapmaKm} km
-                    </span>
-                  ) : null}
                 </div>
               </div>
 
-              <div className="app-surface rounded-[1.15rem] border border-slate-200 p-6">
-                <h3 className="text-lg font-black tracking-tight text-slate-950">Rota uyumu</h3>
-                {request.rotaUyumu ? (
-                  <div className="mt-4 space-y-3 text-sm text-slate-700">
-                    <span
-                      className={getRouteCompatibilityBadgeClassName(
-                        request.rotaUyumu.uygunlukEtiketi
-                      )}
+              <div className="grid gap-3 sm:grid-cols-2 xl:w-[340px] xl:grid-cols-1">
+                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Kayit tarihi
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {formatDate(request.olusturmaTarihi)}
+                  </p>
+                </div>
+
+                <div
+                  className={`rounded-[1.25rem] border px-4 py-4 ${
+                    request.hasExistingOffer
+                      ? "border-emerald-200 bg-emerald-50/80"
+                      : "border-blue-200 bg-blue-50/80"
+                  }`}
+                >
+                  <p
+                    className={`text-xs font-semibold uppercase tracking-[0.18em] ${
+                      request.hasExistingOffer ? "text-emerald-700" : "text-blue-700"
+                    }`}
+                  >
+                    {request.hasExistingOffer ? "Mevcut teklif" : "Hazirlik durumu"}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {request.hasExistingOffer
+                      ? currentOffer
+                        ? formatCurrency(currentOffer.fiyat)
+                        : "Acik teklif kaydin var"
+                      : request.hasActiveVehicle
+                        ? "Teklif girmeye hazirsin"
+                        : "Teklif icin aktif arac gerekiyor"}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2 xl:justify-end">
+                  {currentOffer ? (
+                    <Link
+                      href={`/dashboard/konusmalar/teklif/${currentOfferThread?.offerId ?? currentOffer.id}`}
+                      className="app-button-primary"
                     >
-                      {getRouteCompatibilityLabelText(
-                        request.rotaUyumu.uygunlukEtiketi
-                      )}
-                    </span>
-                    <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
-                        Ek {formatRouteDistanceKm(request.rotaUyumu.extraMesafeMetre)}
-                      </span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
-                        Ek {formatRouteDuration(request.rotaUyumu.extraSureSaniye)}
-                      </span>
-                    </div>
-                  </div>
-                ) : null}
+                      Konusmaya git
+                    </Link>
+                  ) : null}
+                  <Link href={backHref} className="app-button-secondary">
+                    {request.hasExistingOffer ? "Tekliflerime don" : "Listeye don"}
+                  </Link>
+                </div>
               </div>
             </div>
-          ) : null}
+          </section>
 
-          {!request.hasActiveVehicle ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-              Teklif verebilmek icin once en az bir aktif aracin olmali.
-            </div>
-          ) : null}
-
-          {request.hasExistingOffer ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-              Bu istege zaten acik bir teklif verdin. Yeni teklif olusturamazsin.
-            </div>
-          ) : null}
-
-          <div className="app-surface rounded-[1.15rem] border border-slate-200 p-6">
-            <h3 className="text-lg font-black tracking-tight text-slate-950">Yuk detayi</h3>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-              {request.yukDetay}
-            </p>
+          <div data-dashboard-stats className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <CustomerMetricCard
+              label="Fotograf"
+              value={request.images?.length ?? 0}
+              hint="Talebe eklenen gorsel adedi"
+              tone="amber"
+              icon={<i className="pi pi-images text-lg" />}
+            />
+            <CustomerMetricCard
+              label="Rota mesafesi"
+              value={formatRouteDistanceKm(request.rotaMesafeMetre)}
+              hint="Kayitli rota verisine gore"
+              tone="blue"
+              icon={<i className="pi pi-map text-lg" />}
+            />
+            <CustomerMetricCard
+              label="Tahmini sure"
+              value={formatRouteDuration(request.rotaSureSaniye)}
+              hint="Mevcut rota bilgisinden"
+              tone="violet"
+              icon={<i className="pi pi-clock text-lg" />}
+            />
+            <CustomerMetricCard
+              label="Rota uyumu"
+              value={compatibilityLabel}
+              hint={
+                selectedCarrierRoute
+                  ? "Secili rotanla karsilastirma"
+                  : "Uyum bilgisi rota filtresiyle netlesir"
+              }
+              tone={
+                request.rotaUyumu?.uygunlukEtiketi === "UYGUN"
+                  ? "emerald"
+                  : request.rotaUyumu?.uygunlukEtiketi === "SINIRDA"
+                    ? "amber"
+                    : "blue"
+              }
+              icon={<i className="pi pi-directions text-lg" />}
+            />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="app-surface rounded-[1.15rem] border border-slate-200 p-6">
-              <h3 className="text-lg font-black tracking-tight text-slate-950">Baslangic</h3>
-              <dl className="mt-4 space-y-3 text-sm text-slate-600">
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Konum</dt>
-                  <dd className="text-right">
-                    {formatLocationLabel(
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
+            <div className="space-y-6">
+              {request.images && request.images.length > 0 ? (
+                <RequestImageGallery
+                  images={request.images}
+                  primaryImageId={request.primaryImageId ?? null}
+                />
+              ) : (
+                <EmptyStateCard
+                  eyebrow="Fotograf galerisi"
+                  title="Bu istek icin henuz fotograf paylasilmamis"
+                  description="Teklif karari yalnizca mevcut yuk detaylari ve rota bilgilerine dayanir."
+                />
+              )}
+
+              <CustomerSectionSurface
+                title="Yuk ozeti"
+                description="Teklif kararini etkileyen temel operasyon bilgileri."
+              >
+                <div className="grid gap-3 md:grid-cols-2">
+                  <DetailInfoRow label="Yuk tipi" value={getCargoTypeLabel(request.yukTipi)} />
+                  <DetailInfoRow label="Agirlik" value={formatWeightKg(request.agirlikKg)} />
+                  <DetailInfoRow label="Hacim" value={formatVolumeM3(request.hacimM3)} />
+                  <DetailInfoRow
+                    label="Tasima tarihi"
+                    value={
+                      request.tasimaTarihi
+                        ? formatPlannedDate(request.tasimaTarihi)
+                        : "Belirtilmedi"
+                    }
+                  />
+                  <div className="md:col-span-2">
+                    <DetailInfoRow
+                      label="Tasima modeli"
+                      value={request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}
+                    />
+                  </div>
+                </div>
+              </CustomerSectionSurface>
+
+              <CustomerSectionSurface
+                title="Baslangic ve teslim"
+                description="Yukleme ve teslim noktalarinin kayitli detaylari."
+              >
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <DetailAddressCard
+                    title="Baslangic"
+                    location={formatLocationLabel(
                       request.baslangicKonumMetni,
                       request.baslangicSehri
                     )}
-                  </dd>
+                    city={request.normalizeBaslangicSehir || request.baslangicSehri}
+                    district={request.normalizeBaslangicIlce}
+                  />
+                  <DetailAddressCard
+                    title="Varis"
+                    location={formatLocationLabel(
+                      request.varisKonumMetni,
+                      request.varisSehri
+                    )}
+                    city={request.normalizeVarisSehir || request.varisSehri}
+                    district={request.normalizeVarisIlce}
+                  />
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Sehir</dt>
-                  <dd>{request.normalizeBaslangicSehir || request.baslangicSehri}</dd>
-                </div>
-                {request.normalizeBaslangicIlce ? (
-                  <div className="flex items-center justify-between gap-4">
-                    <dt className="font-medium text-slate-900">Ilce</dt>
-                    <dd>{request.normalizeBaslangicIlce}</dd>
-                  </div>
-                ) : null}
-              </dl>
-            </div>
+              </CustomerSectionSurface>
 
-            <div className="app-surface rounded-[1.15rem] border border-slate-200 p-6">
-              <h3 className="text-lg font-black tracking-tight text-slate-950">Varis</h3>
-              <dl className="mt-4 space-y-3 text-sm text-slate-600">
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Konum</dt>
-                  <dd className="text-right">
-                    {formatLocationLabel(request.varisKonumMetni, request.varisSehri)}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Sehir</dt>
-                  <dd>{request.normalizeVarisSehir || request.varisSehri}</dd>
-                </div>
-                {request.normalizeVarisIlce ? (
-                  <div className="flex items-center justify-between gap-4">
-                    <dt className="font-medium text-slate-900">Ilce</dt>
-                    <dd>{request.normalizeVarisIlce}</dd>
-                  </div>
-                ) : null}
-              </dl>
-            </div>
-          </div>
-
-          <div className="app-surface-strong rounded-[1.15rem] border border-slate-200 p-6">
-            <h3 className="text-lg font-black tracking-tight text-slate-950">Teklif ver</h3>
-            {submitErrorMessage ? (
-              <div className="app-form-error-banner mt-4" role="alert">
-                <p className="text-sm font-semibold">Teklif gonderilemedi</p>
-                <p className="mt-1 text-sm">{submitErrorMessage}</p>
-              </div>
-            ) : null}
-            {needsVehicleForSuggestion ? (
-              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                Tek tasima isteginde onerilen fiyat icin once arac secmelisin.
-              </div>
-            ) : null}
-            {priceSuggestion ? (
-              <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-950">
-                <p className="font-semibold">
-                  Onerilen fiyat: {priceSuggestion.onerilenFiyat} TRY
-                </p>
-                <p className="mt-1">Mesafe: {priceSuggestion.km.toFixed(1)} km</p>
-                <p className="mt-1">
-                  Faturalanan yuk: {priceSuggestion.faturalanabilirYukKg.toFixed(0)} kg
-                </p>
-                {request.tekTasimaIstiyor && selectedVehicle?.maksimumHacimM3 ? (
-                  <p className="mt-1">
-                    Tek tasima icin arac hacmi esas alindi:{" "}
-                    {selectedVehicle.maksimumHacimM3.toFixed(1)} m3
+              <CustomerSectionSurface
+                title="Musteri notu"
+                description="Talebe eklenmis aciklama ve operasyon beklentisi."
+              >
+                <div className="rounded-[1.15rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                    {request.yukDetay || "Ek aciklama paylasilmadi."}
                   </p>
-                ) : null}
-              </div>
-            ) : null}
-            <form className="mt-4 grid gap-4" onSubmit={handleSubmit}>
-              <div className="grid gap-2">
-                <label className="text-sm font-semibold text-gray-900" htmlFor="aracId">
-                  Aktif arac sec
-                </label>
-                <select
-                  id="aracId"
-                  name="aracId"
-                  value={form.aracId}
-                  onChange={handleChange}
-                  aria-invalid={vehicleSelectionValidationActive && !form.aracId || undefined}
-                  disabled={
-                    isSubmitting || !request.hasActiveVehicle || request.hasExistingOffer
-                  }
-                  className="app-input block text-sm"
+                </div>
+              </CustomerSectionSurface>
+            </div>
+
+            <div className="space-y-6">
+              {request.hasExistingOffer ? (
+                <OfferSummaryPanel
+                  offer={currentOffer}
+                  thread={currentOfferThread}
+                  backHref={backHref}
+                />
+              ) : (
+                <CustomerSectionSurface
+                  title="Teklif ver"
+                  description="Fiyat, arac ve not alanlariyla teklifini hazirla."
                 >
-                  <option value="">Arac secin</option>
-                  {vehicles.map((vehicle) => (
-                    <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.plaka} - {vehicle.marka} {vehicle.model}
-                    </option>
-                  ))}
-                </select>
-                {vehicleSelectionValidationActive && !form.aracId ? (
-                  <p className="app-field-status app-field-error">
-                    Teklif vermeden once bir aktif arac sec.
-                  </p>
-                ) : null}
-              </div>
+                  <div className="space-y-4">
+                    {submitErrorMessage ? (
+                      <div className="app-form-error-banner" role="alert">
+                        <p className="text-sm font-semibold">Teklif gonderilemedi</p>
+                        <p className="mt-1 text-sm">{submitErrorMessage}</p>
+                      </div>
+                    ) : null}
 
-              <MotionCollapse
-                isOpen={Boolean(selectedVehicle && selectedVehicleCapacitySummary)}
+                    {!request.hasActiveVehicle ? (
+                      <InfoBanner tone="amber">
+                        Teklif verebilmek icin once en az bir aktif aracin olmali.
+                      </InfoBanner>
+                    ) : null}
+
+                    {needsVehicleForSuggestion ? (
+                      <InfoBanner tone="amber">
+                        Tek tasima isteginde onerilen fiyat icin once arac secmelisin.
+                      </InfoBanner>
+                    ) : null}
+
+                    {priceSuggestion ? (
+                      <InfoBanner tone="blue">
+                        <p className="font-semibold">
+                          Onerilen fiyat: {formatCurrency(priceSuggestion.onerilenFiyat)}
+                        </p>
+                        <p className="mt-1">Mesafe: {priceSuggestion.km.toFixed(1)} km</p>
+                        <p className="mt-1">
+                          Faturalanan yuk: {priceSuggestion.faturalanabilirYukKg.toFixed(0)} kg
+                        </p>
+                        {request.tekTasimaIstiyor && selectedVehicle?.maksimumHacimM3 ? (
+                          <p className="mt-1">
+                            Tek tasima icin arac hacmi esas alindi:{" "}
+                            {selectedVehicle.maksimumHacimM3.toFixed(1)} m3
+                          </p>
+                        ) : null}
+                      </InfoBanner>
+                    ) : null}
+
+                    <form className="grid gap-4" onSubmit={handleSubmit}>
+                      <div className="grid gap-2">
+                        <label className="text-sm font-semibold text-gray-900" htmlFor="aracId">
+                          Aktif arac sec
+                        </label>
+                        <select
+                          id="aracId"
+                          name="aracId"
+                          value={form.aracId}
+                          onChange={handleChange}
+                          aria-invalid={
+                            (vehicleSelectionValidationActive && !form.aracId) || undefined
+                          }
+                          disabled={isSubmitting || !request.hasActiveVehicle}
+                          className="app-input block text-sm"
+                        >
+                          <option value="">Arac secin</option>
+                          {vehicles.map((vehicle) => (
+                            <option key={vehicle.id} value={vehicle.id}>
+                              {vehicle.plaka} - {vehicle.marka} {vehicle.model}
+                            </option>
+                          ))}
+                        </select>
+                        {vehicleSelectionValidationActive && !form.aracId ? (
+                          <p className="app-field-status app-field-error">
+                            Teklif vermeden once bir aktif arac sec.
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <MotionCollapse
+                        isOpen={Boolean(selectedVehicle && selectedVehicleCapacitySummary)}
+                      >
+                        {selectedVehicle && selectedVehicleCapacitySummary ? (
+                          <div
+                            data-dashboard-form-conditional
+                            className="grid gap-4 rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4"
+                          >
+                            <div className="grid gap-3">
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                Arac kapasite ozeti
+                              </p>
+                              <DetailInfoRow
+                                label="Toplam agirlik"
+                                value={formatWeightKg(
+                                  selectedVehicleCapacitySummary.toplamAgirlikKg
+                                )}
+                              />
+                              <DetailInfoRow
+                                label="Kalan agirlik"
+                                value={formatWeightKg(
+                                  selectedVehicleCapacitySummary.kalanAgirlikKg
+                                )}
+                              />
+                              <DetailInfoRow
+                                label="Toplam hacim"
+                                value={formatVolumeM3(
+                                  selectedVehicleCapacitySummary.toplamHacimM3
+                                )}
+                              />
+                              <DetailInfoRow
+                                label="Kalan hacim"
+                                value={formatVolumeM3(
+                                  selectedVehicleCapacitySummary.kalanHacimM3
+                                )}
+                              />
+                            </div>
+
+                            <div className="grid gap-3">
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                Bu yuk eklendiginde
+                              </p>
+                              <DetailInfoRow
+                                label="Yuk agirligi"
+                                value={formatWeightKg(request.agirlikKg)}
+                              />
+                              <DetailInfoRow
+                                label="Yuk hacmi"
+                                value={formatVolumeM3(request.hacimM3)}
+                              />
+                              <DetailInfoRow
+                                label="Teorik sonrasi agirlik"
+                                value={formatWeightKg(teorikKalanAgirlikKg)}
+                              />
+                              <DetailInfoRow
+                                label="Teorik sonrasi hacim"
+                                value={formatVolumeM3(teorikKalanHacimM3)}
+                              />
+                            </div>
+
+                            <div className="space-y-3">
+                              {showsWeightOverflowWarning ? (
+                                <InfoBanner tone="rose">
+                                  Bu aracta kayitli agirlik kapasitesi teorik olarak asiliyor.
+                                </InfoBanner>
+                              ) : null}
+                              {showsVolumeOverflowWarning ? (
+                                <InfoBanner tone="rose">
+                                  Bu aracta kayitli hacim kapasitesi teorik olarak asiliyor.
+                                </InfoBanner>
+                              ) : null}
+                              {showsDedicatedIncomingWarning ? (
+                                <InfoBanner tone="amber">
+                                  Bu yuk tek tasima istiyor; secilen aracta aktif rezervasyon varken
+                                  operasyonel uyumu ayrica kontrol etmelisin.
+                                </InfoBanner>
+                              ) : null}
+                              {showsDedicatedExistingWarning ? (
+                                <InfoBanner tone="amber">
+                                  Secilen aracta halihazirda tek tasima talebi olan aktif bir
+                                  rezervasyon var.
+                                </InfoBanner>
+                              ) : null}
+                              <InfoBanner
+                                tone={selectedVehicleCapacitySummary.hesapEksigiVar ? "blue" : "slate"}
+                              >
+                                Bu ozet yalnizca kayitli agirlik ve hacim verilerine dayanir;
+                                fiziksel yerlesim ve istif uygunlugu ayrica kontrol edilmelidir.
+                              </InfoBanner>
+                            </div>
+                          </div>
+                        ) : null}
+                      </MotionCollapse>
+
+                      <div className="grid gap-2">
+                        <label className="text-sm font-semibold text-gray-900" htmlFor="fiyat">
+                          Teklif fiyatiniz (TRY)
+                        </label>
+                        <input
+                          id="fiyat"
+                          name="fiyat"
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={form.fiyat}
+                          onChange={handleChange}
+                          placeholder="Orn: 12500"
+                          disabled={isSubmitting || !request.hasActiveVehicle}
+                          className="app-input block text-sm"
+                          required
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <label className="text-sm font-semibold text-gray-900" htmlFor="not">
+                          Teklif notu
+                        </label>
+                        <textarea
+                          id="not"
+                          name="not"
+                          value={form.not}
+                          onChange={handleChange}
+                          rows={4}
+                          maxLength={255}
+                          placeholder="Teslim plani, sure veya ek aciklama yazabilirsiniz."
+                          disabled={isSubmitting || !request.hasActiveVehicle}
+                          className="app-input block min-h-[7rem] resize-y text-sm"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || !request.hasActiveVehicle || !form.aracId}
+                        className="app-button-primary app-form-submit-button app-pressable w-full justify-center text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isSubmitting ? "Teklif gonderiliyor..." : "Teklif olustur"}
+                      </button>
+                    </form>
+                  </div>
+                </CustomerSectionSurface>
+              )}
+
+              <CustomerSectionSurface
+                title="Rota ve uygunluk"
+                description="Kayitli rota bilgisi ve secili tasiyici rotanla olan uyum baglami."
               >
-                {selectedVehicle && selectedVehicleCapacitySummary ? (
-                  <div
-                    data-dashboard-form-conditional
-                    className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-2"
-                  >
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                        Arac kapasite ozeti
-                      </p>
-                      <div className="mt-3 space-y-2 text-sm text-slate-700">
-                        <div className="flex items-center justify-between gap-3">
-                          <span>Toplam agirlik</span>
-                          <span className="font-semibold text-slate-950">
-                            {formatWeightKg(
-                              selectedVehicleCapacitySummary.toplamAgirlikKg
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span>Rezerve agirlik</span>
-                          <span className="font-semibold text-slate-950">
-                            {formatWeightKg(
-                              selectedVehicleCapacitySummary.rezerveAgirlikKg
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span>Kalan agirlik</span>
-                          <span className="font-semibold text-slate-950">
-                            {formatWeightKg(
-                              selectedVehicleCapacitySummary.kalanAgirlikKg
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span>Toplam hacim</span>
-                          <span className="font-semibold text-slate-950">
-                            {formatVolumeM3(
-                              selectedVehicleCapacitySummary.toplamHacimM3
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span>Rezerve hacim</span>
-                          <span className="font-semibold text-slate-950">
-                            {formatVolumeM3(
-                              selectedVehicleCapacitySummary.rezerveHacimM3
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span>Kalan hacim</span>
-                          <span className="font-semibold text-slate-950">
-                            {formatVolumeM3(
-                              selectedVehicleCapacitySummary.kalanHacimM3
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                        Bu yuk eklendiginde
-                      </p>
-                      <div className="mt-3 space-y-2 text-sm text-slate-700">
-                        <div className="flex items-center justify-between gap-3">
-                          <span>Yuk agirligi</span>
-                          <span className="font-semibold text-slate-950">
-                            {formatWeightKg(request.agirlikKg)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span>Yuk hacmi</span>
-                          <span className="font-semibold text-slate-950">
-                            {formatVolumeM3(request.hacimM3)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span>Teorik sonrasi agirlik</span>
-                          <span className="font-semibold text-slate-950">
-                            {formatWeightKg(teorikKalanAgirlikKg)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span>Teorik sonrasi hacim</span>
-                          <span className="font-semibold text-slate-950">
-                            {formatVolumeM3(teorikKalanHacimM3)}
-                          </span>
-                        </div>
-                        <div className="mb-6 flex items-center justify-between gap-3">
-                          <span>Aktif rezervasyon</span>
-                          <span className="font-semibold text-slate-950">
-                            {selectedVehicleCapacitySummary.aktifRezervasyonSayisi}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 lg:col-span-2">
-                      {showsWeightOverflowWarning ? (
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                          Bu aracta kayitli agirlik kapasitesi teorik olarak asiliyor.
-                        </div>
-                      ) : null}
-                      {showsVolumeOverflowWarning ? (
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                          Bu aracta kayitli hacim kapasitesi teorik olarak asiliyor.
-                        </div>
-                      ) : null}
-                      {showsDedicatedIncomingWarning ? (
-                        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                          Bu yuk tek tasima istiyor; secilen aracta aktif rezervasyon
-                          varken operasyonel uyumu ayrica kontrol etmelisin.
-                        </div>
-                      ) : null}
-                      {showsDedicatedExistingWarning ? (
-                        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                          Secilen aracta halihazirda tek tasima talebi olan aktif bir
-                          rezervasyon var.
-                        </div>
-                      ) : null}
-                      {selectedVehicleCapacitySummary.hesapEksigiVar ? (
-                        <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                          Kapasite ozeti yalnizca kayitli agirlik ve hacim verilerine
-                          gore hesaplanir; fiziksel sigma veya yerlesim garantisi vermez.
-                        </div>
-                      ) : null}
-                      {!selectedVehicleCapacitySummary.hesapEksigiVar ? (
-                        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-                          Bu ozet yalnizca kayitli agirlik ve hacim verilerine dayanir;
-                          fiziksel sigma, istif ve yukleme sekli ayrica kontrol
-                          edilmelidir.
-                        </div>
-                      ) : null}
+                <div className="space-y-4">
+                  <div className="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Talep rotasi
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">{routeMeta}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                        {formatRouteDistanceKm(request.rotaMesafeMetre)}
+                      </span>
+                      <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                        {formatRouteDuration(request.rotaSureSaniye)}
+                      </span>
                     </div>
                   </div>
-                ) : null}
-              </MotionCollapse>
 
-              <div className="grid gap-2">
-                <label className="text-sm font-semibold text-gray-900" htmlFor="fiyat">
-                  Teklif fiyatiniz (TRY)
-                </label>
-                <input
-                  id="fiyat"
-                  name="fiyat"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={form.fiyat}
-                  onChange={handleChange}
-                  placeholder="Orn: 12500"
-                  disabled={
-                    isSubmitting || !request.hasActiveVehicle || request.hasExistingOffer
-                  }
-                  className="app-input block text-sm"
-                  required
-                />
-              </div>
+                  {selectedCarrierRoute ? (
+                    <div className="rounded-[1.2rem] border border-blue-200 bg-blue-50/70 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
+                        Secili rota
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-blue-950">
+                        {formatLocationLabel(
+                          selectedCarrierRoute.baslangicKonumMetni,
+                          selectedCarrierRoute.baslangicSehri
+                        )}{" "}
+                        {"->"}{" "}
+                        {formatLocationLabel(
+                          selectedCarrierRoute.varisKonumMetni,
+                          selectedCarrierRoute.varisSehri
+                        )}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+                          {formatPlannedDate(selectedCarrierRoute.planlananTarih)}
+                        </span>
+                        {typeof selectedMaxSapmaKm === "number" ? (
+                          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+                            Maks. sapma {selectedMaxSapmaKm} km
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
 
-              <div className="grid gap-2">
-                <label className="text-sm font-semibold text-gray-900" htmlFor="not">
-                  Teklif notu
-                </label>
-                <textarea
-                  id="not"
-                  name="not"
-                  value={form.not}
-                  onChange={handleChange}
-                  rows={4}
-                  maxLength={255}
-                  placeholder="Teslim plani, sure veya ek aciklama yazabilirsiniz."
-                  disabled={
-                    isSubmitting || !request.hasActiveVehicle || request.hasExistingOffer
-                  }
-                  className="app-input block min-h-[7rem] resize-y text-sm"
-                />
-              </div>
+                  {request.rotaUyumu ? (
+                    <div className="space-y-3 rounded-[1.2rem] border border-slate-200 bg-white p-4">
+                      <span
+                        className={getRouteCompatibilityBadgeClassName(
+                          request.rotaUyumu.uygunlukEtiketi
+                        )}
+                      >
+                        {getRouteCompatibilityLabelText(request.rotaUyumu.uygunlukEtiketi)}
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                          Ek {formatRouteDistanceKm(request.rotaUyumu.extraMesafeMetre)}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                          Ek {formatRouteDuration(request.rotaUyumu.extraSureSaniye)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <InfoBanner tone="slate">
+                      Secili rota filtresi olmadigi icin ayrintili uyum analizi gosterilmiyor.
+                    </InfoBanner>
+                  )}
+                </div>
+              </CustomerSectionSurface>
 
-              <button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  !request.hasActiveVehicle ||
-                  request.hasExistingOffer ||
-                  !form.aracId
-                }
-                className="app-button-primary app-form-submit-button app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              <CustomerSectionSurface
+                title="Istek kapsami"
+                description="Kaydin operasyonel baglami ve hizli gecisler."
               >
-                {isSubmitting ? "Teklif gonderiliyor..." : "Teklif Olustur"}
-              </button>
-            </form>
+                <div className="space-y-3">
+                  <DetailInfoRow label="Kayit tarihi" value={formatDate(request.olusturmaTarihi)} />
+                  <DetailInfoRow
+                    label="Tasima modeli"
+                    value={request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}
+                  />
+                  <DetailInfoRow
+                    label="Aktif arac"
+                    value={request.hasActiveVehicle ? "Hazir" : "Arac gerekiyor"}
+                  />
+                  <DetailInfoRow
+                    label="Fotograf"
+                    value={`${request.images?.length ?? 0} gorsel`}
+                  />
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4">
+                  <Link href={backHref} className="app-button-secondary w-full justify-center">
+                    {request.hasExistingOffer ? "Tekliflerime don" : "Acik isteklere don"}
+                  </Link>
+                  {currentOffer ? (
+                    <Link
+                      href={`/dashboard/konusmalar/teklif/${currentOfferThread?.offerId ?? currentOffer.id}`}
+                      className="app-button-primary w-full justify-center"
+                    >
+                      Konusmaya git
+                    </Link>
+                  ) : null}
+                </div>
+              </CustomerSectionSurface>
+            </div>
           </div>
         </div>
       ) : null}

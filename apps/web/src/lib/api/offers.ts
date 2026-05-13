@@ -98,6 +98,7 @@ export type IncomingOfferItem = {
   carrierId: number;
   carrierName: string;
   carrierUsername: string;
+  carrierProfileImageUrl?: string;
   aracId: number | null;
   aracPlaka: string | null;
   fiyat: number;
@@ -120,6 +121,7 @@ export type MyIncomingOfferItem = {
   carrierId: number;
   carrierName: string;
   carrierUsername: string;
+  carrierProfileImageUrl?: string;
   aracId: number | null;
   aracPlaka: string | null;
   fiyat: number;

@@ -9,8 +9,12 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
@@ -22,6 +26,8 @@ import { UpdateVehicleDto } from "./dto/update-vehicle.dto";
 import { VehicleDetailResponseDto } from "./dto/vehicle-detail-response.dto";
 import { VehicleListItemResponseDto } from "./dto/vehicle-list-item-response.dto";
 import { VehiclesService } from "./vehicles.service";
+
+const MAX_VEHICLE_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 @Controller("vehicles")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -69,5 +75,33 @@ export class VehiclesController {
     @Body() updateVehicleDto: UpdateVehicleDto
   ): Promise<VehicleDetailResponseDto> {
     return this.vehiclesService.updateById(currentUser, id, updateVehicleDto);
+  }
+
+  @Post(":id/image")
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FileInterceptor("image", {
+      storage: memoryStorage(),
+      limits: {
+        files: 1,
+        fileSize: MAX_VEHICLE_IMAGE_FILE_SIZE_BYTES,
+      },
+    })
+  )
+  updateImage(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param("id", ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File | undefined
+  ): Promise<VehicleDetailResponseDto> {
+    return this.vehiclesService.updateImage(currentUser, id, file);
+  }
+
+  @Delete(":id/image")
+  @HttpCode(HttpStatus.OK)
+  deleteImage(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param("id", ParseIntPipe) id: number
+  ): Promise<VehicleDetailResponseDto> {
+    return this.vehiclesService.deleteImage(currentUser, id);
   }
 }

@@ -303,7 +303,7 @@ export default function MyTransportRequestsPage() {
       ) : null}
 
       {!isLoading && !errorMessage ? (
-        <div data-dashboard-stats className="grid gap-4 md:grid-cols-3">
+        <div data-dashboard-stats className="grid gap-3 md:grid-cols-3">
           <CustomerMetricCard
             label="Toplam istek"
             value={totalRequestCount}
@@ -329,7 +329,7 @@ export default function MyTransportRequestsPage() {
       ) : null}
 
       {!isLoading && !errorMessage ? (
-        <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
           <CustomerSectionSurface
             title="Tum istekler"
             count={totalRequestCount}
@@ -353,7 +353,7 @@ export default function MyTransportRequestsPage() {
             ) : (
               <div className="divide-y divide-slate-100">
                 {sortedRequests.map((request) => (
-                  <div key={request.id} className="p-5 md:p-6">
+                  <div key={request.id} className="p-4 md:p-5">
                     <MyRequestCard
                       request={request}
                       offerCount={offerCountMap.get(request.id) ?? 0}

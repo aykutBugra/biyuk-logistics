@@ -3,10 +3,12 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { MediaStorageService } from "../../infrastructure/media/media-storage.service";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { NotificationsPublisher } from "../notifications/notifications.publisher";
 import { CreateCounterOfferDto } from "./dto/create-counter-offer.dto";
@@ -50,7 +52,8 @@ export class OfferThreadsService {
   constructor(
     private readonly offerThreadsRepository: OfferThreadsRepository,
     private readonly notificationsPublisher: NotificationsPublisher,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    @Optional() private readonly mediaStorageService?: MediaStorageService
   ) {}
 
   // Kullanıcının dahil olduğu thread özetlerini toplar. Liste response'u son mesaj,
@@ -347,6 +350,11 @@ export class OfferThreadsService {
         participantSide === "customer"
           ? record.carrierUsername
           : record.customerUsername,
+      karsiTarafProfileImageUrl: this.toOptionalPublicUrl(
+        participantSide === "customer"
+          ? record.carrierProfileImageStorageKey
+          : record.customerProfileImageStorageKey
+      ),
       fiyat: record.fiyat,
       durum: record.durum,
       isClosed: record.closedAt !== null,
@@ -389,6 +397,11 @@ export class OfferThreadsService {
       karsiTarafKullaniciAdi: isCustomer
         ? record.carrierUsername
         : record.customerUsername,
+      karsiTarafProfileImageUrl: this.toOptionalPublicUrl(
+        isCustomer
+          ? record.carrierProfileImageStorageKey
+          : record.customerProfileImageStorageKey
+      ),
       fiyat: record.fiyat,
       durum: record.durum,
       isClosed: record.closedAt !== null,
@@ -421,12 +434,21 @@ export class OfferThreadsService {
       senderUserId: message.senderUserId,
       senderName: message.senderName,
       senderUsername: message.senderUsername,
+      senderProfileImageUrl: this.toOptionalPublicUrl(
+        message.senderProfileImageStorageKey
+      ),
       isMine: message.senderUserId === currentUserId,
     };
   }
 
   // Thread listesinde uzun message gövdesi yerine kısa bir satır göstermek için
   // message tipine göre özet metin üretir.
+  private toOptionalPublicUrl(storageKey: string | null): string | undefined {
+    return storageKey && this.mediaStorageService
+      ? this.mediaStorageService.toPublicUrl(storageKey)
+      : undefined;
+  }
+
   private toLastMessageSummary(message: OfferThreadMessageRecord | null): string | null {
     if (!message) {
       return null;

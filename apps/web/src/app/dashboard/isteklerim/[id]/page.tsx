@@ -3,8 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
+import CustomerMetricCard from "@/components/CustomerMetricCard";
+import CustomerSectionSurface from "@/components/CustomerSectionSurface";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
+import EmptyStateCard from "@/components/EmptyStateCard";
 import RatingComposerCard from "@/components/RatingComposerCard";
 import RequestImageGallery from "@/components/RequestImageGallery";
 import StatusBadge from "@/components/StatusBadge";
@@ -105,7 +109,7 @@ function getJobStatusCopy(status: string): { title: string; description: string 
       return {
         title: "Nakliye tamamlandi",
         description:
-          "Tasima sureci tamamlandi. Bir sonraki fazda rating gibi kapanis adimlari eklenebilir.",
+          "Tasima sureci tamamlandi. Kapanis puanlamasi ve genel kayit bilgileri asagida gorunuyor.",
       };
     default:
       return {
@@ -113,6 +117,161 @@ function getJobStatusCopy(status: string): { title: string; description: string 
         description: "Nakliye kaydi olustu ve durum bilgisi bu ekrandan takip edilebilir.",
       };
   }
+}
+
+function formatRouteTitle(request: TransportRequestDetail): string {
+  return `${request.baslangicSehri} -> ${request.varisSehri}`;
+}
+
+function formatRouteMeta(request: TransportRequestDetail): string | null {
+  const pickup = request.baslangicKonumMetni?.trim();
+  const dropoff = request.varisKonumMetni?.trim();
+  const pickupLabel = pickup && pickup !== request.baslangicSehri ? pickup : null;
+  const dropoffLabel = dropoff && dropoff !== request.varisSehri ? dropoff : null;
+
+  if (!pickupLabel && !dropoffLabel) {
+    return null;
+  }
+
+  return `${pickupLabel ?? request.baslangicSehri} -> ${dropoffLabel ?? request.varisSehri}`;
+}
+
+function DetailInfoRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
+      <dt className="text-sm font-semibold text-slate-700">{label}</dt>
+      <dd className="text-right text-sm font-medium text-slate-900">{value}</dd>
+    </div>
+  );
+}
+
+function StatusCallout({
+  tone,
+  title,
+  description,
+}: {
+  tone: "emerald" | "slate";
+  title: string;
+  description: string;
+}) {
+  const toneClasses =
+    tone === "emerald"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+      : "border-slate-200 bg-slate-50 text-slate-900";
+  const bodyToneClasses =
+    tone === "emerald" ? "text-emerald-800" : "text-slate-600";
+
+  return (
+    <div className={`rounded-[1.25rem] border px-4 py-4 ${toneClasses}`}>
+      <p className="text-sm font-semibold">{title}</p>
+      <p className={`mt-2 text-sm leading-6 ${bodyToneClasses}`}>{description}</p>
+    </div>
+  );
+}
+
+function IncomingOfferCard({
+  offer,
+  canActOnOffer,
+  isBusy,
+  onAccept,
+  onReject,
+}: {
+  offer: IncomingOfferItem;
+  canActOnOffer: boolean;
+  isBusy: boolean;
+  onAccept: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <article className="rounded-[1.35rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-200">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={offer.durum} label={getOfferStatusLabel(offer.durum)} />
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+              Teklif #{offer.id}
+            </span>
+            {offer.aracPlaka ? (
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                {offer.aracPlaka}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex items-start gap-3">
+            <CustomerInitialsAvatar
+              name={offer.carrierName}
+              fallback={offer.carrierUsername}
+              imageUrl={offer.carrierProfileImageUrl}
+              size="md"
+              tone="slate"
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-950">{offer.carrierName}</p>
+              <p className="text-sm text-slate-500">@{offer.carrierUsername}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
+            {offer.not ? (
+              <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                {offer.not}
+              </p>
+            ) : (
+              <p className="text-sm text-slate-400">Teklif notu eklenmedi.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex w-full flex-col gap-3 xl:w-[220px] xl:items-end">
+          <div className="rounded-[1.1rem] border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-left xl:text-right">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              Teklif tutari
+            </p>
+            <p className="mt-2 text-xl font-black tracking-tight text-emerald-800">
+              {formatCurrency(offer.fiyat)}
+            </p>
+          </div>
+
+          <div className="flex w-full flex-wrap gap-2 xl:justify-end">
+            <Link
+              href={`/dashboard/konusmalar/teklif/${offer.id}`}
+              className="app-button-secondary flex-1 justify-center xl:flex-none"
+            >
+              Konusmaya git
+            </Link>
+
+            {canActOnOffer ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onAccept}
+                  disabled={isBusy}
+                  className="app-button-primary flex-1 justify-center disabled:cursor-not-allowed disabled:opacity-60 xl:flex-none"
+                >
+                  {isBusy ? "Isleniyor..." : "Kabul Et"}
+                </button>
+                <button
+                  type="button"
+                  onClick={onReject}
+                  disabled={isBusy}
+                  className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isBusy ? "Isleniyor..." : "Reddet"}
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
 }
 
 export default function TransportRequestDetailPage() {
@@ -343,8 +502,7 @@ export default function TransportRequestDetailPage() {
         : "Bu teklifi reddetmek istedigine emin misin?";
 
     const isConfirmed = await confirm({
-      title:
-        action === "accept" ? "Teklifi kabul et" : "Teklifi reddet",
+      title: action === "accept" ? "Teklifi kabul et" : "Teklifi reddet",
       message: confirmMessage,
       tone: action === "reject" ? "danger" : "default",
       confirmLabel: action === "accept" ? "Kabul Et" : "Reddet",
@@ -513,375 +671,421 @@ export default function TransportRequestDetailPage() {
   const jobStatusCopy = request?.nakliye
     ? getJobStatusCopy(request.nakliye.durum)
     : null;
+  const routeTitle = request ? formatRouteTitle(request) : "";
+  const routeMeta = request ? formatRouteMeta(request) : null;
+  const imageCount = request?.images?.length ?? 0;
 
   return (
-    <CustomerTransportRequestsShell title="Istek detayi">
+    <CustomerTransportRequestsShell
+      title="Istek detayi"
+      description={
+        request
+          ? "Talep ozeti, yuk fotograflari ve gelen teklifleri tek ekranda yonet."
+          : "Kayit bilgileri yukleniyor."
+      }
+      headerVariant="compact"
+      motionPreset="operational"
+      cardMotionLimit={6}
+    >
       {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700">
-          <h2 className="text-base font-bold text-red-800">Kayit goruntulenemedi</h2>
-          <p className="mt-1">{errorMessage}</p>
+        <div className="rounded-[1.6rem] border border-rose-200 bg-rose-50/70 p-6 text-sm text-rose-700 shadow-sm">
+          <h2 className="text-base font-bold text-rose-800">Kayit goruntulenemedi</h2>
+          <p className="mt-1.5 leading-6">{errorMessage}</p>
         </div>
       ) : null}
 
       {!isLoading && !errorMessage && request ? (
-        <div className="grid gap-6">
-          {/* Request header */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-2">
+        <div className="space-y-6">
+          <section
+            data-dashboard-primary
+            className="app-surface-strong rounded-[1.85rem] border border-slate-200/80 px-5 py-5 shadow-sm md:px-6 md:py-6"
+          >
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+              <div className="min-w-0 flex-1 space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge
                     status={request.durum}
                     label={getRequestStatusLabel(request.durum)}
                   />
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                    #{request.id}
+                    Istek #{request.id}
                   </span>
-                </div>
-                <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                  {formatLocationLabel(
-                    request.baslangicKonumMetni,
-                    request.baslangicSehri
-                  )}{" "}
-                  →{" "}
-                  {formatLocationLabel(
-                    request.varisKonumMetni,
-                    request.varisSehri
-                  )}
-                </h2>
-                <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                    {getCargoTypeLabel(request.yukTipi)}
-                  </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                    {formatWeightKg(request.agirlikKg)}
-                  </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                    {formatVolumeM3(request.hacimM3)}
-                  </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                    {formatTransportDate(request.tasimaTarihi)}
-                  </span>
-                  {request.tekTasimaIstiyor ? (
-                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700">
-                      Tek tasima
+                  {request.nakliye ? (
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                      Nakliye #{request.nakliye.id}
                     </span>
                   ) : null}
                 </div>
-              </div>
 
-              <div className="flex flex-col items-start gap-3 md:items-end">
-                <div className="text-sm text-slate-400">
-                  {formatDate(request.olusturmaTarihi)}
+                <div className="space-y-2">
+                  <h1 className="text-[2rem] font-black tracking-tight text-slate-950 md:text-[2.35rem]">
+                    {routeTitle}
+                  </h1>
+                  {routeMeta ? (
+                    <p className="max-w-3xl text-sm leading-6 text-slate-500">{routeMeta}</p>
+                  ) : null}
                 </div>
+
                 <div className="flex flex-wrap gap-2">
-                  {canMutateRequest ? (
-                    <Link
-                      href={`/dashboard/isteklerim/${request.id}/duzenle`}
-                      className="inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
-                    >
-                      Duzenle
-                    </Link>
-                  ) : null}
-                  {canMutateRequest ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete()}
-                      disabled={isDeleting}
-                      className="text-sm font-semibold text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isDeleting ? "Siliniyor..." : "Sil"}
-                    </button>
-                  ) : null}
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    {getCargoTypeLabel(request.yukTipi)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    {formatWeightKg(request.agirlikKg)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    {formatVolumeM3(request.hacimM3)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    Tasima {formatTransportDate(request.tasimaTarihi)}
+                  </span>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      request.tekTasimaIstiyor
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-blue-50 text-blue-700"
+                    }`}
+                  >
+                    {request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}
+                  </span>
                 </div>
               </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:w-[340px] xl:grid-cols-1">
+                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Kayit tarihi
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {formatDate(request.olusturmaTarihi)}
+                  </p>
+                </div>
+
+                {jobStatusCopy ? (
+                  <StatusCallout
+                    tone="emerald"
+                    title={jobStatusCopy.title}
+                    description={jobStatusCopy.description}
+                  />
+                ) : (
+                  <StatusCallout
+                    tone="slate"
+                    title="Talep su anda teklif topluyor"
+                    description="Duzenleme, silme ve gelen teklifleri inceleme aksiyonlari bu kayit acik kaldigi surece kullanilabilir."
+                  />
+                )}
+              </div>
             </div>
+          </section>
+
+          <div data-dashboard-stats className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <CustomerMetricCard
+              label="Gelen teklif"
+              value={incomingOffers.length}
+              hint="Bu kayit icin ulasan toplam teklif"
+              tone="blue"
+              icon={<i className="pi pi-inbox text-lg" />}
+            />
+            <CustomerMetricCard
+              label="Fotograf"
+              value={imageCount}
+              hint="Yuke eklenen gorsel adedi"
+              tone="amber"
+              icon={<i className="pi pi-images text-lg" />}
+            />
+            <CustomerMetricCard
+              label="Kayit durumu"
+              value={getRequestStatusLabel(request.durum)}
+              hint="Talebin operasyonel asamasi"
+              tone="emerald"
+              icon={<i className="pi pi-flag text-lg" />}
+            />
+            <CustomerMetricCard
+              label="Tasima modeli"
+              value={request.tekTasimaIstiyor ? "Tek" : "Esnek"}
+              hint="Yukun paylasim tercihi"
+              tone="violet"
+              icon={<i className="pi pi-box text-lg" />}
+            />
           </div>
 
-          {/* Photo gallery */}
-          {request.images && request.images.length > 0 ? (
-            <RequestImageGallery
-              images={request.images}
-              primaryImageId={request.primaryImageId}
-            />
-          ) : null}
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
+            <div className="space-y-6">
+              {imageCount > 0 ? (
+                <RequestImageGallery
+                  images={request.images ?? []}
+                  primaryImageId={request.primaryImageId}
+                />
+              ) : (
+                <EmptyStateCard
+                  eyebrow="Fotograf galerisi"
+                  title="Bu talep icin henuz fotograf yok"
+                  description="Istek acik durumdayken Duzenle ekranindan yuk fotograflari ekleyebilirsin."
+                />
+              )}
 
-          {/* Active shipment banner */}
-          {request.nakliye ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
-              <h3 className="text-lg font-bold text-emerald-900">
-                {jobStatusCopy?.title}
-              </h3>
-              <p className="mt-2 text-sm text-emerald-800">
-                {jobStatusCopy?.description}
-              </p>
-            </div>
-          ) : null}
+              <CustomerSectionSurface
+                title="Yuk ozeti"
+                description="Fiyatlama ve eslesme kararlarini etkileyen temel yuk bilgileri."
+              >
+                <div className="grid gap-3 md:grid-cols-2">
+                  <DetailInfoRow label="Yuk tipi" value={getCargoTypeLabel(request.yukTipi)} />
+                  <DetailInfoRow label="Agirlik" value={formatWeightKg(request.agirlikKg)} />
+                  <DetailInfoRow label="Hacim" value={formatVolumeM3(request.hacimM3)} />
+                  <DetailInfoRow
+                    label="Tasima tarihi"
+                    value={formatTransportDate(request.tasimaTarihi)}
+                  />
+                  <div className="md:col-span-2">
+                    <DetailInfoRow
+                      label="Tasima tercihi"
+                      value={request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}
+                    />
+                  </div>
+                </div>
 
-          {/* Cargo details */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900">Yuk detayi</h3>
-            <dl className="mt-4 grid gap-3 text-sm text-slate-600 md:grid-cols-2">
-              <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-slate-900">Yuk tipi</dt>
-                <dd>{getCargoTypeLabel(request.yukTipi)}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-slate-900">Agirlik</dt>
-                <dd>{formatWeightKg(request.agirlikKg)}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-slate-900">Hacim</dt>
-                <dd>{formatVolumeM3(request.hacimM3)}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="font-medium text-slate-900">Tasima tarihi</dt>
-                <dd>{formatTransportDate(request.tasimaTarihi)}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4 md:col-span-2">
-                <dt className="font-medium text-slate-900">Tasima tercihi</dt>
-                <dd>{request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}</dd>
-              </div>
-            </dl>
-            {request.yukDetay ? (
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-                {request.yukDetay}
-              </p>
-            ) : null}
-          </div>
+                <div className="mt-4 rounded-[1.15rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Yuk notu
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                    {request.yukDetay || "Ek not paylasilmadi."}
+                  </p>
+                </div>
+              </CustomerSectionSurface>
 
-          {/* Shipment details */}
-          {request.nakliye ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900">Olusan nakliye</h3>
-              <dl className="mt-4 grid gap-3 text-sm text-slate-600 md:grid-cols-2">
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Durum</dt>
-                  <dd>
-                    <StatusBadge status={request.nakliye.durum} />
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Anlasilan fiyat</dt>
-                  <dd>{formatCurrency(request.nakliye.anlasilanFiyat)}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Nakliyeci</dt>
-                  <dd>{request.nakliye.carrierName}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Kullanici adi</dt>
-                  <dd>@{request.nakliye.carrierUsername}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Arac plakasi</dt>
-                  <dd>{request.nakliye.aracPlaka}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Nakliye kaydi</dt>
-                  <dd>#{request.nakliye.id}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Kayit zamani</dt>
-                  <dd>{formatDate(request.nakliye.olusturmaTarihi)}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Baslangic</dt>
-                  <dd>
-                    {request.nakliye.baslangicTarihi
-                      ? formatDate(request.nakliye.baslangicTarihi)
-                      : "Henuz baslamadi"}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Teslim</dt>
-                  <dd>
-                    {request.nakliye.teslimTarihi
-                      ? formatDate(request.nakliye.teslimTarihi)
-                      : "Henuz tamamlanmadi"}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          ) : null}
+              <CustomerSectionSurface
+                title="Konum ve zamanlama"
+                description="Yukleme ve teslim noktasi detaylari ile zamanlama baglami."
+              >
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Baslangic
+                    </p>
+                    <p className="mt-2 text-base font-bold text-slate-950">
+                      {formatLocationLabel(request.baslangicKonumMetni, request.baslangicSehri)}
+                    </p>
+                    <dl className="mt-4 space-y-3">
+                      <DetailInfoRow
+                        label="Sehir"
+                        value={request.normalizeBaslangicSehir || request.baslangicSehri}
+                      />
+                      {request.normalizeBaslangicIlce ? (
+                        <DetailInfoRow label="Ilce" value={request.normalizeBaslangicIlce} />
+                      ) : null}
+                    </dl>
+                  </div>
 
-          {/* Rating */}
-          {request.nakliye ? (
-            <RatingComposerCard
-              eyebrow="Kapanis degerlendirmesi"
-              title="Nakliyeciyi puanla"
-              description="Tamamlanan nakliye sonrasinda nakliyeci deneyimini 1 ile 5 arasinda puanlayabilirsin."
-              shipmentStatus={request.nakliye.durum}
-              pendingDescription="Nakliye tamamlandiginda nakliyeciyi puanlama alani burada acilacak."
-              canRateCounterparty={request.nakliye.ratingContext.canRateCounterparty}
-              mySubmittedRating={request.nakliye.ratingContext.mySubmittedRating}
-              isSubmitting={isSubmittingRating}
-              onSubmit={handleCreateRating}
-            />
-          ) : null}
+                  <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Varis
+                    </p>
+                    <p className="mt-2 text-base font-bold text-slate-950">
+                      {formatLocationLabel(request.varisKonumMetni, request.varisSehri)}
+                    </p>
+                    <dl className="mt-4 space-y-3">
+                      <DetailInfoRow
+                        label="Sehir"
+                        value={request.normalizeVarisSehir || request.varisSehri}
+                      />
+                      {request.normalizeVarisIlce ? (
+                        <DetailInfoRow label="Ilce" value={request.normalizeVarisIlce} />
+                      ) : null}
+                    </dl>
+                  </div>
+                </div>
+              </CustomerSectionSurface>
 
-          {/* Location cards */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900">Baslangic</h3>
-              <dl className="mt-4 space-y-3 text-sm text-slate-600">
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Konum</dt>
-                  <dd className="text-right">
-                    {formatLocationLabel(
-                      request.baslangicKonumMetni,
-                      request.baslangicSehri
-                    )}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Sehir</dt>
-                  <dd>{request.normalizeBaslangicSehir || request.baslangicSehri}</dd>
-                </div>
-                {request.normalizeBaslangicIlce ? (
-                  <div className="flex items-center justify-between gap-4">
-                    <dt className="font-medium text-slate-900">Ilce</dt>
-                    <dd>{request.normalizeBaslangicIlce}</dd>
+              <CustomerSectionSurface
+                title="Gelen teklifler"
+                count={incomingOffers.length}
+                description="Teklifleri fiyat, arac ve iletisim aksiyonlariyla birlikte karsilastir."
+              >
+                {isIncomingOffersLoading ? (
+                  <DashboardPageSkeleton />
+                ) : null}
+
+                {!isIncomingOffersLoading && incomingOffersErrorMessage ? (
+                  <div className="rounded-[1.15rem] border border-rose-200 bg-rose-50/70 px-4 py-4 text-sm text-rose-700">
+                    {incomingOffersErrorMessage}
                   </div>
                 ) : null}
-              </dl>
-            </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900">Varis</h3>
-              <dl className="mt-4 space-y-3 text-sm text-slate-600">
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Konum</dt>
-                  <dd className="text-right">
-                    {formatLocationLabel(request.varisKonumMetni, request.varisSehri)}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Sehir</dt>
-                  <dd>{request.normalizeVarisSehir || request.varisSehri}</dd>
-                </div>
-                {request.normalizeVarisIlce ? (
-                  <div className="flex items-center justify-between gap-4">
-                    <dt className="font-medium text-slate-900">Ilce</dt>
-                    <dd>{request.normalizeVarisIlce}</dd>
+                {!isIncomingOffersLoading &&
+                !incomingOffersErrorMessage &&
+                incomingOffers.length === 0 ? (
+                  <EmptyStateCard
+                    eyebrow="Teklif akisi"
+                    title="Bu istek icin henuz teklif yok"
+                    description="Kayit yayinda kaldikca yeni teklif ve mesajlar bu alanda listelenecek."
+                  />
+                ) : null}
+
+                {!isIncomingOffersLoading &&
+                !incomingOffersErrorMessage &&
+                incomingOffers.length > 0 ? (
+                  <div className="space-y-4">
+                    {incomingOffers.map((offer) => {
+                      const canActOnOffer =
+                        offer.durum === "OLUSTURULDU" && request.nakliye === null;
+
+                      return (
+                        <IncomingOfferCard
+                          key={offer.id}
+                          offer={offer}
+                          canActOnOffer={canActOnOffer}
+                          isBusy={actingOfferId !== null}
+                          onAccept={() => {
+                            void handleOfferDecision(offer, "accept");
+                          }}
+                          onReject={() => {
+                            void handleOfferDecision(offer, "reject");
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 ) : null}
-              </dl>
+              </CustomerSectionSurface>
+
+              {request.nakliye ? (
+                <RatingComposerCard
+                  eyebrow="Kapanis degerlendirmesi"
+                  title="Nakliyeciyi puanla"
+                  description="Tamamlanan nakliye sonrasinda nakliyeci deneyimini 1 ile 5 arasinda puanlayabilirsin."
+                  shipmentStatus={request.nakliye.durum}
+                  pendingDescription="Nakliye tamamlandiginda nakliyeciyi puanlama alani burada acilacak."
+                  canRateCounterparty={request.nakliye.ratingContext.canRateCounterparty}
+                  mySubmittedRating={request.nakliye.ratingContext.mySubmittedRating}
+                  isSubmitting={isSubmittingRating}
+                  onSubmit={handleCreateRating}
+                />
+              ) : null}
             </div>
-          </div>
 
-          {/* Incoming offers */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900">Gelen teklifler</h3>
-
-            {isIncomingOffersLoading ? (
-              <div className="mt-4">
-                <DashboardPageSkeleton />
-              </div>
-            ) : null}
-
-            {!isIncomingOffersLoading && incomingOffersErrorMessage ? (
-              <p className="mt-4 text-sm text-red-700">{incomingOffersErrorMessage}</p>
-            ) : null}
-
-            {!isIncomingOffersLoading &&
-            !incomingOffersErrorMessage &&
-            incomingOffers.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">
-                Bu istek icin henuz teklif yok.
-              </p>
-            ) : null}
-
-            {!isIncomingOffersLoading &&
-            !incomingOffersErrorMessage &&
-            incomingOffers.length > 0 ? (
-              <div className="mt-4 grid gap-3">
-                {incomingOffers.map((offer) => {
-                  const canActOnOffer =
-                    offer.durum === "OLUSTURULDU" && request.nakliye === null;
-
-                  return (
-                    <div
-                      key={offer.id}
-                      className="rounded-xl border border-slate-100 bg-slate-50 p-4"
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <StatusBadge
-                              status={offer.durum}
-                              label={getOfferStatusLabel(offer.durum)}
-                            />
-                            <span className="text-sm text-slate-500">
-                              Teklif #{offer.id}
-                            </span>
-                            {offer.aracPlaka ? (
-                              <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                                {offer.aracPlaka}
-                              </span>
-                            ) : null}
-                          </div>
-                          <p className="text-sm font-semibold text-slate-900">
-                            {offer.carrierName}
-                          </p>
-                          <p className="text-sm text-slate-500">
-                            @{offer.carrierUsername}
-                          </p>
-                          {offer.not ? (
-                            <p className="whitespace-pre-wrap text-sm text-slate-600">
-                              {offer.not}
-                            </p>
-                          ) : (
-                            <p className="text-sm text-slate-400">
-                              Teklif notu eklenmedi.
-                            </p>
-                          )}
-                        </div>
-                        <div className="space-y-3 md:text-right">
-                          <div className="text-sm font-semibold text-emerald-700">
-                            {formatCurrency(offer.fiyat)}
-                          </div>
-                          <div className="flex flex-wrap gap-2 md:justify-end">
-                            <Link
-                              href={`/dashboard/konusmalar/teklif/${offer.id}`}
-                              className="inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
-                            >
-                              Konusmaya git
-                            </Link>
-                            {canActOnOffer ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => void handleOfferDecision(offer, "accept")}
-                                  disabled={actingOfferId !== null}
-                                  className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  {actingOfferId === offer.id
-                                    ? "Isleniyor..."
-                                    : "Kabul Et"}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => void handleOfferDecision(offer, "reject")}
-                                  disabled={actingOfferId !== null}
-                                  className="text-sm font-semibold text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  {actingOfferId === offer.id
-                                    ? "Isleniyor..."
-                                    : "Reddet"}
-                                </button>
-                              </>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
+            <div className="space-y-6">
+              <CustomerSectionSurface
+                title="Istek durumu"
+                description="Kaydin guncel durumu ve kullanabilecegin mevcut aksiyonlar."
+                action={
+                  canMutateRequest ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/dashboard/isteklerim/${request.id}/duzenle`}
+                        className="app-button-secondary"
+                      >
+                        Duzenle
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete()}
+                        disabled={isDeleting}
+                        className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isDeleting ? "Siliniyor..." : "Sil"}
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            ) : null}
+                  ) : undefined
+                }
+              >
+                <dl className="space-y-3">
+                  <DetailInfoRow label="Istek no" value={`#${request.id}`} />
+                  <DetailInfoRow
+                    label="Durum"
+                    value={getRequestStatusLabel(request.durum)}
+                  />
+                  <DetailInfoRow
+                    label="Tasima tarihi"
+                    value={formatTransportDate(request.tasimaTarihi)}
+                  />
+                  <DetailInfoRow label="Gelen teklif" value={`${incomingOffers.length}`} />
+                  <DetailInfoRow label="Fotograf" value={`${imageCount}`} />
+                </dl>
+
+                <div className="mt-4">
+                  {jobStatusCopy ? (
+                    <StatusCallout
+                      tone="emerald"
+                      title={jobStatusCopy.title}
+                      description={jobStatusCopy.description}
+                    />
+                  ) : (
+                    <StatusCallout
+                      tone="slate"
+                      title={
+                        canMutateRequest
+                          ? "Kayit su an acik durumda"
+                          : "Bu kayit artik duzenlenemiyor"
+                      }
+                      description={
+                        canMutateRequest
+                          ? "Konum, yuk bilgileri ve fotograflari guncellemeye devam edebilirsin."
+                          : "Teklif karari verildigi veya nakliye kaydi olustugu icin temel alanlar kilitlendi."
+                      }
+                    />
+                  )}
+                </div>
+              </CustomerSectionSurface>
+
+              {request.nakliye ? (
+                <CustomerSectionSurface
+                  title="Olusan nakliye"
+                  description="Kabul edilen tekliften dogan tasima kaydinin mevcut durumu."
+                >
+                  <dl className="space-y-3">
+                    <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                      <dt className="text-sm font-semibold text-slate-700">Durum</dt>
+                      <dd className="mt-2">
+                        <StatusBadge status={request.nakliye.durum} />
+                      </dd>
+                    </div>
+                    <DetailInfoRow
+                      label="Nakliye kaydi"
+                      value={`#${request.nakliye.id}`}
+                    />
+                    <DetailInfoRow
+                      label="Anlasilan fiyat"
+                      value={formatCurrency(request.nakliye.anlasilanFiyat)}
+                    />
+                    <DetailInfoRow
+                      label="Nakliyeci"
+                      value={request.nakliye.carrierName}
+                    />
+                    <DetailInfoRow
+                      label="Kullanici adi"
+                      value={`@${request.nakliye.carrierUsername}`}
+                    />
+                    <DetailInfoRow
+                      label="Arac plakasi"
+                      value={request.nakliye.aracPlaka}
+                    />
+                    <DetailInfoRow
+                      label="Kayit zamani"
+                      value={formatDate(request.nakliye.olusturmaTarihi)}
+                    />
+                    <DetailInfoRow
+                      label="Baslangic"
+                      value={
+                        request.nakliye.baslangicTarihi
+                          ? formatDate(request.nakliye.baslangicTarihi)
+                          : "Henuz baslamadi"
+                      }
+                    />
+                    <DetailInfoRow
+                      label="Teslim"
+                      value={
+                        request.nakliye.teslimTarihi
+                          ? formatDate(request.nakliye.teslimTarihi)
+                          : "Henuz tamamlanmadi"
+                      }
+                    />
+                  </dl>
+                </CustomerSectionSurface>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}

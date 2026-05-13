@@ -4,6 +4,7 @@ export class IncomingOfferListItemResponseDto {
   carrierId!: number;
   carrierName!: string;
   carrierUsername!: string;
+  carrierProfileImageUrl?: string;
   aracId!: number | null;
   aracPlaka!: string | null;
   fiyat!: number;

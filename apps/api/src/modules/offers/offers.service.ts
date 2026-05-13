@@ -758,6 +758,10 @@ export class OffersService {
     };
   }
 
+  private toOptionalPublicUrl(storageKey: string | null): string | undefined {
+    return storageKey ? this.mediaStorageService.toPublicUrl(storageKey) : undefined;
+  }
+
   private hasUnavailableRouteService(
     evaluations: Map<number, OpenRequestRouteFilterEvaluation>
   ): boolean {
@@ -817,6 +821,9 @@ export class OffersService {
       carrierId: offer.carrierId,
       carrierName: offer.carrierName,
       carrierUsername: offer.carrierUsername,
+      carrierProfileImageUrl: this.toOptionalPublicUrl(
+        offer.carrierProfileImageStorageKey
+      ),
       aracId: offer.aracId,
       aracPlaka: offer.aracPlaka,
       fiyat: offer.fiyat,
@@ -843,6 +850,9 @@ export class OffersService {
       carrierId: offer.carrierId,
       carrierName: offer.carrierName,
       carrierUsername: offer.carrierUsername,
+      carrierProfileImageUrl: this.toOptionalPublicUrl(
+        offer.carrierProfileImageStorageKey
+      ),
       aracId: offer.aracId,
       aracPlaka: offer.aracPlaka,
       fiyat: offer.fiyat,

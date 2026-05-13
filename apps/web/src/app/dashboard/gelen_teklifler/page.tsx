@@ -288,7 +288,7 @@ export default function MyIncomingOffersPage() {
       ) : null}
 
       {!isLoading && !errorMessage ? (
-        <div data-dashboard-stats className="grid gap-4 md:grid-cols-3">
+        <div data-dashboard-stats className="grid gap-3 md:grid-cols-3">
           <CustomerMetricCard
             label="Karar Bekleyen"
             value={pendingOffers.length}
@@ -314,7 +314,7 @@ export default function MyIncomingOffersPage() {
       ) : null}
 
       {!isLoading && !errorMessage ? (
-        <div className="mt-6">
+        <div className="mt-4">
           <CustomerSectionSurface
             title="Tum teklifler"
             count={offers.length}
@@ -341,7 +341,7 @@ export default function MyIncomingOffersPage() {
                 </Link>
               )
             }
-            contentClassName={offers.length > 0 ? "p-5 md:p-6" : "p-5 md:p-6"}
+            contentClassName={offers.length > 0 ? "p-4 md:p-5" : "p-4 md:p-5"}
           >
             {offers.length === 0 ? (
               <EmptyStateCard

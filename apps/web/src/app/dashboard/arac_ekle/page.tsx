@@ -1,6 +1,7 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
@@ -14,6 +15,29 @@ import {
   toCreateVehicleInput,
   type VehicleFormState,
 } from "@/lib/vehicles/vehicle-form";
+import { getVehicleBodyTypeLabel } from "@/lib/logistics";
+
+function formatFormValue(value: string, suffix = ""): string {
+  const trimmedValue = value.trim();
+  return trimmedValue ? `${trimmedValue}${suffix}` : "Belirtilmedi";
+}
+
+function formatFormDimensions(values: VehicleFormState): string {
+  if (!values.uzunlukCm || !values.genislikCm || !values.yukseklikCm) {
+    return "Belirtilmedi";
+  }
+
+  return `${values.uzunlukCm} x ${values.genislikCm} x ${values.yukseklikCm} cm`;
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-2.5 last:border-b-0">
+      <dt className="text-sm font-medium text-slate-500">{label}</dt>
+      <dd className="text-right text-sm font-semibold text-slate-900">{value}</dd>
+    </div>
+  );
+}
 
 export default function CreateVehiclePage() {
   const router = useRouter();
@@ -86,35 +110,87 @@ export default function CreateVehiclePage() {
       headerVariant="compact"
       motionPreset="form"
     >
-      <form
-        onSubmit={handleSubmit}
-        data-dashboard-form-surface
-        className="app-form-surface app-surface-strong space-y-6"
-      >
-        {formErrorMessage ? (
-          <div data-dashboard-form-error className="app-form-error-banner" role="alert">
-            <p className="text-sm font-semibold">Arac kaydedilemedi</p>
-            <p className="mt-1 text-sm">{formErrorMessage}</p>
-          </div>
-        ) : null}
-
-        <div data-dashboard-form-section>
-          <VehicleFormFields values={form} onChange={handleChange} disabled={isSubmitting} />
-        </div>
-
-        <div
-          data-dashboard-form-submit
-          className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <form
+          onSubmit={handleSubmit}
+          data-dashboard-form-surface
+          className="app-form-surface app-surface-strong space-y-5"
         >
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="app-button-primary app-form-submit-button app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
+          {formErrorMessage ? (
+            <div data-dashboard-form-error className="app-form-error-banner" role="alert">
+              <p className="text-sm font-semibold">Arac kaydedilemedi</p>
+              <p className="mt-1 text-sm">{formErrorMessage}</p>
+            </div>
+          ) : null}
+
+          <div data-dashboard-form-section>
+            <VehicleFormFields
+              values={form}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              layoutVariant="operational"
+            />
+          </div>
+
+          <div
+            data-dashboard-form-submit
+            className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"
           >
-            {isSubmitting ? "Arac kaydediliyor..." : "Araci kaydet"}
-          </button>
-        </div>
-      </form>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="app-button-primary app-form-submit-button app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? "Arac kaydediliyor..." : "Araci kaydet"}
+            </button>
+          </div>
+        </form>
+
+        <aside className="space-y-4">
+          <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
+            <h2 className="text-base font-black text-slate-950">Kayit ozeti</h2>
+            <dl className="mt-4">
+              <SummaryRow label="Plaka" value={formatFormValue(form.plaka)} />
+              <SummaryRow
+                label="Marka / model"
+                value={`${formatFormValue(form.marka)} / ${formatFormValue(form.model)}`}
+              />
+              <SummaryRow label="Kasa tipi" value={getVehicleBodyTypeLabel(form.kasaTipi)} />
+              <SummaryRow label="Yil" value={formatFormValue(form.yil)} />
+            </dl>
+          </section>
+
+          <section className="app-surface rounded-[1.15rem] border border-slate-200 p-4">
+            <h2 className="text-sm font-black text-slate-950">Operasyon bilgileri</h2>
+            <dl className="mt-3">
+              <SummaryRow
+                label="Maks. agirlik"
+                value={formatFormValue(form.maksimumAgirlikKg, " kg")}
+              />
+              <SummaryRow
+                label="Maks. hacim"
+                value={formatFormValue(form.maksimumHacimM3, " m3")}
+              />
+              <SummaryRow label="Yukleme alani" value={formatFormDimensions(form)} />
+            </dl>
+          </section>
+
+          <section className="app-surface rounded-[1.15rem] border border-blue-200 bg-blue-50/60 p-4">
+            <h2 className="text-sm font-black text-blue-950">Arac fotografi</h2>
+            <p className="mt-2 text-sm leading-6 text-blue-900">
+              Arac kaydi olustuktan sonra detay veya duzenleme ekranindan tek ana fotograf ekleyebilirsin.
+            </p>
+          </section>
+
+          <Link
+            href="/dashboard/araclarim"
+            className="app-surface group flex items-center justify-between rounded-[1.05rem] border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700"
+          >
+            <span>Araclarima don</span>
+            <i className="pi pi-angle-right text-xs text-slate-400 group-hover:text-blue-500" />
+          </Link>
+        </aside>
+      </div>
     </CarrierVehiclesShell>
   );
 }

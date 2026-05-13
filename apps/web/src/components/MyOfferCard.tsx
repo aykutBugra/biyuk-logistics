@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import StatusBadge from "@/components/StatusBadge";
 import CustomerWorkspaceSignalPill from "@/components/CustomerWorkspaceSignalPill";
 import { useOperationalCardMotion } from "@/lib/motion/useOperationalCardMotion";
@@ -21,6 +22,7 @@ export type MyOfferCardModel = {
   musteriAdi: string | null;
   musteriKullaniciAdi: string | null;
   musteriBasHarfler: string;
+  musteriProfileImageUrl?: string;
   not: string | null;
   chipler: MyOfferCardChip[];
   takipMetni: string;
@@ -172,9 +174,13 @@ export default function MyOfferCard({ offer }: MyOfferCardProps) {
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_230px]">
           <div className="min-w-0">
             <div className="flex min-w-0 gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-black text-white">
-                {offer.musteriBasHarfler}
-              </div>
+              <CustomerInitialsAvatar
+                name={offer.musteriAdi}
+                fallback={offer.musteriKullaniciAdi ?? offer.musteriBasHarfler}
+                imageUrl={offer.musteriProfileImageUrl}
+                size="lg"
+                tone="blue"
+              />
 
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">

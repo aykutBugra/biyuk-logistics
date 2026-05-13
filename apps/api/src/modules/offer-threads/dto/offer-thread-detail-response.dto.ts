@@ -12,6 +12,7 @@ export class OfferThreadDetailResponseDto {
   karsiTarafId!: number;
   karsiTarafAdSoyad!: string;
   karsiTarafKullaniciAdi!: string;
+  karsiTarafProfileImageUrl?: string;
   fiyat!: number;
   durum!: string;
   isClosed!: boolean;

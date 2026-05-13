@@ -99,10 +99,10 @@ export default function CustomerRecentRequestsPanel({
   const offerCountMap = buildOfferCountMap(incomingOffers);
 
   return (
-    <section className="app-surface-strong rounded-[1.6rem] border border-slate-200 p-5 shadow-sm md:p-6">
-      <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+    <section className="app-surface-strong rounded-[1.6rem] border border-slate-200 p-4 shadow-sm md:p-5">
+      <div className="flex flex-col gap-3 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-[1.65rem] font-black tracking-tight text-slate-950">
+          <h2 className="text-[1.45rem] font-black tracking-tight text-slate-950">
             Son tasima talepleriniz
           </h2>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -146,10 +146,10 @@ export default function CustomerRecentRequestsPanel({
             return (
               <article
                 key={request.id}
-                className="flex flex-col gap-4 py-5 xl:flex-row xl:items-center xl:justify-between"
+                className="flex flex-col gap-3 py-4 xl:flex-row xl:items-center xl:justify-between"
               >
                 <div className="flex min-w-0 flex-1 gap-4">
-                  <div className="relative flex h-20 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                  <div className="relative flex h-16 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
                     {request.primaryImage ? (
                       <>
                         <img
@@ -181,7 +181,7 @@ export default function CustomerRecentRequestsPanel({
                       ) : null}
                     </div>
 
-                    <h3 className="mt-3 text-[1.7rem] font-black tracking-tight text-slate-950">
+                    <h3 className="mt-2 text-[1.4rem] font-black tracking-tight text-slate-950">
                       {formatRouteTitle(request)}
                     </h3>
 

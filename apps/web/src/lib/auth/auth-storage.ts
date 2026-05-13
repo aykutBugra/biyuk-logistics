@@ -29,6 +29,7 @@ export type StoredAuthUser = {
   mail: string;
   kullaniciAdi: string;
   telefonNumarasi: string | null;
+  profileImageUrl?: string;
   customerIntroDismissedAt: string | null;
   carrierIntroDismissedAt: string | null;
   roles: string[];

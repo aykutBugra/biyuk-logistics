@@ -12,5 +12,6 @@ export class VehicleListItemResponseDto {
   uzunlukCm!: number | null;
   genislikCm!: number | null;
   yukseklikCm!: number | null;
+  vehicleImageUrl?: string;
   capacitySummary!: VehicleCapacitySummaryResponseDto;
 }

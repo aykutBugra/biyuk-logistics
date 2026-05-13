@@ -487,6 +487,7 @@ export default function MyVehiclesPage() {
       ],
       kullanimOrani: usageRatio,
       kullanimEtiketi: statusModel.usageLabel,
+      imageUrl: vehicle.vehicleImageUrl,
       uyariMesaji: vehicle.capacitySummary.hesapEksigiVar
         ? "Kapasite ozeti eksik kayitlar nedeniyle yaklasik gosteriliyor."
         : null,

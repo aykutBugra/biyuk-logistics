@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import MotionCollapse from "@/components/MotionCollapse";
 import { ApiClientError } from "@/lib/api/api-client";
 import { getMyUnreadNotificationCount } from "@/lib/api/notifications";
@@ -185,7 +186,14 @@ export default function Navbar() {
                 >
                   Panelim
                 </Link>
-                <span className="whitespace-nowrap text-sm font-medium text-slate-600">
+                <span className="inline-flex items-center gap-2 whitespace-nowrap text-sm font-medium text-slate-600">
+                  <CustomerInitialsAvatar
+                    name={`${auth.user?.ad ?? ""} ${auth.user?.soyad ?? ""}`}
+                    fallback={auth.user?.kullaniciAdi ?? "NA"}
+                    imageUrl={auth.user?.profileImageUrl}
+                    size="sm"
+                    tone="blue"
+                  />
                   Merhaba, {getAuthLabel(auth)}
                 </span>
                 <button
@@ -270,7 +278,14 @@ export default function Navbar() {
                   >
                     Panelim
                   </Link>
-                  <p className="px-1 text-sm text-slate-600">
+                  <p className="flex items-center gap-2 px-1 text-sm text-slate-600">
+                    <CustomerInitialsAvatar
+                      name={`${auth.user?.ad ?? ""} ${auth.user?.soyad ?? ""}`}
+                      fallback={auth.user?.kullaniciAdi ?? "NA"}
+                      imageUrl={auth.user?.profileImageUrl}
+                      size="sm"
+                      tone="blue"
+                    />
                     Merhaba, {getAuthLabel(auth)}
                   </p>
                   <button

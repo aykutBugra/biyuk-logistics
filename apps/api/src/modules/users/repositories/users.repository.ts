@@ -30,6 +30,7 @@ const authUserSelect = {
   mail: true,
   kullaniciAdi: true,
   telefonNumarasi: true,
+  profilFotografiStorageKey: true,
   customerIntroDismissedAt: true,
   carrierIntroDismissedAt: true,
   sifreHash: true,
@@ -51,6 +52,7 @@ const userProfileSelect = {
   mail: true,
   kullaniciAdi: true,
   telefonNumarasi: true,
+  profilFotografiStorageKey: true,
   customerIntroDismissedAt: true,
   carrierIntroDismissedAt: true,
   sifreHash: false,
@@ -272,6 +274,7 @@ export type StoredUserRecord = {
   mail: string;
   kullaniciAdi: string;
   telefonNumarasi: string | null;
+  profilFotografiStorageKey: string | null;
   customerIntroDismissedAt: Date | null;
   carrierIntroDismissedAt: Date | null;
   sifreHash: string;
@@ -473,6 +476,27 @@ export class UsersRepository {
     return this.mapStoredProfile(updatedUser);
   }
 
+  async updateProfileImageStorageKeyById(
+    userId: number,
+    storageKey: string | null
+  ): Promise<StoredUserProfileRecord | null> {
+    const updatedUser = await this.prisma.client.kullanici.updateMany({
+      where: {
+        id: userId,
+        silmeTarihi: null,
+      },
+      data: {
+        profilFotografiStorageKey: storageKey,
+      },
+    });
+
+    if (updatedUser.count === 0) {
+      return null;
+    }
+
+    return this.findProfileById(userId);
+  }
+
   async findAllActiveProfiles(): Promise<StoredUserProfileRecord[]> {
     const users = await this.prisma.client.kullanici.findMany({
       where: {
@@ -612,6 +636,7 @@ export class UsersRepository {
       mail: user.mail,
       kullaniciAdi: user.kullaniciAdi,
       telefonNumarasi: user.telefonNumarasi,
+      profilFotografiStorageKey: user.profilFotografiStorageKey,
       customerIntroDismissedAt: user.customerIntroDismissedAt,
       carrierIntroDismissedAt: user.carrierIntroDismissedAt,
       sifreHash: user.sifreHash,
@@ -627,6 +652,7 @@ export class UsersRepository {
       mail: user.mail,
       kullaniciAdi: user.kullaniciAdi,
       telefonNumarasi: user.telefonNumarasi,
+      profilFotografiStorageKey: user.profilFotografiStorageKey,
       customerIntroDismissedAt: user.customerIntroDismissedAt,
       carrierIntroDismissedAt: user.carrierIntroDismissedAt,
       roleNames: user.roller.map((role) => role.rol.rolAd),

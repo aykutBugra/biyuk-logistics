@@ -1,26 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import type { OfferThreadSummary } from "@/lib/api/offer-threads";
 
 type CustomerConversationsPreviewPanelProps = {
   threads: OfferThreadSummary[];
   unreadMessageCount: number;
 };
-
-function getInitials(name: string): string {
-  const parts = name
-    .split(" ")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .slice(0, 2);
-
-  if (!parts.length) {
-    return "KN";
-  }
-
-  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
-}
 
 function formatThreadTime(value: string | null): string {
   if (!value) {
@@ -56,10 +43,10 @@ export default function CustomerConversationsPreviewPanel({
     .slice(0, 2);
 
   return (
-    <section className="app-surface-strong rounded-[1.6rem] border border-slate-200 p-5 shadow-sm md:p-6">
+    <section className="app-surface-strong rounded-[1.6rem] border border-slate-200 p-4 shadow-sm md:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-[1.7rem] font-black tracking-tight text-slate-950">
+          <h2 className="text-[1.5rem] font-black tracking-tight text-slate-950">
             Konusmalar
           </h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -78,16 +65,20 @@ export default function CustomerConversationsPreviewPanel({
       </div>
 
       {previewThreads.length > 0 ? (
-        <div className="mt-5 divide-y divide-slate-100 rounded-[1.45rem] border border-slate-200 bg-white shadow-sm">
+        <div className="mt-4 divide-y divide-slate-100 rounded-[1.45rem] border border-slate-200 bg-white shadow-sm">
           {previewThreads.map((thread) => (
             <Link
               key={thread.id}
               href={`/dashboard/konusmalar/teklif/${thread.offerId}`}
               className="flex items-start gap-3 px-4 py-4 transition hover:bg-slate-50/80"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-black text-white">
-                {getInitials(thread.karsiTarafAdSoyad)}
-              </div>
+              <CustomerInitialsAvatar
+                name={thread.karsiTarafAdSoyad}
+                fallback={thread.karsiTarafKullaniciAdi}
+                imageUrl={thread.karsiTarafProfileImageUrl}
+                size="sm"
+                tone="blue"
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   {thread.hasUnread ? (
@@ -110,7 +101,7 @@ export default function CustomerConversationsPreviewPanel({
           ))}
         </div>
       ) : (
-        <div className="mt-5 rounded-[1.45rem] border border-dashed border-slate-200 bg-slate-50/70 p-6">
+        <div className="mt-4 rounded-[1.45rem] border border-dashed border-slate-200 bg-slate-50/70 p-5">
           <p className="text-base font-semibold text-slate-900">Konusma bekleniyor.</p>
           <p className="mt-2 text-sm leading-6 text-slate-500">
             Teklifler ve pazarlik akislarin olustukca son mesajlarini burada goreceksin.
@@ -120,7 +111,7 @@ export default function CustomerConversationsPreviewPanel({
 
       <Link
         href="/dashboard/konusmalar"
-        className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 transition hover:text-blue-800"
+        className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 transition hover:text-blue-800"
       >
         Tum konusmalari gor
         <i className="pi pi-arrow-right text-xs" />

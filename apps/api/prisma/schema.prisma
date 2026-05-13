@@ -41,6 +41,7 @@ model Kullanici {
   kullaniciAdi     String         @unique @db.VarChar(100)
   sifreHash        String
   telefonNumarasi  String?
+  profilFotografiStorageKey String? @db.VarChar(500)
   customerIntroDismissedAt DateTime?
   carrierIntroDismissedAt  DateTime?
   kayitTarihi      DateTime       @default(now())
@@ -106,6 +107,7 @@ model Arac {
   uzunlukCm         Int?
   genislikCm        Int?
   yukseklikCm       Int?
+  aracFotografiStorageKey String? @db.VarChar(500)
   silmeTarihi       DateTime?
   
   teklifler         Teklif[]

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import {
   clearStoredAuth,
   type StoredAuth,
@@ -78,9 +79,16 @@ export default function DashboardTopbar({
 
         <div className="flex items-center gap-2">
           {displayName ? (
-            <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 sm:block">
-              {displayName}
-            </span>
+            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white py-1.5 pl-1.5 pr-3 text-sm font-medium text-slate-600 sm:flex">
+              <CustomerInitialsAvatar
+                name={displayName}
+                fallback={auth?.user?.kullaniciAdi}
+                imageUrl={auth?.user?.profileImageUrl}
+                size="sm"
+                tone="blue"
+              />
+              <span>{displayName}</span>
+            </div>
           ) : null}
 
           <button

@@ -11,6 +11,7 @@ export class UserProfileResponseDto {
   mail!: string;
   kullaniciAdi!: string;
   telefonNumarasi!: string | null;
+  profileImageUrl?: string;
   customerIntroDismissedAt!: Date | null;
   carrierIntroDismissedAt!: Date | null;
   roles!: RoleName[];

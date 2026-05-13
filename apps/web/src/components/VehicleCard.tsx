@@ -29,6 +29,7 @@ export type VehicleCardModel = {
   operasyonOzeti: VehicleSummaryItem[];
   kullanimOrani: number;
   kullanimEtiketi: string;
+  imageUrl?: string;
   uyariMesaji: string | null;
   detailHref: string;
   editHref: string;
@@ -127,10 +128,20 @@ export default function VehicleCard({
           <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1.2fr)_minmax(0,1fr)]">
             <div className="relative overflow-hidden rounded-[1.3rem] border border-slate-200 bg-gradient-to-br from-slate-100 via-white to-blue-50 p-5">
               <div className="absolute -right-10 -top-12 h-32 w-32 rounded-full bg-blue-100/60 blur-2xl" />
-              <div className="relative flex h-full min-h-[220px] flex-col justify-between">
-                <div className="flex h-16 w-16 items-center justify-center rounded-[1.4rem] border border-white/80 bg-white text-blue-600 shadow-sm">
-                  <i className="pi pi-truck text-[1.8rem]" />
-                </div>
+              <div className="relative flex h-full min-h-[220px] flex-col justify-between gap-4">
+                {vehicle.imageUrl ? (
+                  <div className="overflow-hidden rounded-[1.2rem] border border-white/80 bg-white/80 shadow-sm">
+                    <img
+                      src={vehicle.imageUrl}
+                      alt={`${vehicle.baslik} fotografi`}
+                      className="h-28 w-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-[1.4rem] border border-white/80 bg-white text-blue-600 shadow-sm">
+                    <i className="pi pi-truck text-[1.8rem]" />
+                  </div>
+                )}
 
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">

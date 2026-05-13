@@ -39,6 +39,7 @@ export type VehicleListItem = {
   uzunlukCm: number | null;
   genislikCm: number | null;
   yukseklikCm: number | null;
+  vehicleImageUrl?: string;
   capacitySummary: VehicleCapacitySummary;
 };
 
@@ -80,6 +81,25 @@ export function updateVehicle(
 
 export function deleteVehicle(id: number, accessToken: string) {
   return apiFetch<void>(`/vehicles/${id}`, {
+    method: "DELETE",
+    accessToken,
+  });
+}
+
+export function uploadVehicleImage(
+  id: number,
+  formData: FormData,
+  accessToken: string
+) {
+  return apiFetch<VehicleDetail>(`/vehicles/${id}/image`, {
+    method: "POST",
+    accessToken,
+    body: formData,
+  });
+}
+
+export function deleteVehicleImage(id: number, accessToken: string) {
+  return apiFetch<VehicleDetail>(`/vehicles/${id}/image`, {
     method: "DELETE",
     accessToken,
   });

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -32,6 +33,102 @@ function formatPlannedDate(value: string): string {
   return new Intl.DateTimeFormat("tr-TR", {
     dateStyle: "medium",
   }).format(new Date(`${value}T00:00:00`));
+}
+
+function hasRouteCoordinates(route: CarrierRouteDetail): boolean {
+  return [
+    route.baslangicEnlem,
+    route.baslangicBoylam,
+    route.varisEnlem,
+    route.varisBoylam,
+  ].every((value) => Number.isFinite(value));
+}
+
+function resolveRouteStatus(route: CarrierRouteDetail): {
+  label: string;
+  tone: "blue" | "emerald" | "amber";
+  description: string;
+} {
+  if (hasRouteCoordinates(route)) {
+    return {
+      label: "Koordinat hazir",
+      tone: "emerald",
+      description: "Baslangic ve varis konumu eslesmis durumda.",
+    };
+  }
+
+  if (route.rotaMesafeMetre !== null && route.rotaSureSaniye !== null) {
+    return {
+      label: "Mesafe hazir",
+      tone: "blue",
+      description: "Mesafe ve sure snapshot'i mevcut.",
+    };
+  }
+
+  return {
+    label: "Veri eksik",
+    tone: "amber",
+    description: "Rota metrikleri tamamlanmadigi icin detay kontrol edilmeli.",
+  };
+}
+
+const STATUS_TONE_CLASSES = {
+  blue: "border-blue-100 bg-blue-50 text-blue-700",
+  emerald: "border-emerald-100 bg-emerald-50 text-emerald-700",
+  amber: "border-amber-100 bg-amber-50 text-amber-700",
+} satisfies Record<"blue" | "emerald" | "amber", string>;
+
+function StatusPill({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "blue" | "emerald" | "amber";
+}) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_TONE_CLASSES[tone]}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function MetricTile({
+  label,
+  value,
+  icon,
+  tone = "blue",
+}: {
+  label: string;
+  value: string;
+  icon: string;
+  tone?: "blue" | "emerald" | "amber";
+}) {
+  return (
+    <article className="app-surface-strong rounded-[1.2rem] border border-slate-200 p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase text-slate-400">{label}</p>
+          <p className="mt-2 text-xl font-black text-slate-950">{value}</p>
+        </div>
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${STATUS_TONE_CLASSES[tone]}`}
+        >
+          <i className={`${icon} text-sm`} />
+        </span>
+      </div>
+    </article>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-2.5 last:border-b-0">
+      <dt className="text-sm font-medium text-slate-500">{label}</dt>
+      <dd className="text-right text-sm font-semibold text-slate-900">{value}</dd>
+    </div>
+  );
 }
 
 export default function CarrierRouteDetailPage() {
@@ -204,8 +301,18 @@ export default function CarrierRouteDetailPage() {
     );
   }
 
+  const routeStatus = route ? resolveRouteStatus(route) : null;
+  const routeTitle = route
+    ? `${formatLocationLabel(route.baslangicKonumMetni, route.baslangicSehri)} -> ${formatLocationLabel(route.varisKonumMetni, route.varisSehri)}`
+    : "";
+
   return (
-    <CarrierVehiclesShell title="Rota detayi">
+    <CarrierVehiclesShell
+      title="Rota detayi"
+      description="Kayitli ana hattin operasyonel ozetini, konum bilgilerini ve aksiyonlarini gor."
+      headerVariant="compact"
+      motionPreset="operational"
+    >
       {isLoading ? <DashboardPageSkeleton /> : null}
 
       {!isLoading && errorMessage ? (
@@ -215,121 +322,186 @@ export default function CarrierRouteDetailPage() {
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && route ? (
-        <div className="grid gap-6">
-          {/* Identity header */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                    Rota #{route.id}
-                  </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                    {formatPlannedDate(route.planlananTarih)}
-                  </span>
+      {!isLoading && !errorMessage && route && routeStatus ? (
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-4">
+            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+                      Rota #{route.id}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                      {formatPlannedDate(route.planlananTarih)}
+                    </span>
+                    <StatusPill label={routeStatus.label} tone={routeStatus.tone} />
+                  </div>
+                  <h2 className="text-2xl font-black text-slate-950 md:text-3xl">
+                    {routeTitle}
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Olusturma: {formatDateTime(route.olusturmaTarihi)}
+                  </p>
                 </div>
-                <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                  {formatLocationLabel(
-                    route.baslangicKonumMetni,
-                    route.baslangicSehri
-                  )}{" "}
-                  →{" "}
-                  {formatLocationLabel(route.varisKonumMetni, route.varisSehri)}
-                </h2>
-                <p className="text-xs text-slate-400">
-                  {formatDateTime(route.olusturmaTarihi)}
+
+                <Link
+                  href={`/dashboard/rotalarim/${route.id}/duzenle`}
+                  className="app-pressable inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                >
+                  <i className="pi pi-pencil text-xs" />
+                  Rotayi duzenle
+                </Link>
+              </div>
+            </section>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <MetricTile
+                label="Mesafe"
+                value={formatRouteDistanceKm(route.rotaMesafeMetre)}
+                icon="pi pi-map-marker"
+                tone="blue"
+              />
+              <MetricTile
+                label="Sure"
+                value={formatRouteDuration(route.rotaSureSaniye)}
+                icon="pi pi-clock"
+                tone="emerald"
+              />
+              <MetricTile
+                label="Plan"
+                value={formatPlannedDate(route.planlananTarih)}
+                icon="pi pi-calendar"
+                tone="amber"
+              />
+            </div>
+
+            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
+              <div className="flex flex-col gap-1 border-b border-slate-100 pb-4">
+                <h2 className="text-lg font-black text-slate-950">Guzergah bilgileri</h2>
+                <p className="text-sm leading-6 text-slate-500">
+                  Baslangic ve varis kaydindan gelen normalize konum bilgileri.
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="mt-4 grid gap-5 md:grid-cols-2">
+                <div>
+                  <h3 className="text-sm font-black text-slate-950">Baslangic</h3>
+                  <dl className="mt-3">
+                    <InfoRow
+                      label="Konum"
+                      value={formatLocationLabel(
+                        route.baslangicKonumMetni,
+                        route.baslangicSehri
+                      )}
+                    />
+                    <InfoRow
+                      label="Sehir"
+                      value={route.normalizeBaslangicSehir || route.baslangicSehri}
+                    />
+                    {route.normalizeBaslangicIlce ? (
+                      <InfoRow label="Ilce" value={route.normalizeBaslangicIlce} />
+                    ) : null}
+                  </dl>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-black text-slate-950">Varis</h3>
+                  <dl className="mt-3">
+                    <InfoRow
+                      label="Konum"
+                      value={formatLocationLabel(route.varisKonumMetni, route.varisSehri)}
+                    />
+                    <InfoRow
+                      label="Sehir"
+                      value={route.normalizeVarisSehir || route.varisSehri}
+                    />
+                    {route.normalizeVarisIlce ? (
+                      <InfoRow label="Ilce" value={route.normalizeVarisIlce} />
+                    ) : null}
+                  </dl>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <aside className="space-y-4">
+            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-black text-slate-950">Durum</h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-500">
+                    {routeStatus.description}
+                  </p>
+                </div>
+                <StatusPill label={routeStatus.label} tone={routeStatus.tone} />
+              </div>
+              <dl className="mt-4">
+                <InfoRow
+                  label="Koordinat"
+                  value={hasRouteCoordinates(route) ? "Hazir" : "Eksik"}
+                />
+                <InfoRow
+                  label="Mesafe-sure"
+                  value={
+                    route.rotaMesafeMetre !== null && route.rotaSureSaniye !== null
+                      ? "Hazir"
+                      : "Eksik"
+                  }
+                />
+                <InfoRow label="Kayit" value={formatDateTime(route.olusturmaTarihi)} />
+              </dl>
+            </section>
+
+            <section className="app-surface rounded-[1.15rem] border border-slate-200 p-4">
+              <h2 className="text-sm font-black text-slate-950">Hizli aksiyonlar</h2>
+              <div className="mt-3 grid gap-2">
                 <Link
-                  href={`/dashboard/rotalarim/${route.id}/duzenle`}
-                  className="inline-flex items-center justify-center rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+                  href="/dashboard/acik_istekler"
+                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700"
                 >
-                  Rotayi Duzenle
+                  <span className="flex items-center gap-2">
+                    <i className="pi pi-search text-xs text-slate-400" />
+                    Acik istekleri kesfet
+                  </span>
+                  <i className="pi pi-angle-right text-xs text-slate-400" />
+                </Link>
+                <Link
+                  href="/dashboard/rotalarim"
+                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700"
+                >
+                  <span className="flex items-center gap-2">
+                    <i className="pi pi-list text-xs text-slate-400" />
+                    Rotalarima don
+                  </span>
+                  <i className="pi pi-angle-right text-xs text-slate-400" />
                 </Link>
                 <button
                   type="button"
                   onClick={() => void handleDelete()}
                   disabled={isDeleting}
-                  className="text-sm font-semibold text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex items-center justify-between rounded-xl border border-red-100 bg-red-50/70 px-3.5 py-3 text-sm font-semibold text-red-700 transition hover:border-red-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isDeleting ? "Siliniyor..." : "Rotayi Sil"}
+                  <span className="flex items-center gap-2">
+                    <i className="pi pi-trash text-xs" />
+                    {isDeleting ? "Siliniyor..." : "Rotayi sil"}
+                  </span>
                 </button>
               </div>
-            </div>
-          </div>
+            </section>
 
-          {/* Metrics cards */}
-          <div className="mb-6 grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                Mesafe
-              </h3>
-              <p className="mt-3 text-2xl font-black tracking-tight text-slate-950">
-                {formatRouteDistanceKm(route.rotaMesafeMetre)}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                Sure
-              </h3>
-              <p className="mt-3 text-2xl font-black tracking-tight text-slate-950">
-                {formatRouteDuration(route.rotaSureSaniye)}
-              </p>
-            </div>
-          </div>
-
-          {/* Location detail cards */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900">Baslangic</h3>
-              <dl className="mt-4 space-y-3 text-sm text-slate-600">
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Konum</dt>
-                  <dd className="text-right">
-                    {formatLocationLabel(
-                      route.baslangicKonumMetni,
-                      route.baslangicSehri
-                    )}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Sehir</dt>
-                  <dd>{route.normalizeBaslangicSehir || route.baslangicSehri}</dd>
-                </div>
-                {route.normalizeBaslangicIlce ? (
-                  <div className="flex items-center justify-between gap-4">
-                    <dt className="font-medium text-slate-900">Ilce</dt>
-                    <dd>{route.normalizeBaslangicIlce}</dd>
-                  </div>
-                ) : null}
-              </dl>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900">Varis</h3>
-              <dl className="mt-4 space-y-3 text-sm text-slate-600">
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Konum</dt>
-                  <dd className="text-right">
-                    {formatLocationLabel(route.varisKonumMetni, route.varisSehri)}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-900">Sehir</dt>
-                  <dd>{route.normalizeVarisSehir || route.varisSehri}</dd>
-                </div>
-                {route.normalizeVarisIlce ? (
-                  <div className="flex items-center justify-between gap-4">
-                    <dt className="font-medium text-slate-900">Ilce</dt>
-                    <dd>{route.normalizeVarisIlce}</dd>
-                  </div>
-                ) : null}
-              </dl>
-            </div>
-          </div>
+            <section className="app-surface rounded-[1.15rem] border border-slate-200 p-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-amber-700">
+                  <i className="pi pi-info-circle text-sm" />
+                </span>
+                <p className="text-sm leading-6 text-slate-600">
+                  Sapma limiti bu detay ekraninda degistirilmez. Rota secimiyle
+                  kesif yapmak icin Acik Istekler ekranini kullan.
+                </p>
+              </div>
+            </section>
+          </aside>
         </div>
       ) : null}
     </CarrierVehiclesShell>

@@ -190,11 +190,11 @@ export default function RequestImageUploader({ disabled = false, onChange }: Pro
                 key={image.id}
                 className="overflow-hidden rounded-[1.2rem] border border-slate-200 bg-white shadow-sm"
               >
-                <div className="relative aspect-[4/3] bg-slate-100">
+                <div className="relative aspect-[4/3] bg-slate-100 p-2">
                   <img
                     src={image.previewUrl}
                     alt={image.file.name}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full rounded-[0.95rem] object-contain"
                   />
                   {image.isPrimary ? (
                     <span className="absolute left-3 top-3 rounded-full bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">

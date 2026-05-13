@@ -1,6 +1,7 @@
 "use client";
 
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
@@ -24,6 +25,41 @@ type UpdateCarrierRouteForm = {
 const initialForm: UpdateCarrierRouteForm = {
   planlananTarih: "",
 };
+
+function formatSelectedLocation(value: SelectedLocation | null): string {
+  return value?.konumMetni?.trim() || value?.sehir || "Secilmedi";
+}
+
+function RouteFormPanel({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="border-t border-slate-200 pt-4 first:border-t-0 first:pt-0">
+      <div className="mb-4">
+        <h2 className="text-sm font-black text-slate-950">{title}</h2>
+        {description ? (
+          <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-2.5 last:border-b-0">
+      <dt className="text-sm font-medium text-slate-500">{label}</dt>
+      <dd className="text-right text-sm font-semibold text-slate-900">{value}</dd>
+    </div>
+  );
+}
 
 export default function EditCarrierRoutePage() {
   const router = useRouter();
@@ -238,79 +274,131 @@ export default function EditCarrierRoutePage() {
       ) : null}
 
       {!isLoading && !errorMessage ? (
-        <form
-          onSubmit={handleSubmit}
-          data-dashboard-form-surface
-          className="app-form-surface app-surface-strong space-y-6"
-        >
-          {submitErrorMessage ? (
-            <div data-dashboard-form-error className="app-form-error-banner" role="alert">
-              <p className="text-sm font-semibold">Degisiklikler kaydedilemedi</p>
-              <p className="mt-1 text-sm">{submitErrorMessage}</p>
-            </div>
-          ) : null}
-
-          <div data-dashboard-form-section className="grid gap-4 md:grid-cols-2">
-            <LocationAutocompleteField
-              label="Baslangic konumu"
-              placeholder="Sefer baslangicini ara"
-              accessToken={accessToken ?? ""}
-              value={baslangicKonum}
-              onSelect={(value) => {
-                setBaslangicKonum(value);
-                setSubmitErrorMessage(null);
-              }}
-              disabled={isSubmitting}
-              invalid={locationValidationActive && !baslangicKonum}
-              validationMessage={
-                locationValidationActive && !baslangicKonum
-                  ? "Listeden bir baslangic konumu sec."
-                  : null
-              }
-            />
-            <LocationAutocompleteField
-              label="Varis konumu"
-              placeholder="Sefer varisini ara"
-              accessToken={accessToken ?? ""}
-              value={varisKonum}
-              onSelect={(value) => {
-                setVarisKonum(value);
-                setSubmitErrorMessage(null);
-              }}
-              disabled={isSubmitting}
-              invalid={locationValidationActive && !varisKonum}
-              validationMessage={
-                locationValidationActive && !varisKonum
-                  ? "Listeden bir varis konumu sec."
-                  : null
-              }
-            />
-          </div>
-
-          <div data-dashboard-form-section className="grid gap-4 md:grid-cols-2">
-            <InputField
-              name="planlananTarih"
-              label="Planlanan tarih"
-              type="date"
-              value={form.planlananTarih}
-              onChange={handleChange}
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div
-            data-dashboard-form-submit
-            className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <form
+            onSubmit={handleSubmit}
+            data-dashboard-form-surface
+            className="app-form-surface app-surface-strong space-y-5"
           >
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="app-button-primary app-form-submit-button app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            {submitErrorMessage ? (
+              <div data-dashboard-form-error className="app-form-error-banner" role="alert">
+                <p className="text-sm font-semibold">Degisiklikler kaydedilemedi</p>
+                <p className="mt-1 text-sm">{submitErrorMessage}</p>
+              </div>
+            ) : null}
+
+            <RouteFormPanel
+              title="Guzergah"
+              description="Baslangic ve varis konumunu guncelle."
             >
-              {isSubmitting ? "Rota guncelleniyor..." : "Degisiklikleri kaydet"}
-            </button>
-          </div>
-        </form>
+              <div data-dashboard-form-section className="grid gap-4 md:grid-cols-2">
+                <LocationAutocompleteField
+                  label="Baslangic konumu"
+                  placeholder="Sefer baslangicini ara"
+                  accessToken={accessToken ?? ""}
+                  value={baslangicKonum}
+                  onSelect={(value) => {
+                    setBaslangicKonum(value);
+                    setSubmitErrorMessage(null);
+                  }}
+                  disabled={isSubmitting}
+                  invalid={locationValidationActive && !baslangicKonum}
+                  validationMessage={
+                    locationValidationActive && !baslangicKonum
+                      ? "Listeden bir baslangic konumu sec."
+                      : null
+                  }
+                />
+                <LocationAutocompleteField
+                  label="Varis konumu"
+                  placeholder="Sefer varisini ara"
+                  accessToken={accessToken ?? ""}
+                  value={varisKonum}
+                  onSelect={(value) => {
+                    setVarisKonum(value);
+                    setSubmitErrorMessage(null);
+                  }}
+                  disabled={isSubmitting}
+                  invalid={locationValidationActive && !varisKonum}
+                  validationMessage={
+                    locationValidationActive && !varisKonum
+                      ? "Listeden bir varis konumu sec."
+                      : null
+                  }
+                />
+              </div>
+            </RouteFormPanel>
+
+            <RouteFormPanel title="Planlama">
+              <div data-dashboard-form-section className="grid gap-4 md:grid-cols-2">
+                <InputField
+                  name="planlananTarih"
+                  label="Planlanan tarih"
+                  type="date"
+                  value={form.planlananTarih}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </RouteFormPanel>
+
+            <div
+              data-dashboard-form-submit
+              className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="app-button-primary app-form-submit-button app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? "Rota guncelleniyor..." : "Degisiklikleri kaydet"}
+              </button>
+            </div>
+          </form>
+
+          <aside className="space-y-4">
+            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
+              <h2 className="text-base font-black text-slate-950">Mevcut ozet</h2>
+              <dl className="mt-4">
+                <SummaryRow label="Baslangic" value={formatSelectedLocation(baslangicKonum)} />
+                <SummaryRow label="Varis" value={formatSelectedLocation(varisKonum)} />
+                <SummaryRow
+                  label="Planlanan tarih"
+                  value={form.planlananTarih || "Secilmedi"}
+                />
+              </dl>
+            </section>
+
+            <section className="app-surface rounded-[1.15rem] border border-slate-200 p-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-amber-700">
+                  <i className="pi pi-exclamation-triangle text-sm" />
+                </span>
+                <p className="text-sm leading-6 text-slate-600">
+                  Sapma limiti bu ekranda degistirilmez. Kesif akisi Acik Istekler
+                  ekraninda mevcut rota uzerinden devam eder.
+                </p>
+              </div>
+            </section>
+
+            <div className="grid gap-2">
+              <Link
+                href={`/dashboard/rotalarim/${routeId}`}
+                className="app-surface group flex items-center justify-between rounded-[1.05rem] border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700"
+              >
+                <span>Rota detayina don</span>
+                <i className="pi pi-angle-right text-xs text-slate-400 group-hover:text-blue-500" />
+              </Link>
+              <Link
+                href="/dashboard/rotalarim"
+                className="app-surface group flex items-center justify-between rounded-[1.05rem] border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700"
+              >
+                <span>Rotalarima don</span>
+                <i className="pi pi-angle-right text-xs text-slate-400 group-hover:text-blue-500" />
+              </Link>
+            </div>
+          </aside>
+        </div>
       ) : null}
     </CarrierVehiclesShell>
   );

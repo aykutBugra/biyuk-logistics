@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CustomerConversationCard from "@/components/CustomerConversationCard";
+import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import CustomerMetricCard from "@/components/CustomerMetricCard";
 import CustomerSectionSurface from "@/components/CustomerSectionSurface";
 import CustomerWorkspaceSignalPill from "@/components/CustomerWorkspaceSignalPill";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import DashboardShell from "@/components/DashboardShell";
 import EmptyStateCard from "@/components/EmptyStateCard";
-import SummaryStatCard from "@/components/SummaryStatCard";
+import StatusBadge from "@/components/StatusBadge";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   getMyOfferThreads,
@@ -19,11 +20,13 @@ import {
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useDashboardAccess } from "@/lib/auth/use-dashboard-access";
 import { formatLocationLabel } from "@/lib/logistics";
+import { useOperationalCardMotion } from "@/lib/motion/useOperationalCardMotion";
 
-type ConversationFilter = "all" | "unread" | "open" | "closed";
+type CustomerConversationFilter = "all" | "unread" | "open" | "closed";
+type CarrierConversationFilter = "all" | "pending" | "active" | "closed";
 
 const CUSTOMER_FILTERS: Array<{
-  id: ConversationFilter;
+  id: CustomerConversationFilter;
   label: string;
 }> = [
   { id: "all", label: "Tumu" },
@@ -32,8 +35,22 @@ const CUSTOMER_FILTERS: Array<{
   { id: "closed", label: "Kapali" },
 ];
 
+const CARRIER_FILTERS: Array<{
+  id: CarrierConversationFilter;
+  label: string;
+}> = [
+  { id: "all", label: "Tumu" },
+  { id: "pending", label: "Bekleyen" },
+  { id: "active", label: "Aktif" },
+  { id: "closed", label: "Kapali" },
+];
+
 function normalizeText(value: string): string {
   return value.trim().toLocaleLowerCase("tr-TR");
+}
+
+function normalizeStatus(value: string): string {
+  return value.trim().toUpperCase();
 }
 
 function formatDate(value: string | null): string {
@@ -56,7 +73,7 @@ function formatCurrency(value: number): string {
 }
 
 function getOfferStatusLabel(status: string): string {
-  switch (status.trim().toUpperCase()) {
+  switch (normalizeStatus(status)) {
     case "OLUSTURULDU":
       return "Bekliyor";
     case "KABUL_EDILDI":
@@ -70,15 +87,94 @@ function getOfferStatusLabel(status: string): string {
   }
 }
 
-function matchesConversationFilter(
+function getThreadRouteTitle(thread: OfferThreadSummary): string {
+  return `${formatLocationLabel(
+    thread.baslangicKonumMetni,
+    thread.baslangicSehri
+  )} -> ${formatLocationLabel(thread.varisKonumMetni, thread.varisSehri)}`;
+}
+
+function getConversationPreview(thread: OfferThreadSummary): string {
+  if (thread.lastMessageSummary?.trim()) {
+    return thread.lastMessageSummary;
+  }
+
+  if (thread.isClosed) {
+    return "Konusma tamamlandi.";
+  }
+
+  if (normalizeStatus(thread.durum) === "OLUSTURULDU") {
+    return "Musteri yaniti bekleniyor.";
+  }
+
+  return "Konusma akisi hazir.";
+}
+
+function isCarrierPendingConversation(thread: OfferThreadSummary): boolean {
+  return !thread.isClosed && normalizeStatus(thread.durum) === "OLUSTURULDU";
+}
+
+function isCarrierActiveConversation(thread: OfferThreadSummary): boolean {
+  return !thread.isClosed && !isCarrierPendingConversation(thread);
+}
+
+function resolveCarrierConversationStatusLabel(
+  thread: OfferThreadSummary
+): "Bekliyor" | "Aktif" | "Kapali" {
+  if (thread.isClosed) {
+    return "Kapali";
+  }
+
+  if (isCarrierPendingConversation(thread)) {
+    return "Bekliyor";
+  }
+
+  return "Aktif";
+}
+
+function resolveCarrierConversationStatusValue(
+  thread: OfferThreadSummary
+): "BEKLIYOR" | "AKTIF" | "KAPALI" {
+  if (thread.isClosed) {
+    return "KAPALI";
+  }
+
+  if (isCarrierPendingConversation(thread)) {
+    return "BEKLIYOR";
+  }
+
+  return "AKTIF";
+}
+
+function canOpenCarrierRequestDetail(thread: OfferThreadSummary): boolean {
+  return isCarrierPendingConversation(thread);
+}
+
+function matchesCustomerConversationFilter(
   thread: OfferThreadSummary,
-  filter: ConversationFilter
+  filter: CustomerConversationFilter
 ): boolean {
   switch (filter) {
     case "unread":
       return thread.hasUnread;
     case "open":
       return !thread.isClosed;
+    case "closed":
+      return thread.isClosed;
+    default:
+      return true;
+  }
+}
+
+function matchesCarrierConversationFilter(
+  thread: OfferThreadSummary,
+  filter: CarrierConversationFilter
+): boolean {
+  switch (filter) {
+    case "pending":
+      return isCarrierPendingConversation(thread);
+    case "active":
+      return isCarrierActiveConversation(thread);
     case "closed":
       return thread.isClosed;
     default:
@@ -94,16 +190,8 @@ function matchesConversationSearch(
     return true;
   }
 
-  const routeTitle = `${formatLocationLabel(
-    thread.baslangicKonumMetni,
-    thread.baslangicSehri
-  )} ${thread.baslangicSehri} ${formatLocationLabel(
-    thread.varisKonumMetni,
-    thread.varisSehri
-  )} ${thread.varisSehri}`;
-
   const searchableText = [
-    routeTitle,
+    getThreadRouteTitle(thread),
     thread.karsiTarafAdSoyad,
     thread.karsiTarafKullaniciAdi,
     thread.lastMessageSummary ?? "",
@@ -116,6 +204,125 @@ function matchesConversationSearch(
   return searchableText.includes(query);
 }
 
+function sortCarrierThreads(
+  left: OfferThreadSummary,
+  right: OfferThreadSummary
+): number {
+  if (left.hasUnread !== right.hasUnread) {
+    return left.hasUnread ? -1 : 1;
+  }
+
+  return (
+    new Date(right.lastMessageAt ?? right.closedAt ?? 0).getTime() -
+    new Date(left.lastMessageAt ?? left.closedAt ?? 0).getTime()
+  );
+}
+
+function CarrierConversationCard({
+  thread,
+}: {
+  thread: OfferThreadSummary;
+}) {
+  const { elementRef, motionProps } = useOperationalCardMotion<HTMLElement>();
+  const updatedAt = thread.lastMessageAt ?? thread.closedAt;
+  const requestHref = canOpenCarrierRequestDetail(thread)
+    ? `/dashboard/acik_istekler/${thread.requestId}`
+    : null;
+
+  return (
+    <article
+      ref={elementRef}
+      data-dashboard-card
+      {...motionProps}
+      className={`rounded-[1.4rem] border bg-white p-4 shadow-sm transition-colors will-change-transform md:p-5 ${
+        thread.hasUnread
+          ? "border-blue-200 shadow-[0_14px_34px_rgba(37,99,235,0.08)]"
+          : "border-slate-200 hover:border-blue-200"
+      }`}
+    >
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge
+              status={resolveCarrierConversationStatusValue(thread)}
+              label={resolveCarrierConversationStatusLabel(thread)}
+            />
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+              Teklif #{thread.offerId}
+            </span>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+              Istek #{thread.requestId}
+            </span>
+            {thread.hasUnread ? (
+              <CustomerWorkspaceSignalPill
+                tone="blue"
+                label={`${thread.unreadCount} okunmamis mesaj`}
+              />
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex min-w-0 gap-4">
+            <CustomerInitialsAvatar
+              name={thread.karsiTarafAdSoyad}
+              fallback={thread.karsiTarafKullaniciAdi}
+              imageUrl={thread.karsiTarafProfileImageUrl}
+              tone={thread.isClosed ? "slate" : "blue"}
+            />
+
+            <div className="min-w-0 flex-1">
+              <h3 className="text-[1.65rem] font-black tracking-tight text-slate-950">
+                {getThreadRouteTitle(thread)}
+              </h3>
+
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                <span className="font-semibold text-slate-900">
+                  {thread.karsiTarafAdSoyad}
+                </span>
+                <span className="text-slate-400">
+                  @{thread.karsiTarafKullaniciAdi}
+                </span>
+              </div>
+
+              <p className="mt-3 line-clamp-2 max-w-3xl text-sm leading-6 text-slate-500">
+                {getConversationPreview(thread)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 xl:min-w-[260px] xl:items-end">
+          <div className="xl:text-right">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              Teklif tutari
+            </p>
+            <p className="mt-2 text-[2.15rem] font-black leading-none tracking-tight text-emerald-600">
+              {formatCurrency(thread.fiyat)}
+            </p>
+          </div>
+
+          <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-3 py-2 text-sm text-slate-500 xl:text-right">
+            Son hareket: {formatDate(updatedAt)}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+            {requestHref ? (
+              <Link href={requestHref} className="app-button-secondary">
+                Istek detayi
+              </Link>
+            ) : null}
+            <Link
+              href={`/dashboard/konusmalar/teklif/${thread.offerId}`}
+              className="app-button-primary"
+            >
+              Konusmaya git
+            </Link>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export default function OfferThreadsPage() {
   const router = useRouter();
   const { accessToken, isCarrierWorkspace, isCustomerWorkspace, primaryRole, status } =
@@ -124,8 +331,10 @@ export default function OfferThreadsPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] =
-    useState<ConversationFilter>("all");
+  const [customerSelectedFilter, setCustomerSelectedFilter] =
+    useState<CustomerConversationFilter>("all");
+  const [carrierSelectedFilter, setCarrierSelectedFilter] =
+    useState<CarrierConversationFilter>("all");
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
@@ -185,6 +394,12 @@ export default function OfferThreadsPage() {
     };
   }, [accessToken, primaryRole, router, status]);
 
+  useEffect(() => {
+    setSearchQuery("");
+    setCustomerSelectedFilter("all");
+    setCarrierSelectedFilter("all");
+  }, [primaryRole]);
+
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
@@ -194,27 +409,35 @@ export default function OfferThreadsPage() {
   }
 
   const normalizedSearchQuery = normalizeText(searchQuery);
-  const unreadCount = threads.filter((thread) => thread.hasUnread).length;
-  const activeCount = threads.filter((thread) => !thread.isClosed).length;
+  const unreadThreadCount = threads.filter((thread) => thread.hasUnread).length;
+  const carrierPendingCount = threads.filter(isCarrierPendingConversation).length;
+  const carrierActiveCount = threads.filter(isCarrierActiveConversation).length;
   const closedCount = threads.filter((thread) => thread.isClosed).length;
-  const filteredThreads = threads.filter(
+  const filteredCustomerThreads = threads.filter(
     (thread) =>
-      matchesConversationFilter(thread, selectedFilter) &&
+      matchesCustomerConversationFilter(thread, customerSelectedFilter) &&
       matchesConversationSearch(thread, normalizedSearchQuery)
   );
+  const filteredCarrierThreads = [...threads]
+    .filter(
+      (thread) =>
+        matchesCarrierConversationFilter(thread, carrierSelectedFilter) &&
+        matchesConversationSearch(thread, normalizedSearchQuery)
+    )
+    .sort(sortCarrierThreads);
 
   return (
     <DashboardShell
       title="Konusmalar"
       description={
         isCarrierWorkspace
-          ? "Nakliyeci baglamindaki teklif konusmalarini ve okunmamis akislari takip et."
+          ? "Tekliflerinle ilgili gorusmelerini buradan takip et ve musterilerle iletisimde kal."
           : "Musteri baglamindaki teklif konusmalarini ve pazarlik akislarini yonet."
       }
       pageEyebrow={isCustomerWorkspace ? "Calisma alani" : undefined}
-      headerVariant={isCustomerWorkspace ? "compact" : "default"}
-      motionPreset={isCustomerWorkspace ? "operational" : "default"}
-      cardMotionLimit={isCustomerWorkspace ? 6 : undefined}
+      headerVariant="compact"
+      motionPreset="operational"
+      cardMotionLimit={6}
     >
       {isLoading ? <DashboardPageSkeleton /> : null}
 
@@ -225,240 +448,260 @@ export default function OfferThreadsPage() {
       ) : null}
 
       {!isLoading && !errorMessage && isCustomerWorkspace ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <CustomerMetricCard
-            label="Toplam thread"
-            value={threads.length}
-            hint="Tum teklif konusmalarin"
-            tone="blue"
-            icon={<i className="pi pi-comments text-lg" />}
-          />
-          <CustomerMetricCard
-            label="Okunmamis"
-            value={unreadCount}
-            hint="Incelemen bekleyen akislari gosterir"
-            tone="violet"
-            icon={<i className="pi pi-envelope text-lg" />}
-          />
-          <CustomerMetricCard
-            label="Aktif pazarlik"
-            value={activeCount}
-            hint="Devam eden gorusmeler"
-            tone="emerald"
-            icon={<i className="pi pi-refresh text-lg" />}
-          />
-          <CustomerMetricCard
-            label="Kapali"
-            value={closedCount}
-            hint="Tamamlanan veya kapanan akislar"
-            tone="amber"
-            icon={<i className="pi pi-lock text-lg" />}
-          />
-        </div>
+        <>
+          <div data-dashboard-stats className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <CustomerMetricCard
+              label="Toplam thread"
+              value={threads.length}
+              hint="Tum teklif konusmalarin"
+              tone="blue"
+              icon={<i className="pi pi-comments text-lg" />}
+            />
+            <CustomerMetricCard
+              label="Okunmamis"
+              value={unreadThreadCount}
+              hint="Incelemen bekleyen akislari gosterir"
+              tone="violet"
+              icon={<i className="pi pi-envelope text-lg" />}
+            />
+            <CustomerMetricCard
+              label="Aktif pazarlik"
+              value={threads.filter((thread) => !thread.isClosed).length}
+              hint="Devam eden gorusmeler"
+              tone="emerald"
+              icon={<i className="pi pi-refresh text-lg" />}
+            />
+            <CustomerMetricCard
+              label="Kapali"
+              value={closedCount}
+              hint="Tamamlanan veya kapanan akislar"
+              tone="amber"
+              icon={<i className="pi pi-lock text-lg" />}
+            />
+          </div>
+
+          {threads.length === 0 ? (
+            <div data-dashboard-primary className="mt-6">
+              <EmptyStateCard
+                eyebrow="Konusma kutusu"
+                title="Henuz konusma yok"
+                description="Teklif akisi olustugunda teklif gorusmelerin burada listelenecek. Gelen teklifleri veya aktif isteklerini acarak sonraki adima gecebilirsin."
+                actionHref="/dashboard/gelen_teklifler"
+                actionLabel="Gelen teklifleri gor"
+              />
+            </div>
+          ) : (
+            <div data-dashboard-primary className="mt-6">
+              <CustomerSectionSurface
+                title="Tum konusmalar"
+                count={filteredCustomerThreads.length}
+                description="Teklif konusmalarini rota, durum ve mevcut aksiyonlariyla birlikte tek listede yonet."
+                action={
+                  <div className="flex flex-wrap gap-2">
+                    <CustomerWorkspaceSignalPill
+                      tone="blue"
+                      label={`${unreadThreadCount} okunmamis`}
+                    />
+                    <CustomerWorkspaceSignalPill
+                      tone="emerald"
+                      label={`${threads.filter((thread) => !thread.isClosed).length} acik`}
+                    />
+                    <CustomerWorkspaceSignalPill
+                      tone="slate"
+                      label={`${closedCount} kapali`}
+                    />
+                  </div>
+                }
+              >
+                <div className="space-y-4">
+                  <div className="app-surface-muted rounded-[1.35rem] p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <label className="relative block w-full lg:max-w-md">
+                        <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+                          <i className="pi pi-search text-sm" />
+                        </span>
+                        <input
+                          type="search"
+                          value={searchQuery}
+                          onChange={(event) => setSearchQuery(event.target.value)}
+                          placeholder="Konusma, rota veya taraf ara"
+                          className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </label>
+
+                      <div className="flex flex-wrap gap-2">
+                        {CUSTOMER_FILTERS.map((filter) => {
+                          const isActive = customerSelectedFilter === filter.id;
+
+                          return (
+                            <button
+                              key={filter.id}
+                              type="button"
+                              onClick={() => setCustomerSelectedFilter(filter.id)}
+                              className={`app-pressable inline-flex items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                                isActive
+                                  ? "border-blue-600 bg-blue-600 text-white"
+                                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              {filter.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {filteredCustomerThreads.length === 0 ? (
+                    <EmptyStateCard
+                      eyebrow="Filtre sonucu"
+                      title="Filtreye uyan konusma bulunamadi"
+                      description="Arama metnini veya secili durumu temizleyerek tum thread'leri tekrar goruntuleyebilirsin."
+                    />
+                  ) : (
+                    <div className="grid gap-4">
+                      {filteredCustomerThreads.map((thread) => (
+                        <CustomerConversationCard
+                          key={thread.id}
+                          thread={thread}
+                          conversationHref={`/dashboard/konusmalar/teklif/${thread.offerId}`}
+                          requestHref={`/dashboard/isteklerim/${thread.requestId}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CustomerSectionSurface>
+            </div>
+          )}
+        </>
       ) : null}
 
-      {!isLoading && !errorMessage && !isCustomerWorkspace && threads.length > 0 ? (
-        <div className="mb-6 grid gap-4 md:grid-cols-3">
-          <SummaryStatCard label="Toplam thread" value={threads.length} />
-          <SummaryStatCard label="Okunmamis" value={unreadCount} />
-          <SummaryStatCard label="Kapali" value={closedCount} />
-        </div>
-      ) : null}
-
-      {!isLoading && !errorMessage && isCustomerWorkspace ? (
+      {!isLoading && !errorMessage && !isCustomerWorkspace ? (
         threads.length === 0 ? (
-          <div className="mt-6">
+          <div data-dashboard-primary className="mt-6">
             <EmptyStateCard
-              eyebrow="Konusma kutusu"
               title="Henuz konusma yok"
-              description="Teklif akisi olustugunda teklif gorusmelerin burada listelenecek. Gelen teklifleri veya aktif isteklerini acarak sonraki adima gecebilirsin."
-              actionHref="/dashboard/gelen_teklifler"
-              actionLabel="Gelen teklifleri gor"
+              description="Teklif verdiginde veya musteriden yanit geldiginde konusmalar burada listelenecek."
+              actionHref="/dashboard/acik_istekler"
+              actionLabel="Acik istekleri incele"
             />
           </div>
         ) : (
-          <div className="mt-6">
-            <CustomerSectionSurface
-              title="Tum konusmalar"
-              count={filteredThreads.length}
-              description="Teklif konusmalarini rota, durum ve mevcut aksiyonlariyla birlikte tek listede yonet."
-              action={
-                <div className="flex flex-wrap gap-2">
-                  <CustomerWorkspaceSignalPill
-                    tone="blue"
-                    label={`${unreadCount} okunmamis`}
-                  />
-                  <CustomerWorkspaceSignalPill
-                    tone="emerald"
-                    label={`${activeCount} acik`}
-                  />
-                  <CustomerWorkspaceSignalPill
-                    tone="slate"
-                    label={`${closedCount} kapali`}
-                  />
-                </div>
-              }
+          <div className="mt-6 space-y-6">
+            <div
+              data-dashboard-stats
+              className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
             >
-              <div className="space-y-4">
-                <div className="app-surface-muted rounded-[1.35rem] p-4">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <label className="relative block w-full lg:max-w-md">
-                      <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-                        <i className="pi pi-search text-sm" />
-                      </span>
-                      <input
-                        type="search"
-                        value={searchQuery}
-                        onChange={(event) => setSearchQuery(event.target.value)}
-                        placeholder="Konusma, rota veya taraf ara"
-                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      />
-                    </label>
+              <CustomerMetricCard
+                label="Toplam thread"
+                value={threads.length}
+                hint="Tum teklif gorusmelerin"
+                tone="blue"
+                icon={<i className="pi pi-comments text-lg" />}
+              />
+              <CustomerMetricCard
+                label="Okunmamis"
+                value={unreadThreadCount}
+                hint="Takip bekleyen gorusmeler"
+                tone="violet"
+                icon={<i className="pi pi-envelope text-lg" />}
+              />
+              <CustomerMetricCard
+                label="Aktif pazarlik"
+                value={carrierActiveCount}
+                hint="Devam eden operasyonel gorusmeler"
+                tone="emerald"
+                icon={<i className="pi pi-sync text-lg" />}
+              />
+              <CustomerMetricCard
+                label="Kapali"
+                value={closedCount}
+                hint="Sonuclanan veya kapanan thread'ler"
+                tone="amber"
+                icon={<i className="pi pi-lock text-lg" />}
+              />
+            </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      {CUSTOMER_FILTERS.map((filter) => {
-                        const isActive = selectedFilter === filter.id;
+            <div data-dashboard-primary>
+              <CustomerSectionSurface
+                title="Tum konusmalar"
+                count={filteredCarrierThreads.length}
+                description="Teklif verdigin isleri rota, musteri ve son hareket baglamiyla tek listede takip et."
+                action={
+                  <div className="flex flex-wrap gap-2">
+                    <CustomerWorkspaceSignalPill
+                      tone="blue"
+                      label={`${unreadThreadCount} okunmamis`}
+                    />
+                    <CustomerWorkspaceSignalPill
+                      tone="amber"
+                      label={`${carrierPendingCount} bekleyen`}
+                    />
+                    <CustomerWorkspaceSignalPill
+                      tone="emerald"
+                      label={`${carrierActiveCount} aktif`}
+                    />
+                  </div>
+                }
+              >
+                <div className="space-y-4">
+                  <section className="app-surface rounded-[1.15rem] border border-slate-200 p-4">
+                    <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                      <label className="relative block w-full xl:max-w-md">
+                        <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+                          <i className="pi pi-search text-sm" />
+                        </span>
+                        <input
+                          type="search"
+                          value={searchQuery}
+                          onChange={(event) => setSearchQuery(event.target.value)}
+                          placeholder="Konusma, rota veya musteri ara..."
+                          className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300"
+                        />
+                      </label>
 
-                        return (
-                          <button
-                            key={filter.id}
-                            type="button"
-                            onClick={() => setSelectedFilter(filter.id)}
-                            className={`app-pressable inline-flex items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-                              isActive
-                                ? "border-blue-600 bg-blue-600 text-white"
-                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                            }`}
-                          >
-                            {filter.label}
-                          </button>
-                        );
-                      })}
+                      <div className="flex flex-wrap gap-2">
+                        {CARRIER_FILTERS.map((filter) => {
+                          const isActive = carrierSelectedFilter === filter.id;
+
+                          return (
+                            <button
+                              key={filter.id}
+                              type="button"
+                              onClick={() => setCarrierSelectedFilter(filter.id)}
+                              className={`rounded-xl border px-3.5 py-2 text-sm font-semibold transition ${
+                                isActive
+                                  ? "border-blue-200 bg-blue-50 text-blue-700"
+                                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              {filter.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </section>
 
-                {filteredThreads.length === 0 ? (
-                  <EmptyStateCard
-                    eyebrow="Filtre sonucu"
-                    title="Filtreye uyan konusma bulunamadi"
-                    description="Arama metnini veya secili durumu temizleyerek tum thread'leri tekrar goruntuleyebilirsin."
-                  />
-                ) : (
-                  <div className="grid gap-4">
-                    {filteredThreads.map((thread) => (
-                      <CustomerConversationCard
-                        key={thread.id}
-                        thread={thread}
-                        conversationHref={`/dashboard/konusmalar/teklif/${thread.offerId}`}
-                        requestHref={`/dashboard/isteklerim/${thread.requestId}`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CustomerSectionSurface>
+                  {filteredCarrierThreads.length === 0 ? (
+                    <EmptyStateCard
+                      eyebrow="Filtre sonucu"
+                      title="Filtreye uyan konusma bulunamadi"
+                      description="Aramayi veya durum filtresini degistirerek diger gorusmeleri tekrar listeleyebilirsin."
+                    />
+                  ) : (
+                    <div className="grid gap-4">
+                      {filteredCarrierThreads.map((thread) => (
+                        <CarrierConversationCard key={thread.id} thread={thread} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CustomerSectionSurface>
+            </div>
           </div>
         )
-      ) : null}
-
-      {!isLoading && !errorMessage && !isCustomerWorkspace && threads.length === 0 ? (
-        <EmptyStateCard
-          title="Henuz konusma yok"
-          description="Teklif olustukca veya sana teklif geldikce ilgili konusmalar burada listelenecek."
-          actionHref={
-            primaryRole === "NAKLIYECI"
-              ? "/dashboard/acik_istekler"
-              : "/dashboard/gelen_teklifler"
-          }
-          actionLabel={
-            primaryRole === "NAKLIYECI"
-              ? "Acik istekleri incele"
-              : "Gelen teklifleri gor"
-          }
-        />
-      ) : null}
-
-      {!isLoading && !errorMessage && !isCustomerWorkspace && threads.length > 0 ? (
-        <div className="grid gap-4">
-          {threads.map((thread) => (
-            <article
-              key={thread.id}
-              className={`rounded-2xl border p-6 shadow-sm transition-colors ${
-                thread.hasUnread
-                  ? "border-blue-200 bg-blue-50/40"
-                  : "border-slate-200 bg-white hover:border-blue-200"
-              }`}
-            >
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        thread.isClosed
-                          ? "bg-slate-100 text-slate-700"
-                          : "bg-emerald-50 text-emerald-700"
-                      }`}
-                    >
-                      {thread.isClosed ? "Kapali" : "Aktif"}
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      Teklif #{thread.offerId}
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      Istek #{thread.requestId}
-                    </span>
-                    {thread.hasUnread ? (
-                      <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                        {thread.unreadCount} okunmamis
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                      {formatLocationLabel(
-                        thread.baslangicKonumMetni,
-                        thread.baslangicSehri
-                      )}{" "}
-                      {"->"}{" "}
-                      {formatLocationLabel(
-                        thread.varisKonumMetni,
-                        thread.varisSehri
-                      )}
-                    </h2>
-                    <p className="text-sm text-slate-600">
-                      {thread.karsiTarafAdSoyad}{" "}
-                      <span className="text-slate-500">
-                        @{thread.karsiTarafKullaniciAdi}
-                      </span>
-                    </p>
-                    <p className="max-w-3xl text-sm leading-6 text-slate-600">
-                      {thread.lastMessageSummary ?? "Konusma hazir."}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex min-w-[240px] flex-col items-start gap-3 lg:items-end">
-                  <p className="text-2xl font-black tracking-tight text-emerald-700">
-                    {formatCurrency(thread.fiyat)}
-                  </p>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    {formatDate(thread.lastMessageAt ?? thread.closedAt)}
-                  </p>
-                  <div className="flex flex-wrap gap-2 lg:justify-end">
-                    <Link
-                      href={`/dashboard/konusmalar/teklif/${thread.offerId}`}
-                      className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-                    >
-                      Konusmaya git
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
       ) : null}
     </DashboardShell>
   );

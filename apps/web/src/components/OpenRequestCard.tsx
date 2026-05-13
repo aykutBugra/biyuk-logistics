@@ -115,11 +115,11 @@ export default function OpenRequestCard({
         className={`h-full ${hasImage ? "grid gap-4 md:grid-cols-[11rem_minmax(0,1fr)]" : "flex flex-col gap-3.5"}`}
       >
         {request.primaryImage ? (
-          <div className="relative overflow-hidden rounded-[1rem] border border-slate-200 bg-slate-100">
+          <div className="relative overflow-hidden rounded-[1rem] border border-slate-200 bg-slate-100 p-2">
             <img
               src={request.primaryImage.thumbnailUrl}
               alt={`${request.baslangicSehri} - ${request.varisSehri} yuk fotografi`}
-              className="h-full min-h-[12rem] w-full object-cover"
+              className="h-full min-h-[12rem] w-full rounded-[0.8rem] object-contain"
             />
             {typeof request.imageCount === "number" && request.imageCount > 1 ? (
               <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">

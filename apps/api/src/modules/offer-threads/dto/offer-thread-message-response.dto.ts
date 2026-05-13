@@ -8,5 +8,6 @@ export class OfferThreadMessageResponseDto {
   senderUserId!: number | null;
   senderName!: string | null;
   senderUsername!: string | null;
+  senderProfileImageUrl?: string;
   isMine!: boolean;
 }

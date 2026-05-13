@@ -101,9 +101,17 @@ export default function CarrierVehicleCapacityPanel({
 
         <div className="flex flex-col justify-between gap-4">
           <div className="relative flex min-h-[160px] items-center justify-center overflow-hidden rounded-[1.25rem] border border-slate-200 bg-slate-50">
-            <div className="flex h-20 w-20 items-center justify-center rounded-[1.6rem] bg-white text-slate-300 shadow-sm">
-              <i className="pi pi-truck text-4xl" />
-            </div>
+            {vehicle.vehicleImageUrl ? (
+              <img
+                src={vehicle.vehicleImageUrl}
+                alt={`${vehicle.marka} ${vehicle.model} fotografi`}
+                className="h-full min-h-[160px] w-full object-contain"
+              />
+            ) : (
+              <div className="flex h-20 w-20 items-center justify-center rounded-[1.6rem] bg-white text-slate-300 shadow-sm">
+                <i className="pi pi-truck text-4xl" />
+              </div>
+            )}
             <span
               className={`absolute bottom-3 right-3 rounded-full border px-2.5 py-1 text-xs font-semibold ${status.tone}`}
             >

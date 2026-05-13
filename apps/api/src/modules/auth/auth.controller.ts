@@ -7,8 +7,12 @@ import {
   HttpStatus,
   Patch,
   Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
@@ -20,6 +24,8 @@ import { DismissDashboardIntroDto } from "./dto/dismiss-dashboard-intro.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
 import { RegisterDto } from "./dto/register.dto";
+
+const MAX_PROFILE_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 @Controller("auth")
 export class AuthController {
@@ -57,6 +63,34 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() currentUser: AuthenticatedUser): Promise<UserProfileResponseDto> {
     return this.authService.getCurrentUser(currentUser);
+  }
+
+  @Post("me/profile-image")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor("image", {
+      storage: memoryStorage(),
+      limits: {
+        files: 1,
+        fileSize: MAX_PROFILE_IMAGE_FILE_SIZE_BYTES,
+      },
+    })
+  )
+  updateProfileImage(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @UploadedFile() file: Express.Multer.File | undefined
+  ): Promise<UserProfileResponseDto> {
+    return this.authService.updateCurrentUserProfileImage(currentUser, file);
+  }
+
+  @Delete("me/profile-image")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  deleteProfileImage(
+    @CurrentUser() currentUser: AuthenticatedUser
+  ): Promise<UserProfileResponseDto> {
+    return this.authService.deleteCurrentUserProfileImage(currentUser);
   }
 
   @Patch("me/dashboard-intro")

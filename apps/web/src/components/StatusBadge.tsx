@@ -8,6 +8,8 @@ function getBadgeClasses(status: string): string {
 
   if (
     normalizedStatus === "OLUSTURULDU" ||
+    normalizedStatus === "BEKLIYOR" ||
+    normalizedStatus === "AKTIF" ||
     normalizedStatus === "ACIK" ||
     normalizedStatus === "YENI"
   ) {
@@ -27,6 +29,10 @@ function getBadgeClasses(status: string): string {
 
   if (normalizedStatus === "REDDEDILDI" || normalizedStatus === "IPTAL_EDILDI") {
     return "bg-rose-50 text-rose-700 ring-rose-100";
+  }
+
+  if (normalizedStatus === "KAPALI") {
+    return "bg-slate-100 text-slate-700 ring-slate-200";
   }
 
   return "bg-slate-100 text-slate-700 ring-slate-200";

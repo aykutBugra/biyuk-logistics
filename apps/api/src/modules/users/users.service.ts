@@ -1,8 +1,11 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  Optional,
   UnauthorizedException,
 } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import {
   BUSINESS_ROLE_VALUES,
@@ -10,6 +13,8 @@ import {
   type RoleName,
 } from "../../common/constants/role-names";
 import type { DashboardIntroRole } from "../../common/types/dashboard-intro-role.type";
+import { ImageProcessingService } from "../../infrastructure/media/image-processing.service";
+import { MediaStorageService } from "../../infrastructure/media/media-storage.service";
 import { RolesService } from "../roles/roles.service";
 import { UserProfileResponseDto } from "./dto/user-profile-response.dto";
 import {
@@ -27,6 +32,8 @@ export type AuthUserRecord = {
   mail: string;
   kullaniciAdi: string;
   telefonNumarasi: string | null;
+  profileImageUrl?: string;
+  profilFotografiStorageKey?: string | null;
   customerIntroDismissedAt?: Date | null;
   carrierIntroDismissedAt?: Date | null;
   sifreHash: string;
@@ -43,6 +50,13 @@ type UsersRepositoryWithProfileList = UsersRepository & {
   findAllActiveProfiles(): Promise<StoredUserProfileRecord[]>;
 };
 
+const USER_IMAGE_ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const MAX_USER_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
 //type UsersRepositoryWithProfileList = UsersRepository & {
   //findAllActiveProfiles(ad?: string): Promise<StoredUserProfileRecord[]>;
 //};
@@ -54,7 +68,9 @@ type UsersRepositoryWithProfileList = UsersRepository & {
 export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
-    private readonly rolesService: RolesService
+    private readonly rolesService: RolesService,
+    @Optional() private readonly mediaStorageService?: MediaStorageService,
+    @Optional() private readonly imageProcessingService?: ImageProcessingService
   ) {}
 
   async findActiveByIdentifier(identifier: string): Promise<AuthUserRecord | null> {
@@ -150,6 +166,90 @@ export class UsersService {
     this.assertDeleteSucceeded(result);
   }
 
+  async updateOwnProfileImage(
+    userId: number,
+    file: Express.Multer.File | undefined
+  ): Promise<UserProfileResponseDto> {
+    if (!file) {
+      throw new BadRequestException("Profil fotografi secmelisin.");
+    }
+
+    if (!this.mediaStorageService || !this.imageProcessingService) {
+      throw new BadRequestException("Gorsel yukleme servisi hazir degil.");
+    }
+
+    this.assertValidUserImageFile(file);
+
+    const currentUser = await this.usersRepository.findProfileById(userId);
+
+    if (!currentUser) {
+      throw new UnauthorizedException("Current user could not be resolved.");
+    }
+
+    const processedImage = await this.imageProcessingService.processProfileImage(
+      file.buffer
+    );
+    const storageKey = `profile-images/${userId}/${randomUUID()}.webp`;
+
+    await this.mediaStorageService.saveFile({
+      storageKey,
+      buffer: processedImage.buffer,
+      contentType: processedImage.mimeType,
+    });
+
+    try {
+      const updatedUser = await this.usersRepository.updateProfileImageStorageKeyById(
+        userId,
+        storageKey
+      );
+
+      if (!updatedUser) {
+        throw new UnauthorizedException("Current user could not be resolved.");
+      }
+
+      if (currentUser.profilFotografiStorageKey) {
+        await this.mediaStorageService.deleteFile(
+          currentUser.profilFotografiStorageKey
+        );
+      }
+
+      return this.mapStoredProfile(updatedUser);
+    } catch (error) {
+      await this.mediaStorageService.deleteFile(storageKey);
+      throw error;
+    }
+  }
+
+  async deleteOwnProfileImage(userId: number): Promise<UserProfileResponseDto> {
+    if (!this.mediaStorageService) {
+      throw new BadRequestException("Gorsel yukleme servisi hazir degil.");
+    }
+
+    const currentUser = await this.usersRepository.findProfileById(userId);
+
+    if (!currentUser) {
+      throw new UnauthorizedException("Current user could not be resolved.");
+    }
+
+    if (!currentUser.profilFotografiStorageKey) {
+      return this.mapStoredProfile(currentUser);
+    }
+
+    const previousStorageKey = currentUser.profilFotografiStorageKey;
+    const updatedUser = await this.usersRepository.updateProfileImageStorageKeyById(
+      userId,
+      null
+    );
+
+    if (!updatedUser) {
+      throw new UnauthorizedException("Current user could not be resolved.");
+    }
+
+    await this.mediaStorageService.deleteFile(previousStorageKey);
+
+    return this.mapStoredProfile(updatedUser);
+  }
+
   toUserProfile(user: Omit<AuthUserRecord, "sifreHash">): UserProfileResponseDto {
     return {
       id: user.id,
@@ -158,6 +258,9 @@ export class UsersService {
       mail: user.mail,
       kullaniciAdi: user.kullaniciAdi,
       telefonNumarasi: user.telefonNumarasi,
+      profileImageUrl:
+        user.profileImageUrl ??
+        this.toPublicMediaUrl(user.profilFotografiStorageKey ?? null),
       customerIntroDismissedAt: user.customerIntroDismissedAt ?? null,
       carrierIntroDismissedAt: user.carrierIntroDismissedAt ?? null,
       roles: user.roles,
@@ -176,6 +279,8 @@ export class UsersService {
       mail: user.mail,
       kullaniciAdi: user.kullaniciAdi,
       telefonNumarasi: user.telefonNumarasi,
+      profileImageUrl: this.toPublicMediaUrl(user.profilFotografiStorageKey),
+      profilFotografiStorageKey: user.profilFotografiStorageKey,
       customerIntroDismissedAt: user.customerIntroDismissedAt,
       carrierIntroDismissedAt: user.carrierIntroDismissedAt,
       sifreHash: user.sifreHash,
@@ -191,6 +296,8 @@ export class UsersService {
       mail: user.mail,
       kullaniciAdi: user.kullaniciAdi,
       telefonNumarasi: user.telefonNumarasi,
+      profileImageUrl: this.toPublicMediaUrl(user.profilFotografiStorageKey),
+      profilFotografiStorageKey: user.profilFotografiStorageKey,
       customerIntroDismissedAt: user.customerIntroDismissedAt,
       carrierIntroDismissedAt: user.carrierIntroDismissedAt,
       roles: this.rolesService.normalizeRoleNames(user.roleNames),
@@ -226,5 +333,29 @@ export class UsersService {
           "Account cannot be deleted because an agreed transport request is not fully closed."
         );
     }
+  }
+
+  private assertValidUserImageFile(file: Express.Multer.File): void {
+    if (!file.buffer || file.buffer.length === 0) {
+      throw new BadRequestException("Dosya icerigi okunamadi.");
+    }
+
+    if (!USER_IMAGE_ALLOWED_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException(
+        "Yalnizca JPEG, PNG veya WEBP gorseller yuklenebilir."
+      );
+    }
+
+    if (file.size > MAX_USER_IMAGE_FILE_SIZE_BYTES) {
+      throw new BadRequestException("Gorsel boyutu en fazla 5 MB olabilir.");
+    }
+  }
+
+  private toPublicMediaUrl(storageKey: string | null | undefined): string | undefined {
+    if (!storageKey || !this.mediaStorageService) {
+      return undefined;
+    }
+
+    return this.mediaStorageService.toPublicUrl(storageKey);
   }
 }

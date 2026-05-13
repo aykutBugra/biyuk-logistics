@@ -213,6 +213,19 @@ export class AuthService {
     return user;
   }
 
+  async updateCurrentUserProfileImage(
+    currentUser: AuthenticatedUser,
+    file: Express.Multer.File | undefined
+  ): Promise<UserProfileResponseDto> {
+    return this.usersService.updateOwnProfileImage(currentUser.id, file);
+  }
+
+  async deleteCurrentUserProfileImage(
+    currentUser: AuthenticatedUser
+  ): Promise<UserProfileResponseDto> {
+    return this.usersService.deleteOwnProfileImage(currentUser.id);
+  }
+
   async deleteCurrentUser(currentUser: AuthenticatedUser): Promise<void> {
     await this.usersService.deleteOwnAccount(currentUser.id);
   }
@@ -356,6 +369,8 @@ export class AuthService {
       mail: user.mail,
       kullaniciAdi: user.kullaniciAdi,
       telefonNumarasi: user.telefonNumarasi,
+      profileImageUrl: user.profileImageUrl,
+      profilFotografiStorageKey: user.profilFotografiStorageKey,
       customerIntroDismissedAt: user.customerIntroDismissedAt ?? null,
       carrierIntroDismissedAt: user.carrierIntroDismissedAt ?? null,
       roles: user.roles,

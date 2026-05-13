@@ -20,3 +20,18 @@ export function dismissMyDashboardIntro(
     body: JSON.stringify({ role }),
   });
 }
+
+export function uploadMyProfileImage(formData: FormData, accessToken: string) {
+  return apiFetch<UserProfile>("/auth/me/profile-image", {
+    method: "POST",
+    accessToken,
+    body: formData,
+  });
+}
+
+export function deleteMyProfileImage(accessToken: string) {
+  return apiFetch<UserProfile>("/auth/me/profile-image", {
+    method: "DELETE",
+    accessToken,
+  });
+}

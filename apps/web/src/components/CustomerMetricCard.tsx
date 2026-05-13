@@ -42,19 +42,19 @@ export default function CustomerMetricCard({
   const styles = TONE_STYLES[tone];
 
   return (
-    <article className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-4 shadow-sm">
-      <div className="flex items-start gap-4">
+    <article className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-3.5 shadow-sm">
+      <div className="flex items-start gap-3">
         <div
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${styles.iconBox} ${styles.iconColor}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${styles.iconBox} ${styles.iconColor}`}
         >
           {icon}
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-500">{label}</p>
-          <p className="mt-1 text-[2rem] font-black leading-none tracking-tight text-slate-950">
+          <p className="mt-1 text-[1.75rem] font-black leading-none tracking-tight text-slate-950">
             {value}
           </p>
-          <p className="mt-1.5 text-sm text-slate-500">{hint}</p>
+          <p className="mt-1 text-xs text-slate-500">{hint}</p>
         </div>
       </div>
     </article>

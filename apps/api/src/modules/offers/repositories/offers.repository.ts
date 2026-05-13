@@ -121,6 +121,7 @@ export type IncomingOfferListItemRecord = {
   carrierId: number;
   carrierName: string;
   carrierUsername: string;
+  carrierProfileImageStorageKey: string | null;
   aracId: number | null;
   aracPlaka: string | null;
   fiyat: number;
@@ -143,6 +144,7 @@ export type MyIncomingOfferListItemRecord = {
   carrierId: number;
   carrierName: string;
   carrierUsername: string;
+  carrierProfileImageStorageKey: string | null;
   aracId: number | null;
   aracPlaka: string | null;
   fiyat: number;
@@ -738,6 +740,7 @@ export class OffersRepository {
             ad: true,
             soyad: true,
             kullaniciAdi: true,
+            profilFotografiStorageKey: true,
           },
         },
         arac: {
@@ -760,6 +763,7 @@ export class OffersRepository {
       carrierId: offer.nakliyeci.id,
       carrierName: `${offer.nakliyeci.ad} ${offer.nakliyeci.soyad}`.trim(),
       carrierUsername: offer.nakliyeci.kullaniciAdi,
+      carrierProfileImageStorageKey: offer.nakliyeci.profilFotografiStorageKey,
       aracId: offer.arac?.id ?? null,
       aracPlaka: offer.arac?.plaka ?? null,
       fiyat: offer.fiyat.toNumber(),
@@ -826,6 +830,7 @@ export class OffersRepository {
             ad: true,
             soyad: true,
             kullaniciAdi: true,
+            profilFotografiStorageKey: true,
           },
         },
         arac: {
@@ -857,6 +862,7 @@ export class OffersRepository {
       carrierId: offer.nakliyeci.id,
       carrierName: `${offer.nakliyeci.ad} ${offer.nakliyeci.soyad}`.trim(),
       carrierUsername: offer.nakliyeci.kullaniciAdi,
+      carrierProfileImageStorageKey: offer.nakliyeci.profilFotografiStorageKey,
       aracId: offer.arac?.id ?? null,
       aracPlaka: offer.arac?.plaka ?? null,
       fiyat: offer.fiyat.toNumber(),

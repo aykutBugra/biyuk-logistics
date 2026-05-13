@@ -659,6 +659,7 @@ export default function MyOffersPage() {
     const signal = buildOfferSignal(offer.durum, isNegotiation);
     const customerName = thread?.karsiTarafAdSoyad ?? null;
     const customerUsername = thread?.karsiTarafKullaniciAdi ?? null;
+    const customerProfileImageUrl = thread?.karsiTarafProfileImageUrl;
     const trackingParts = [
       offer.aracPlaka ? `Arac: ${offer.aracPlaka}` : "Arac bilgisi yok",
       detail?.tasimaTarihi ? `Planlanan tarih: ${detail.tasimaTarihi}` : null,
@@ -688,6 +689,7 @@ export default function MyOffersPage() {
       musteriAdi: customerName,
       musteriKullaniciAdi: customerUsername,
       musteriBasHarfler: buildInitials(customerName ?? customerUsername),
+      musteriProfileImageUrl: customerProfileImageUrl,
       not: offer.not,
       chipler: buildOfferChips(detail),
       takipMetni: trackingParts.join(" | "),

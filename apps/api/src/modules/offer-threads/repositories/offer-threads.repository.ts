@@ -16,6 +16,7 @@ export type OfferThreadMessageRecord = {
   senderUserId: number | null;
   senderName: string | null;
   senderUsername: string | null;
+  senderProfileImageStorageKey: string | null;
 };
 
 export type OfferThreadSummaryRecord = {
@@ -29,9 +30,11 @@ export type OfferThreadSummaryRecord = {
   customerId: number;
   customerName: string;
   customerUsername: string;
+  customerProfileImageStorageKey: string | null;
   carrierId: number;
   carrierName: string;
   carrierUsername: string;
+  carrierProfileImageStorageKey: string | null;
   fiyat: number;
   durum: string;
   closedAt: Date | null;
@@ -139,6 +142,7 @@ export class OfferThreadsRepository {
             ad: true,
             soyad: true,
             kullaniciAdi: true,
+            profilFotografiStorageKey: true,
           },
         },
         carrier: {
@@ -147,6 +151,7 @@ export class OfferThreadsRepository {
             ad: true,
             soyad: true,
             kullaniciAdi: true,
+            profilFotografiStorageKey: true,
           },
         },
         offer: {
@@ -184,6 +189,7 @@ export class OfferThreadsRepository {
                 ad: true,
                 soyad: true,
                 kullaniciAdi: true,
+                profilFotografiStorageKey: true,
               },
             },
           },
@@ -202,9 +208,11 @@ export class OfferThreadsRepository {
       customerId: thread.customerId,
       customerName: formatFullName(thread.customer.ad, thread.customer.soyad),
       customerUsername: thread.customer.kullaniciAdi,
+      customerProfileImageStorageKey: thread.customer.profilFotografiStorageKey,
       carrierId: thread.carrierId,
       carrierName: formatFullName(thread.carrier.ad, thread.carrier.soyad),
       carrierUsername: thread.carrier.kullaniciAdi,
+      carrierProfileImageStorageKey: thread.carrier.profilFotografiStorageKey,
       fiyat: thread.offer.fiyat.toNumber(),
       durum: thread.offer.durum.durumAdi,
       closedAt: thread.closedAt,
@@ -239,6 +247,7 @@ export class OfferThreadsRepository {
             ad: true,
             soyad: true,
             kullaniciAdi: true,
+            profilFotografiStorageKey: true,
           },
         },
         carrier: {
@@ -246,6 +255,7 @@ export class OfferThreadsRepository {
             ad: true,
             soyad: true,
             kullaniciAdi: true,
+            profilFotografiStorageKey: true,
           },
         },
         offer: {
@@ -294,6 +304,7 @@ export class OfferThreadsRepository {
                 ad: true,
                 soyad: true,
                 kullaniciAdi: true,
+                profilFotografiStorageKey: true,
               },
             },
           },
@@ -316,9 +327,11 @@ export class OfferThreadsRepository {
       customerId: thread.customerId,
       customerName: formatFullName(thread.customer.ad, thread.customer.soyad),
       customerUsername: thread.customer.kullaniciAdi,
+      customerProfileImageStorageKey: thread.customer.profilFotografiStorageKey,
       carrierId: thread.carrierId,
       carrierName: formatFullName(thread.carrier.ad, thread.carrier.soyad),
       carrierUsername: thread.carrier.kullaniciAdi,
+      carrierProfileImageStorageKey: thread.carrier.profilFotografiStorageKey,
       fiyat: thread.offer.fiyat.toNumber(),
       durumTuru: thread.offer.durum.durumTuru,
       durumAdi: thread.offer.durum.durumAdi,
@@ -538,6 +551,7 @@ export class OfferThreadsRepository {
             ad: true,
             soyad: true,
             kullaniciAdi: true,
+            profilFotografiStorageKey: true,
           },
         },
       },
@@ -591,6 +605,7 @@ export class OfferThreadsRepository {
             ad: true,
             soyad: true,
             kullaniciAdi: true,
+            profilFotografiStorageKey: true,
           },
         },
       },
@@ -703,6 +718,7 @@ export class OfferThreadsRepository {
           ad: string;
           soyad: string;
           kullaniciAdi: string;
+          profilFotografiStorageKey: string | null;
         }
       | null;
   }): OfferThreadMessageRecord {
@@ -718,6 +734,8 @@ export class OfferThreadsRepository {
         ? formatFullName(message.sender.ad, message.sender.soyad)
         : null,
       senderUsername: message.sender?.kullaniciAdi ?? null,
+      senderProfileImageStorageKey:
+        message.sender?.profilFotografiStorageKey ?? null,
     };
   }
 }
