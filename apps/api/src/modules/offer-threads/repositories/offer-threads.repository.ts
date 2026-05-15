@@ -457,6 +457,42 @@ export class OfferThreadsRepository {
     };
   }
 
+  // Son fiyat adımını kimin attığını belirler. Counter offer yoksa initial offer nakliyeciden
+  // gelir; varsa son COUNTER_OFFER mesajının göndericisi hangi tarafsa o lastPriceActor'dur.
+  async findLastPriceActorSide(
+    offerId: number,
+    executor?: PrismaExecutor
+  ): Promise<OfferThreadParticipantSide> {
+    const db = this.getExecutor(executor);
+
+    const thread = await db.offerThread.findUnique({
+      where: { offerId },
+      select: {
+        customerId: true,
+        messages: {
+          where: { type: "COUNTER_OFFER" },
+          orderBy: { id: "desc" },
+          take: 1,
+          select: { senderUserId: true },
+        },
+      },
+    });
+
+    if (!thread) {
+      return "carrier";
+    }
+
+    const lastCounterOffer = thread.messages[0];
+
+    if (!lastCounterOffer || lastCounterOffer.senderUserId === null) {
+      return "carrier";
+    }
+
+    return lastCounterOffer.senderUserId === thread.customerId
+      ? "customer"
+      : "carrier";
+  }
+
   // Okunmamış sayısı, kullanıcının kendi yazdığı mesajları hariç tutarak last-read
   // pointer'ının sonrasındaki kayıtlar üzerinden hesaplanır.
   async countUnreadMessages(

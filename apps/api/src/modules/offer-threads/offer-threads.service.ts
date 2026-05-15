@@ -382,6 +382,8 @@ export class OfferThreadsService {
     );
     const isWritable = this.isThreadWritable(record);
     const isCustomer = participantSide === "customer";
+    const lastPriceActorSide = this.resolveLastPriceActorSide(record);
+    const canDecide = isWritable && participantSide !== lastPriceActorSide;
 
     return {
       id: record.id,
@@ -410,8 +412,9 @@ export class OfferThreadsService {
       unreadCount,
       canSendMessage: isWritable,
       canSendCounterOffer: isWritable,
-      canAcceptOffer: isCustomer && isWritable,
-      canRejectOffer: isCustomer && isWritable,
+      canAcceptOffer: canDecide,
+      canRejectOffer: canDecide,
+      lastPriceActorSide,
       messages: record.messages.map((message) =>
         this.toMessageResponse(message, currentUserId)
       ),
@@ -647,6 +650,33 @@ export class OfferThreadsService {
     throw new ConflictException(
       "Offer thread actions are blocked because the customer and carrier resolve to the same user."
     );
+  }
+
+  // Kabul/red yetkisi kontrolü için offers servisi tarafından çağrılır; son fiyat adımını
+  // kimin attığını thread mesajlarından sorgular.
+  async getLastPriceActorSide(
+    offerId: number,
+    executor?: Prisma.TransactionClient
+  ): Promise<OfferThreadParticipantSide> {
+    return this.offerThreadsRepository.findLastPriceActorSide(offerId, executor);
+  }
+
+  // Son fiyat adımını hangi tarafın attığını message stream'den hesaplar. Counter offer
+  // yoksa initial offer nakliyeciden gelmiştir; varsa son COUNTER_OFFER göndericisinin tarafı döner.
+  private resolveLastPriceActorSide(
+    record: OfferThreadDetailRecord
+  ): OfferThreadParticipantSide {
+    const lastCounterOffer = [...record.messages]
+      .reverse()
+      .find((msg) => msg.type === "COUNTER_OFFER");
+
+    if (!lastCounterOffer || lastCounterOffer.senderUserId === null) {
+      return "carrier";
+    }
+
+    return lastCounterOffer.senderUserId === record.customerId
+      ? "customer"
+      : "carrier";
   }
 
   // Thread'in yazmaya açık olup olmadığını offer durumu, request durumu, shipment

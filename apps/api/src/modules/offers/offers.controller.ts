@@ -64,7 +64,7 @@ export class OffersController {
 
   @Post(":offerId/accept")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Roles(ROLE_NAMES.MUSTERI)
+  @Roles(ROLE_NAMES.MUSTERI, ROLE_NAMES.NAKLIYECI)
   async acceptById(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Param("offerId", ParseIntPipe) offerId: number
@@ -74,7 +74,7 @@ export class OffersController {
 
   @Post(":offerId/reject")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Roles(ROLE_NAMES.MUSTERI)
+  @Roles(ROLE_NAMES.MUSTERI, ROLE_NAMES.NAKLIYECI)
   async rejectById(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Param("offerId", ParseIntPipe) offerId: number

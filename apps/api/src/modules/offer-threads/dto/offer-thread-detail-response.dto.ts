@@ -23,5 +23,6 @@ export class OfferThreadDetailResponseDto {
   canSendCounterOffer!: boolean;
   canAcceptOffer!: boolean;
   canRejectOffer!: boolean;
+  lastPriceActorSide!: "customer" | "carrier";
   messages!: OfferThreadMessageResponseDto[];
 }

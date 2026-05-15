@@ -2,7 +2,7 @@ type CustomerInitialsAvatarProps = {
   name?: string | null;
   fallback?: string;
   imageUrl?: string | null;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   tone?: "blue" | "slate" | "amber";
   className?: string;
 };
@@ -11,6 +11,7 @@ const SIZE_STYLES: Record<
   NonNullable<CustomerInitialsAvatarProps["size"]>,
   string
 > = {
+  xs: "h-6 w-6 text-[9px]",
   sm: "h-10 w-10 text-xs",
   md: "h-12 w-12 text-sm",
   lg: "h-16 w-16 text-xl",
@@ -20,6 +21,7 @@ const IMAGE_SIZE_STYLES: Record<
   NonNullable<CustomerInitialsAvatarProps["size"]>,
   string
 > = {
+  xs: "h-6 w-6",
   sm: "h-10 w-10",
   md: "h-12 w-12",
   lg: "h-16 w-16",

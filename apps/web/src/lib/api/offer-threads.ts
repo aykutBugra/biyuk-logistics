@@ -62,6 +62,7 @@ export type OfferThreadDetail = {
   canSendCounterOffer: boolean;
   canAcceptOffer: boolean;
   canRejectOffer: boolean;
+  lastPriceActorSide: "customer" | "carrier";
   messages: OfferThreadMessage[];
 };
 

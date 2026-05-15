@@ -4,7 +4,6 @@ import type { ChangeEvent, ReactNode } from "react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import CarrierActivityPanel from "@/components/CarrierActivityPanel";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
 import CustomerMetricCard from "@/components/CustomerMetricCard";
 import DashboardActionCard from "@/components/DashboardActionCard";
@@ -25,13 +24,8 @@ import {
   getMyOfferThreads,
   type OfferThreadSummary,
 } from "@/lib/api/offer-threads";
-import {
-  getMyNotifications,
-  type NotificationListItem,
-} from "@/lib/api/notifications";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
-import type { CarrierDashboardActivity } from "@/lib/dashboard/use-home-data";
 import {
   formatLocationLabel,
   formatVolumeM3,
@@ -255,55 +249,6 @@ function buildShipmentNote(status: string, isDelayed: boolean): string {
   }
 }
 
-function buildActivities(
-  notifications: NotificationListItem[],
-  threads: OfferThreadSummary[],
-  jobs: JobListItem[]
-): CarrierDashboardActivity[] {
-  if (notifications.length > 0) {
-    return notifications.slice(0, 4).map((notification) => ({
-      id: `notification-${notification.id}`,
-      title: notification.baslik,
-      description: notification.mesaj,
-      timestamp: notification.olusturmaTarihi,
-      href: notification.hedefUrl,
-      tone: notification.isRead ? "slate" : "blue",
-      badge: notification.isRead ? undefined : "Yeni",
-    }));
-  }
-
-  if (threads.length > 0) {
-    return threads
-      .filter((thread) => thread.lastMessageAt || thread.lastMessageSummary)
-      .sort((left, right) => {
-        return (
-          new Date(right.lastMessageAt ?? 0).getTime() -
-          new Date(left.lastMessageAt ?? 0).getTime()
-        );
-      })
-      .slice(0, 4)
-      .map((thread) => ({
-        id: `thread-${thread.id}`,
-        title: `${thread.baslangicSehri} -> ${thread.varisSehri}`,
-        description: thread.lastMessageSummary ?? "Konusmada yeni hareket var.",
-        timestamp: thread.lastMessageAt,
-        href: `/dashboard/konusmalar/teklif/${thread.offerId}`,
-        tone: thread.hasUnread ? "blue" : "slate",
-        badge: thread.hasUnread ? "Okunmamis" : undefined,
-      }));
-  }
-
-  return jobs.slice(0, 4).map((job) => ({
-    id: `job-${job.id}`,
-    title: `${job.baslangicSehri} -> ${job.varisSehri}`,
-    description: `${job.counterpartyName} ile operasyon kaydi acik.`,
-    timestamp: job.baslangicTarihi ?? job.olusturmaTarihi,
-    href: `/dashboard/nakliyelerim/${job.id}`,
-    tone: isCompletedJobStatus(job.durum) ? "emerald" : "blue",
-    badge: isCompletedJobStatus(job.durum) ? "Tamamlandi" : "Aktif",
-  }));
-}
-
 function Toolbar(props: {
   searchQuery: string;
   activeTab: ShipmentFilterTab;
@@ -430,74 +375,11 @@ function TodayTasksPanel(props: { tasks: ShipmentViewModel[] }) {
   );
 }
 
-function DeliverySummaryPanel(props: {
-  activeCount: number;
-  completedCount: number;
-  delayedCount: number;
-  todayCount: number;
-}) {
-  const rows = [
-    {
-      label: "Aktif operasyon",
-      value: props.activeCount,
-      tone: "bg-blue-500",
-    },
-    {
-      label: "Bugun teslimat",
-      value: props.todayCount,
-      tone: "bg-amber-500",
-    },
-    {
-      label: "Tamamlanan",
-      value: props.completedCount,
-      tone: "bg-emerald-500",
-    },
-    {
-      label: "Gecikme riski",
-      value: props.delayedCount,
-      tone: "bg-rose-500",
-    },
-  ];
-
-  return (
-    <SidebarSection
-      title="Teslimat ozeti"
-      description="Mevcut tasimalarin durum dagilimini tek panelde oku."
-    >
-      <div className="space-y-4">
-        {rows.map((row) => {
-          const totalBase = Math.max(
-            1,
-            props.activeCount + props.completedCount + props.delayedCount
-          );
-          const ratio = Math.round((row.value / totalBase) * 100);
-
-          return (
-            <div key={row.label} className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-600">{row.label}</p>
-                <p className="text-sm font-bold text-slate-950">{row.value}</p>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={`h-full rounded-full ${row.tone}`}
-                  style={{ width: `${ratio}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </SidebarSection>
-  );
-}
-
 export default function MyJobsPage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
   const [jobs, setJobs] = useState<JobListItem[]>([]);
   const [threads, setThreads] = useState<OfferThreadSummary[]>([]);
-  const [notifications, setNotifications] = useState<NotificationListItem[]>([]);
   const [jobDetailsById, setJobDetailsById] = useState<Record<number, JobDetail | null>>(
     {}
   );
@@ -523,11 +405,10 @@ export default function MyJobsPage() {
         setIsLoading(true);
         setErrorMessage(null);
 
-        const [jobsResult, threadsResult, notificationsResult] =
+        const [jobsResult, threadsResult] =
           await Promise.allSettled([
             getMyJobs(accessToken, "carrier"),
             getMyOfferThreads(accessToken, { as: "carrier" }),
-            getMyNotifications(accessToken),
           ]);
 
         if (!isMounted) {
@@ -557,32 +438,8 @@ export default function MyJobsPage() {
           return;
         }
 
-        if (
-          notificationsResult.status === "rejected" &&
-          notificationsResult.reason instanceof ApiClientError &&
-          notificationsResult.reason.status === 401
-        ) {
-          clearStoredAuth();
-          router.replace("/login");
-          return;
-        }
-
-        if (
-          notificationsResult.status === "rejected" &&
-          notificationsResult.reason instanceof ApiClientError &&
-          notificationsResult.reason.status === 403
-        ) {
-          router.replace("/");
-          return;
-        }
-
         setJobs(jobsResult.value);
         setThreads(threadsResult.status === "fulfilled" ? threadsResult.value : []);
-        setNotifications(
-          notificationsResult.status === "fulfilled"
-            ? notificationsResult.value
-            : []
-        );
         setJobDetailsById({});
       } catch (error) {
         if (!isMounted) {
@@ -838,7 +695,6 @@ export default function MyJobsPage() {
     return right.createdSortValue - left.createdSortValue;
   });
 
-  const activities = buildActivities(notifications, threads, jobs);
   const todayTasks = shipmentCards
     .filter((shipment) => shipment.isTodayDelivery)
     .sort((left, right) => left.deliverySortValue - right.deliverySortValue)
@@ -871,10 +727,10 @@ export default function MyJobsPage() {
       ) : null}
 
       {!isLoading && !errorMessage ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div
             data-dashboard-stats
-            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
           >
             <CustomerMetricCard
               label="Aktif nakliye"
@@ -987,13 +843,6 @@ export default function MyJobsPage() {
               <div className="space-y-4">
                 <TodayTasksPanel tasks={todayTasks} />
 
-                <DeliverySummaryPanel
-                  activeCount={activeJobCount}
-                  completedCount={completedJobCount}
-                  delayedCount={delayedShipmentCount}
-                  todayCount={todayDeliveryCount}
-                />
-
                 <SidebarSection
                   title="Hizli islemler"
                   description="Mevcut nakliyeci akislarini kisa yoldan ac."
@@ -1021,8 +870,6 @@ export default function MyJobsPage() {
                     />
                   </div>
                 </SidebarSection>
-
-                <CarrierActivityPanel activities={activities} />
               </div>
             </div>
           )}

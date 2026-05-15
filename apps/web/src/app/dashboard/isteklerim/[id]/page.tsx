@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import CustomerMetricCard from "@/components/CustomerMetricCard";
 import CustomerSectionSurface from "@/components/CustomerSectionSurface";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
@@ -14,9 +13,7 @@ import RequestImageGallery from "@/components/RequestImageGallery";
 import StatusBadge from "@/components/StatusBadge";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
-  acceptOffer,
   getIncomingOffersForRequest,
-  rejectOffer,
   type IncomingOfferItem,
 } from "@/lib/api/offers";
 import { createRatingForJob } from "@/lib/api/ratings";
@@ -69,21 +66,6 @@ function getRequestStatusLabel(status: string): string {
       return "Anlasma saglandi";
     case "TAMAMLANDI":
       return "Tamamlandi";
-    case "IPTAL_EDILDI":
-      return "Iptal edildi";
-    default:
-      return status;
-  }
-}
-
-function getOfferStatusLabel(status: string): string {
-  switch (status.trim().toUpperCase()) {
-    case "OLUSTURULDU":
-      return "Bekliyor";
-    case "KABUL_EDILDI":
-      return "Kabul edildi";
-    case "REDDEDILDI":
-      return "Reddedildi";
     case "IPTAL_EDILDI":
       return "Iptal edildi";
     default:
@@ -175,105 +157,6 @@ function StatusCallout({
   );
 }
 
-function IncomingOfferCard({
-  offer,
-  canActOnOffer,
-  isBusy,
-  onAccept,
-  onReject,
-}: {
-  offer: IncomingOfferItem;
-  canActOnOffer: boolean;
-  isBusy: boolean;
-  onAccept: () => void;
-  onReject: () => void;
-}) {
-  return (
-    <article className="rounded-[1.35rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-200">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={offer.durum} label={getOfferStatusLabel(offer.durum)} />
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-              Teklif #{offer.id}
-            </span>
-            {offer.aracPlaka ? (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                {offer.aracPlaka}
-              </span>
-            ) : null}
-          </div>
-
-          <div className="mt-4 flex items-start gap-3">
-            <CustomerInitialsAvatar
-              name={offer.carrierName}
-              fallback={offer.carrierUsername}
-              imageUrl={offer.carrierProfileImageUrl}
-              size="md"
-              tone="slate"
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-950">{offer.carrierName}</p>
-              <p className="text-sm text-slate-500">@{offer.carrierUsername}</p>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
-            {offer.not ? (
-              <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">
-                {offer.not}
-              </p>
-            ) : (
-              <p className="text-sm text-slate-400">Teklif notu eklenmedi.</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex w-full flex-col gap-3 xl:w-[220px] xl:items-end">
-          <div className="rounded-[1.1rem] border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-left xl:text-right">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              Teklif tutari
-            </p>
-            <p className="mt-2 text-xl font-black tracking-tight text-emerald-800">
-              {formatCurrency(offer.fiyat)}
-            </p>
-          </div>
-
-          <div className="flex w-full flex-wrap gap-2 xl:justify-end">
-            <Link
-              href={`/dashboard/konusmalar/teklif/${offer.id}`}
-              className="app-button-secondary flex-1 justify-center xl:flex-none"
-            >
-              Konusmaya git
-            </Link>
-
-            {canActOnOffer ? (
-              <>
-                <button
-                  type="button"
-                  onClick={onAccept}
-                  disabled={isBusy}
-                  className="app-button-primary flex-1 justify-center disabled:cursor-not-allowed disabled:opacity-60 xl:flex-none"
-                >
-                  {isBusy ? "Isleniyor..." : "Kabul Et"}
-                </button>
-                <button
-                  type="button"
-                  onClick={onReject}
-                  disabled={isBusy}
-                  className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isBusy ? "Isleniyor..." : "Reddet"}
-                </button>
-              </>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </article>
-  );
-}
-
 export default function TransportRequestDetailPage() {
   const router = useRouter();
   const { accessToken, status } = useCustomerPageAccess();
@@ -283,14 +166,9 @@ export default function TransportRequestDetailPage() {
   const requestId = Number(params.id);
   const [request, setRequest] = useState<TransportRequestDetail | null>(null);
   const [incomingOffers, setIncomingOffers] = useState<IncomingOfferItem[]>([]);
-  const [incomingOffersErrorMessage, setIncomingOffersErrorMessage] = useState<string | null>(
-    null
-  );
-  const [isIncomingOffersLoading, setIsIncomingOffersLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [actingOfferId, setActingOfferId] = useState<number | null>(null);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -313,9 +191,7 @@ export default function TransportRequestDetailPage() {
     const loadRequest = async () => {
       try {
         setIsLoading(true);
-        setIsIncomingOffersLoading(true);
         setErrorMessage(null);
-        setIncomingOffersErrorMessage(null);
 
         const response = await getTransportRequestDetail(requestId, accessToken);
 
@@ -351,21 +227,6 @@ export default function TransportRequestDetailPage() {
             router.replace("/");
             return;
           }
-
-          if (offersError instanceof ApiClientError && offersError.status === 404) {
-            setIncomingOffers([]);
-            return;
-          }
-
-          setIncomingOffersErrorMessage(
-            offersError instanceof ApiClientError
-              ? offersError.message
-              : "Gelen teklifler yuklenirken beklenmeyen bir hata olustu."
-          );
-        } finally {
-          if (isMounted) {
-            setIsIncomingOffersLoading(false);
-          }
         }
       } catch (error) {
         if (!isMounted) {
@@ -393,7 +254,6 @@ export default function TransportRequestDetailPage() {
             ? error.message
             : "Istek detayi yuklenirken beklenmeyen bir hata olustu."
         );
-        setIsIncomingOffersLoading(false);
       } finally {
         if (!isMounted) {
           return;
@@ -488,104 +348,6 @@ export default function TransportRequestDetailPage() {
       });
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  const handleOfferDecision = async (offer: IncomingOfferItem, action: "accept" | "reject") => {
-    if (!accessToken || actingOfferId !== null) {
-      return;
-    }
-
-    const confirmMessage =
-      action === "accept"
-        ? "Bu teklifi kabul etmek istedigine emin misin?"
-        : "Bu teklifi reddetmek istedigine emin misin?";
-
-    const isConfirmed = await confirm({
-      title: action === "accept" ? "Teklifi kabul et" : "Teklifi reddet",
-      message: confirmMessage,
-      tone: action === "reject" ? "danger" : "default",
-      confirmLabel: action === "accept" ? "Kabul Et" : "Reddet",
-      cancelLabel: "Vazgec",
-      defaultFocus: action === "reject" ? "reject" : "accept",
-      dismissableMask: action !== "reject",
-    });
-
-    if (!isConfirmed) {
-      return;
-    }
-
-    try {
-      setActingOfferId(offer.id);
-
-      if (action === "accept") {
-        await acceptOffer(offer.id, accessToken);
-        showToast({
-          severity: "success",
-          summary: "Teklif kabul edildi",
-          detail: "Nakliye kaydi olusturuldu.",
-        });
-      } else {
-        await rejectOffer(offer.id, accessToken);
-        showToast({
-          severity: "info",
-          summary: "Teklif reddedildi",
-          detail: "Teklif durumu guncellendi.",
-        });
-      }
-
-      setReloadKey((currentKey) => currentKey + 1);
-    } catch (error) {
-      if (error instanceof ApiClientError && error.status === 401) {
-        clearStoredAuth();
-        showToast({
-          severity: "error",
-          summary: "Oturum sona erdi",
-          detail: "Lutfen yeniden giris yapin.",
-          life: 3400,
-          closable: true,
-        });
-        router.replace("/login");
-        return;
-      }
-
-      if (error instanceof ApiClientError && error.status === 403) {
-        showToast({
-          severity: "error",
-          summary: "Yetki yok",
-          detail: "Bu islem icin yetkin yok.",
-          life: 3400,
-          closable: true,
-        });
-        router.replace("/");
-        return;
-      }
-
-      if (error instanceof ApiClientError && error.status === 404) {
-        showToast({
-          severity: "warn",
-          summary: "Teklif bulunamadi",
-          detail: "Liste guncellenecek.",
-          life: 3200,
-          closable: true,
-        });
-        setReloadKey((currentKey) => currentKey + 1);
-        return;
-      }
-
-      showToast({
-        severity: "error",
-        summary: "Teklif guncellenemedi",
-        detail:
-          error instanceof ApiClientError
-            ? error.message
-            : "Teklif karari verilirken beklenmeyen bir hata olustu.",
-        life: 3600,
-        closable: true,
-      });
-      setReloadKey((currentKey) => currentKey + 1);
-    } finally {
-      setActingOfferId(null);
     }
   };
 
@@ -697,13 +459,13 @@ export default function TransportRequestDetailPage() {
       ) : null}
 
       {!isLoading && !errorMessage && request ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <section
             data-dashboard-primary
-            className="app-surface-strong rounded-[1.85rem] border border-slate-200/80 px-5 py-5 shadow-sm md:px-6 md:py-6"
+            className="app-surface-strong rounded-[1.6rem] border border-slate-200/80 px-4 py-4 shadow-sm md:px-5 md:py-5"
           >
-            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-              <div className="min-w-0 flex-1 space-y-4">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div className="min-w-0 flex-1 space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge
                     status={request.durum}
@@ -719,8 +481,8 @@ export default function TransportRequestDetailPage() {
                   ) : null}
                 </div>
 
-                <div className="space-y-2">
-                  <h1 className="text-[2rem] font-black tracking-tight text-slate-950 md:text-[2.35rem]">
+                <div className="space-y-1.5">
+                  <h1 className="text-[1.75rem] font-black tracking-tight text-slate-950 md:text-[2rem]">
                     {routeTitle}
                   </h1>
                   {routeMeta ? (
@@ -753,12 +515,12 @@ export default function TransportRequestDetailPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:w-[340px] xl:grid-cols-1">
-                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start xl:w-[300px] xl:flex-col">
+                <div className="flex-1 rounded-[1.1rem] border border-slate-200 bg-slate-50/80 px-3.5 py-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                     Kayit tarihi
                   </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                  <p className="mt-1.5 text-sm font-semibold text-slate-900">
                     {formatDate(request.olusturmaTarihi)}
                   </p>
                 </div>
@@ -780,7 +542,7 @@ export default function TransportRequestDetailPage() {
             </div>
           </section>
 
-          <div data-dashboard-stats className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div data-dashboard-stats className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <CustomerMetricCard
               label="Gelen teklif"
               value={incomingOffers.length}
@@ -811,8 +573,8 @@ export default function TransportRequestDetailPage() {
             />
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
-            <div className="space-y-6">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
+            <div className="space-y-4">
               {imageCount > 0 ? (
                 <RequestImageGallery
                   images={request.images ?? []}
@@ -827,128 +589,71 @@ export default function TransportRequestDetailPage() {
               )}
 
               <CustomerSectionSurface
-                title="Yuk ozeti"
-                description="Fiyatlama ve eslesme kararlarini etkileyen temel yuk bilgileri."
+                title="Yuk ve konum ozeti"
+                description="Kargo, tasima ve konum bilgileri."
               >
-                <div className="grid gap-3 md:grid-cols-2">
-                  <DetailInfoRow label="Yuk tipi" value={getCargoTypeLabel(request.yukTipi)} />
-                  <DetailInfoRow label="Agirlik" value={formatWeightKg(request.agirlikKg)} />
-                  <DetailInfoRow label="Hacim" value={formatVolumeM3(request.hacimM3)} />
-                  <DetailInfoRow
-                    label="Tasima tarihi"
-                    value={formatTransportDate(request.tasimaTarihi)}
-                  />
-                  <div className="md:col-span-2">
+                <div className="space-y-3">
+                  <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                    <DetailInfoRow label="Yuk tipi" value={getCargoTypeLabel(request.yukTipi)} />
+                    <DetailInfoRow label="Agirlik" value={formatWeightKg(request.agirlikKg)} />
+                    <DetailInfoRow label="Hacim" value={formatVolumeM3(request.hacimM3)} />
+                    <DetailInfoRow
+                      label="Tasima tarihi"
+                      value={formatTransportDate(request.tasimaTarihi)}
+                    />
                     <DetailInfoRow
                       label="Tasima tercihi"
                       value={request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}
                     />
                   </div>
-                </div>
 
-                <div className="mt-4 rounded-[1.15rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Yuk notu
-                  </p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-                    {request.yukDetay || "Ek not paylasilmadi."}
-                  </p>
-                </div>
-              </CustomerSectionSurface>
-
-              <CustomerSectionSurface
-                title="Konum ve zamanlama"
-                description="Yukleme ve teslim noktasi detaylari ile zamanlama baglami."
-              >
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Baslangic
-                    </p>
-                    <p className="mt-2 text-base font-bold text-slate-950">
-                      {formatLocationLabel(request.baslangicKonumMetni, request.baslangicSehri)}
-                    </p>
-                    <dl className="mt-4 space-y-3">
-                      <DetailInfoRow
-                        label="Sehir"
-                        value={request.normalizeBaslangicSehir || request.baslangicSehri}
-                      />
-                      {request.normalizeBaslangicIlce ? (
-                        <DetailInfoRow label="Ilce" value={request.normalizeBaslangicIlce} />
-                      ) : null}
-                    </dl>
-                  </div>
-
-                  <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Varis
-                    </p>
-                    <p className="mt-2 text-base font-bold text-slate-950">
-                      {formatLocationLabel(request.varisKonumMetni, request.varisSehri)}
-                    </p>
-                    <dl className="mt-4 space-y-3">
-                      <DetailInfoRow
-                        label="Sehir"
-                        value={request.normalizeVarisSehir || request.varisSehri}
-                      />
-                      {request.normalizeVarisIlce ? (
-                        <DetailInfoRow label="Ilce" value={request.normalizeVarisIlce} />
-                      ) : null}
-                    </dl>
-                  </div>
-                </div>
-              </CustomerSectionSurface>
-
-              <CustomerSectionSurface
-                title="Gelen teklifler"
-                count={incomingOffers.length}
-                description="Teklifleri fiyat, arac ve iletisim aksiyonlariyla birlikte karsilastir."
-              >
-                {isIncomingOffersLoading ? (
-                  <DashboardPageSkeleton />
-                ) : null}
-
-                {!isIncomingOffersLoading && incomingOffersErrorMessage ? (
-                  <div className="rounded-[1.15rem] border border-rose-200 bg-rose-50/70 px-4 py-4 text-sm text-rose-700">
-                    {incomingOffersErrorMessage}
-                  </div>
-                ) : null}
-
-                {!isIncomingOffersLoading &&
-                !incomingOffersErrorMessage &&
-                incomingOffers.length === 0 ? (
-                  <EmptyStateCard
-                    eyebrow="Teklif akisi"
-                    title="Bu istek icin henuz teklif yok"
-                    description="Kayit yayinda kaldikca yeni teklif ve mesajlar bu alanda listelenecek."
-                  />
-                ) : null}
-
-                {!isIncomingOffersLoading &&
-                !incomingOffersErrorMessage &&
-                incomingOffers.length > 0 ? (
-                  <div className="space-y-4">
-                    {incomingOffers.map((offer) => {
-                      const canActOnOffer =
-                        offer.durum === "OLUSTURULDU" && request.nakliye === null;
-
-                      return (
-                        <IncomingOfferCard
-                          key={offer.id}
-                          offer={offer}
-                          canActOnOffer={canActOnOffer}
-                          isBusy={actingOfferId !== null}
-                          onAccept={() => {
-                            void handleOfferDecision(offer, "accept");
-                          }}
-                          onReject={() => {
-                            void handleOfferDecision(offer, "reject");
-                          }}
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        Baslangic
+                      </p>
+                      <p className="mt-2 text-base font-bold text-slate-950">
+                        {formatLocationLabel(request.baslangicKonumMetni, request.baslangicSehri)}
+                      </p>
+                      <dl className="mt-3 space-y-2.5">
+                        <DetailInfoRow
+                          label="Sehir"
+                          value={request.normalizeBaslangicSehir || request.baslangicSehri}
                         />
-                      );
-                    })}
+                        {request.normalizeBaslangicIlce ? (
+                          <DetailInfoRow label="Ilce" value={request.normalizeBaslangicIlce} />
+                        ) : null}
+                      </dl>
+                    </div>
+
+                    <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        Varis
+                      </p>
+                      <p className="mt-2 text-base font-bold text-slate-950">
+                        {formatLocationLabel(request.varisKonumMetni, request.varisSehri)}
+                      </p>
+                      <dl className="mt-3 space-y-2.5">
+                        <DetailInfoRow
+                          label="Sehir"
+                          value={request.normalizeVarisSehir || request.varisSehri}
+                        />
+                        {request.normalizeVarisIlce ? (
+                          <DetailInfoRow label="Ilce" value={request.normalizeVarisIlce} />
+                        ) : null}
+                      </dl>
+                    </div>
                   </div>
-                ) : null}
+
+                  <div className="rounded-[1.15rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Yuk notu
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                      {request.yukDetay || "Ek not paylasilmadi."}
+                    </p>
+                  </div>
+                </div>
               </CustomerSectionSurface>
 
               {request.nakliye ? (
@@ -966,7 +671,7 @@ export default function TransportRequestDetailPage() {
               ) : null}
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               <CustomerSectionSurface
                 title="Istek durumu"
                 description="Kaydin guncel durumu ve kullanabilecegin mevcut aksiyonlar."

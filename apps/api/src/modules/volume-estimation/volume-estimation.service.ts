@@ -121,6 +121,10 @@ export class VolumeEstimationService {
     };
   }
 
+
+  //assertValidUploadedImages fonksiyonu, kullanici tarafindan yuklenen gorselleri
+  // dosya boyutu, gorsel sayisi ve format acisindan kontrol eder; herhangi bir 
+  // gorsel gecersizse uygun bir hata mesaji ile BadRequestException firlatir
   private assertValidUploadedImages(files: UploadedImageFile[]) {
     const maxImages =
       this.configService.get<number>("ai.volumeEstimationMaxImages") ?? 3;
@@ -167,6 +171,9 @@ export class VolumeEstimationService {
     }
   }
 
+//normalizeImage fonksiyonu, yuklenen her bir gorseli isleyerek AI analizine uygun hale getirir;
+//gorsel, maksimum boyutlara gore yeniden boyutlandiktan sonra JPEG formatina cevrilir; 
+//islem sirasinda herhangi bir hata olusursa uygun bir mesajla BadRequestException firlatir
   private async normalizeImage(
     file: UploadedImageFile
   ): Promise<NormalizedVolumeEstimationImage> {
@@ -192,6 +199,10 @@ export class VolumeEstimationService {
         .toBuffer();
 
       return {
+        //base64 yapma sebebi AI servislerine gorsel gonderirken genellikle data
+        //  URL formatinin kullanilmasi;
+        //bu format, gorsel verisini metin olarak temsil eder ve gorsel 
+        // hakkinda ek bilgi (orijinal dosya adi gibi) eklemeye de imkan tanir
         dataUrl: `data:image/jpeg;base64,${normalizedImage.toString("base64")}`,
         sizeBytes: normalizedImage.length,
         sourceName: file.originalname,

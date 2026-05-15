@@ -17,3 +17,5 @@ git diff --cached --name-only
 git commit -m "Update route distance response and repository fixes"
 git pull --rebase origin main
 git push origin main
+
+prisma güncelleme:

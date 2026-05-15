@@ -189,8 +189,14 @@ export class UsersService {
     const processedImage = await this.imageProcessingService.processProfileImage(
       file.buffer
     );
+
+
+
     const storageKey = `profile-images/${userId}/${randomUUID()}.webp`;
 
+
+
+    
     await this.mediaStorageService.saveFile({
       storageKey,
       buffer: processedImage.buffer,

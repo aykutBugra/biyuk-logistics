@@ -111,7 +111,9 @@ export class OpenAiVolumeEstimationService {
           ],
           max_output_tokens: 1200,
           text: {
-            format: {
+            format: { //json zorunlu hale getirmek icin schema kullaniyoruz; 
+                      // AI'nin gecerli bir JSON uretmesini saglamak icin dogrudan
+                      // "json" formatini kullanmak bazen yetersiz kalabiliyor
               type: "json_schema",
               name: "volume_analysis",
               strict: true,
@@ -299,6 +301,12 @@ export class OpenAiVolumeEstimationService {
       .join(" ");
   }
 
+  //parseResponse fonksiyonu, AI servisinden gelen metin cevabini beklenen 
+  // VolumeAnalysisResult yapisina donusturur;
+  //cevabin gecerli bir JSON olup olmadigini, beklenen alanlari icerip icermedigini
+  //  ve her bir alani dogru tipte mi dondurdugunu kontrol eder; 
+  // herhangi bir sorun tespit edilirse uygun bir mesajla 
+  // ServiceUnavailableException firlatir
   private parseResponse(responseText: string): VolumeAnalysisResult {
     let parsedResponse: ParsedAnalysis;
 

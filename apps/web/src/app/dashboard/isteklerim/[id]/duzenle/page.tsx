@@ -66,9 +66,9 @@ function RequestFormSection({
   return (
     <section
       data-dashboard-form-section
-      className={`app-surface-strong rounded-[1.85rem] border border-slate-200/80 px-5 py-5 shadow-sm md:px-6 md:py-6 ${className}`.trim()}
+      className={`app-surface-strong rounded-[1.6rem] border border-slate-200/80 px-4 py-4 shadow-sm md:px-5 md:py-5 ${className}`.trim()}
     >
-      <div className="mb-5 space-y-2">
+      <div className="mb-4 space-y-1.5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
           {eyebrow}
         </p>
@@ -135,13 +135,13 @@ function ExistingRequestImagesPanel({
   onDelete: (imageId: number) => void;
 }) {
   return (
-    <section className="app-surface-strong rounded-[1.85rem] border border-slate-200/80 p-5 shadow-sm md:p-6">
+    <section className="app-surface-strong rounded-[1.6rem] border border-slate-200/80 p-4 shadow-sm md:p-5">
       <div className="space-y-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
             Mevcut gorseller
           </p>
-          <h2 className="mt-2 text-xl font-black tracking-tight text-slate-950">
+          <h2 className="mt-1.5 text-lg font-black tracking-tight text-slate-950">
             Fotograf yonetimi
           </h2>
           <p className="mt-1 text-sm leading-6 text-slate-600">
@@ -209,88 +209,6 @@ function ExistingRequestImagesPanel({
             Henuz fotograf eklenmemis.
           </div>
         )}
-      </div>
-    </section>
-  );
-}
-
-function EditRequestSummaryCard({
-  routePreview,
-  existingImagesCount,
-  pendingImagesCount,
-  isSubmitting,
-  requestId,
-}: {
-  routePreview: string;
-  existingImagesCount: number;
-  pendingImagesCount: number;
-  isSubmitting: boolean;
-  requestId: number;
-}) {
-  return (
-    <section className="app-surface-strong rounded-[1.85rem] border border-slate-200/80 p-5 shadow-sm md:p-6">
-      <div className="space-y-5">
-        <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
-            Guncelleme ozeti
-          </p>
-          <h2 className="text-xl font-black tracking-tight text-slate-950">
-            Degisiklikleri kaydetmeye hazirsin
-          </h2>
-          <p className="text-sm leading-6 text-slate-600">
-            Konum, yuk ve fotograf alanlarinda yaptigin degisiklikler kayit sonrasinda
-            detay ekranina yansir.
-          </p>
-        </div>
-
-        <div className="grid gap-3">
-          <div className="rounded-[1.15rem] border border-slate-200 bg-slate-50/80 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Rota ozeti
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">{routePreview}</p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <div className="rounded-[1.15rem] border border-slate-200 bg-slate-50/80 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Mevcut fotograf
-              </p>
-              <p className="mt-2 text-sm font-semibold text-slate-900">
-                {existingImagesCount > 0
-                  ? `${existingImagesCount} fotograf kayitli`
-                  : "Kayitli fotograf yok"}
-              </p>
-            </div>
-
-            <div className="rounded-[1.15rem] border border-slate-200 bg-slate-50/80 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Yeni eklenen
-              </p>
-              <p className="mt-2 text-sm font-semibold text-slate-900">
-                {pendingImagesCount > 0
-                  ? `${pendingImagesCount} yeni fotograf secildi`
-                  : "Yeni fotograf secilmedi"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
-          <Link
-            href={`/dashboard/isteklerim/${requestId}`}
-            className="app-button-secondary w-full justify-center"
-          >
-            Vazgec
-          </Link>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="app-button-primary app-form-submit-button app-pressable w-full justify-center text-sm disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting ? "Istek guncelleniyor..." : "Degisiklikleri kaydet"}
-          </button>
-        </div>
       </div>
     </section>
   );
@@ -618,7 +536,7 @@ export default function EditTransportRequestPage() {
         <form
           onSubmit={handleSubmit}
           data-dashboard-form-surface
-          className="mx-auto max-w-7xl space-y-6"
+          className="mx-auto max-w-7xl space-y-4"
         >
           {submitErrorMessage ? (
             <div data-dashboard-form-error className="app-form-error-banner" role="alert">
@@ -627,8 +545,8 @@ export default function EditTransportRequestPage() {
             </div>
           ) : null}
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_380px] xl:items-start">
-            <div className="space-y-6">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_360px] xl:items-start">
+            <div className="space-y-4">
               <RequestFormSection
                 eyebrow="Konum"
                 title="Yukleme ve teslim noktasi"
@@ -773,9 +691,25 @@ export default function EditTransportRequestPage() {
                   />
                 </div>
               </RequestFormSection>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <Link
+                  href={`/dashboard/isteklerim/${requestId}`}
+                  className="app-button-secondary justify-center sm:w-auto"
+                >
+                  Vazgec
+                </Link>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="app-button-primary app-form-submit-button app-pressable justify-center text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                >
+                  {isSubmitting ? "Istek guncelleniyor..." : "Degisiklikleri kaydet"}
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               <ExistingRequestImagesPanel
                 images={existingImages}
                 imageActionError={imageActionError}
@@ -791,14 +725,6 @@ export default function EditTransportRequestPage() {
               />
 
               <RequestImageUploader disabled={isSubmitting} onChange={setPendingImages} />
-
-              <EditRequestSummaryCard
-                routePreview={routePreview}
-                existingImagesCount={existingImages.length}
-                pendingImagesCount={pendingImages.length}
-                isSubmitting={isSubmitting}
-                requestId={requestId}
-              />
             </div>
           </div>
         </form>

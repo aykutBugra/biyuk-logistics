@@ -1,10 +1,8 @@
 "use client";
 
 import type { ChangeEvent, ReactNode } from "react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import CarrierActivityPanel from "@/components/CarrierActivityPanel";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
 import CustomerMetricCard from "@/components/CustomerMetricCard";
 import DashboardActionCard from "@/components/DashboardActionCard";
@@ -21,10 +19,6 @@ import {
   type OfferThreadSummary,
 } from "@/lib/api/offer-threads";
 import {
-  getMyNotifications,
-  type NotificationListItem,
-} from "@/lib/api/notifications";
-import {
   getMyOffers,
   getOpenOfferRequestDetail,
   type OfferItem,
@@ -32,7 +26,6 @@ import {
 } from "@/lib/api/offers";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
-import type { CarrierDashboardActivity } from "@/lib/dashboard/use-home-data";
 import {
   formatLocationLabel,
   formatVolumeM3,
@@ -204,42 +197,6 @@ function buildOfferSignal(
   };
 }
 
-function buildActivities(
-  notifications: NotificationListItem[],
-  threads: OfferThreadSummary[]
-): CarrierDashboardActivity[] {
-  if (notifications.length > 0) {
-    return notifications.slice(0, 4).map((notification) => ({
-      id: `notification-${notification.id}`,
-      title: notification.baslik,
-      description: notification.mesaj,
-      timestamp: notification.olusturmaTarihi,
-      href: notification.hedefUrl,
-      tone: notification.isRead ? "slate" : "blue",
-      badge: notification.isRead ? undefined : "Yeni",
-    }));
-  }
-
-  return threads
-    .filter((thread) => thread.lastMessageAt || thread.lastMessageSummary)
-    .sort((left, right) => {
-      return (
-        new Date(right.lastMessageAt ?? 0).getTime() -
-        new Date(left.lastMessageAt ?? 0).getTime()
-      );
-    })
-    .slice(0, 4)
-    .map((thread) => ({
-      id: `thread-${thread.id}`,
-      title: `${thread.baslangicSehri} -> ${thread.varisSehri}`,
-      description: thread.lastMessageSummary ?? "Konusmada yeni hareket var.",
-      timestamp: thread.lastMessageAt,
-      href: `/dashboard/konusmalar/teklif/${thread.offerId}`,
-      tone: thread.hasUnread ? "blue" : "slate",
-      badge: thread.hasUnread ? "Okunmamis" : undefined,
-    }));
-}
-
 function OfferToolbar(props: {
   searchQuery: string;
   activeTab: OfferFilterTab;
@@ -327,94 +284,11 @@ function SidebarSection(props: {
   );
 }
 
-function OfferPerformancePanel(props: {
-  totalCount: number;
-  openCount: number;
-  acceptedCount: number;
-  rejectedCount: number;
-  negotiationCount: number;
-}) {
-  if (props.totalCount === 0) {
-    return (
-      <SidebarSection
-        title="Teklif performansi"
-        description="Teklif hareketleri olustukca burada durum dagilimini goreceksin."
-      >
-        <div className="rounded-[1.1rem] border border-dashed border-slate-200 bg-slate-50/70 p-4">
-          <p className="text-sm font-semibold text-slate-900">
-            Henuz performans verisi yok
-          </p>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Ilk tekliflerini verdiginde yanit dagilimi burada toplanacak.
-          </p>
-        </div>
-      </SidebarSection>
-    );
-  }
-
-  const rows = [
-    {
-      label: "Yanit bekleyen",
-      value: props.openCount,
-      tone: "bg-amber-500",
-    },
-    {
-      label: "Kabul edilen",
-      value: props.acceptedCount,
-      tone: "bg-emerald-500",
-    },
-    {
-      label: "Reddedilen",
-      value: props.rejectedCount,
-      tone: "bg-rose-500",
-    },
-    {
-      label: "Muzakere",
-      value: props.negotiationCount,
-      tone: "bg-blue-500",
-    },
-  ];
-
-  return (
-    <SidebarSection
-      title="Teklif performansi"
-      description="Mevcut tekliflerinin durum dagilimini hizli oku."
-    >
-      <div className="space-y-4">
-        {rows.map((row) => {
-          const ratio =
-            props.totalCount > 0
-              ? Math.round((row.value / props.totalCount) * 100)
-              : 0;
-
-          return (
-            <div key={row.label} className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-600">{row.label}</p>
-                <p className="text-sm font-bold text-slate-950">
-                  {row.value} ({ratio}%)
-                </p>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={`h-full rounded-full ${row.tone}`}
-                  style={{ width: `${ratio}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </SidebarSection>
-  );
-}
-
 export default function MyOffersPage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
   const [offers, setOffers] = useState<OfferItem[]>([]);
   const [threads, setThreads] = useState<OfferThreadSummary[]>([]);
-  const [notifications, setNotifications] = useState<NotificationListItem[]>([]);
   const [requestDetailsById, setRequestDetailsById] = useState<
     Record<number, OpenOfferRequestDetail | null>
   >({});
@@ -440,11 +314,10 @@ export default function MyOffersPage() {
         setIsLoading(true);
         setErrorMessage(null);
 
-        const [offersResult, threadsResult, notificationsResult] =
+        const [offersResult, threadsResult] =
           await Promise.allSettled([
             getMyOffers(accessToken),
             getMyOfferThreads(accessToken, { as: "carrier" }),
-            getMyNotifications(accessToken),
           ]);
 
         if (!isMounted) {
@@ -474,32 +347,8 @@ export default function MyOffersPage() {
           return;
         }
 
-        if (
-          notificationsResult.status === "rejected" &&
-          notificationsResult.reason instanceof ApiClientError &&
-          notificationsResult.reason.status === 401
-        ) {
-          clearStoredAuth();
-          router.replace("/login");
-          return;
-        }
-
-        if (
-          notificationsResult.status === "rejected" &&
-          notificationsResult.reason instanceof ApiClientError &&
-          notificationsResult.reason.status === 403
-        ) {
-          router.replace("/");
-          return;
-        }
-
         setOffers(offersResult.value);
         setThreads(threadsResult.status === "fulfilled" ? threadsResult.value : []);
-        setNotifications(
-          notificationsResult.status === "fulfilled"
-            ? notificationsResult.value
-            : []
-        );
         setRequestDetailsById({});
       } catch (error) {
         if (!isMounted) {
@@ -648,7 +497,6 @@ export default function MyOffersPage() {
     isRejectedOfferStatus(offer.durum)
   ).length;
   const threadByOfferId = new Map(threads.map((thread) => [thread.offerId, thread]));
-  const activities = buildActivities(notifications, threads);
 
   const offerCards: OfferViewModel[] = offers.map((offer) => {
     const thread = threadByOfferId.get(offer.id) ?? null;
@@ -710,6 +558,7 @@ export default function MyOffersPage() {
 
   const negotiationCount = offerCards.filter((offer) => offer.isNegotiation).length;
   const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase("tr-TR");
+
   const filteredOffers = offerCards.filter((offer) => {
     const matchesSearch =
       normalizedSearchQuery.length === 0 ||
@@ -776,10 +625,10 @@ export default function MyOffersPage() {
       ) : null}
 
       {!isLoading && !errorMessage ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div
             data-dashboard-stats
-            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
           >
             <CustomerMetricCard
               label="Toplam teklif"
@@ -917,36 +766,6 @@ export default function MyOffersPage() {
                     />
                   </div>
                 </SidebarSection>
-
-                <OfferPerformancePanel
-                  totalCount={offers.length}
-                  openCount={openOfferCount}
-                  acceptedCount={acceptedOfferCount}
-                  rejectedCount={rejectedOfferCount}
-                  negotiationCount={negotiationCount}
-                />
-
-                <CarrierActivityPanel activities={activities} />
-
-                <section className="app-surface-strong overflow-hidden rounded-[1.35rem] border border-blue-200 bg-blue-50/60 shadow-sm">
-                  <div className="p-5 md:p-6">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
-                      Kazanc potansiyeli
-                    </p>
-                    <h2 className="mt-3 text-[1.55rem] font-black tracking-tight text-slate-950">
-                      Daha fazla firsat icin kesfi sicak tut
-                    </h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Acik istekleri ve rotalarini birlikte takip ederek yeni teklif firsatlarini arttirabilirsin.
-                    </p>
-                    <Link
-                      href="/dashboard/acik_istekler"
-                      className="app-button-primary mt-5"
-                    >
-                      Acik istekleri gor
-                    </Link>
-                  </div>
-                </section>
               </div>
             </div>
           )}

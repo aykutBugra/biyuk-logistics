@@ -30,7 +30,6 @@ import {
   getOpenOfferRequestDetail,
   type OfferItem,
   type OpenOfferRequestDetail,
-  type OpenOfferRequestRouteCompatibility,
 } from "@/lib/api/offers";
 import { getMyVehicles, type VehicleListItem } from "@/lib/api/vehicles";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
@@ -153,36 +152,6 @@ function buildOpenRequestsListPath(
   }
 
   return `/dashboard/acik_istekler?${searchParams.toString()}`;
-}
-
-function getRouteCompatibilityLabelText(
-  value: OpenOfferRequestRouteCompatibility["uygunlukEtiketi"]
-): string {
-  switch (value) {
-    case "UYGUN":
-      return "Uygun";
-    case "SINIRDA":
-      return "Sinirda";
-    case "UYGUN_DEGIL":
-      return "Uygun degil";
-    default:
-      return value;
-  }
-}
-
-function getRouteCompatibilityBadgeClassName(
-  value: OpenOfferRequestRouteCompatibility["uygunlukEtiketi"]
-): string {
-  switch (value) {
-    case "UYGUN":
-      return "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100";
-    case "SINIRDA":
-      return "rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100";
-    case "UYGUN_DEGIL":
-      return "rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-100";
-    default:
-      return "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700";
-  }
 }
 
 function getPreferredOfferForRequest(
@@ -783,10 +752,6 @@ function OpenTransportRequestDetailPageContent({
       request.varisKonumMetni,
       request.varisSehri
     )}`;
-  const compatibilityLabel = request?.rotaUyumu
-    ? getRouteCompatibilityLabelText(request.rotaUyumu.uygunlukEtiketi)
-    : "Filtre yok";
-
   return (
     <CarrierVehiclesShell
       title={request?.hasExistingOffer ? "Teklif detayi" : "Istek detayi ve teklif"}
@@ -810,13 +775,13 @@ function OpenTransportRequestDetailPageContent({
       ) : null}
 
       {!isLoading && !errorMessage && request ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <section
             data-dashboard-primary
-            className="app-surface-strong rounded-[1.85rem] border border-slate-200/80 px-5 py-5 shadow-sm md:px-6 md:py-6"
+            className="app-surface-strong rounded-[1.6rem] border border-slate-200/80 px-4 py-4 shadow-sm md:px-5 md:py-5"
           >
-            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-              <div className="min-w-0 flex-1 space-y-4">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div className="min-w-0 flex-1 space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={request.durum} />
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
@@ -834,8 +799,8 @@ function OpenTransportRequestDetailPageContent({
                   ) : null}
                 </div>
 
-                <div className="space-y-2">
-                  <h1 className="text-[2rem] font-black tracking-tight text-slate-950 md:text-[2.35rem]">
+                <div className="space-y-1.5">
+                  <h1 className="text-[1.75rem] font-black tracking-tight text-slate-950 md:text-[2rem]">
                     {routeTitle}
                   </h1>
                   <p className="max-w-3xl text-sm leading-6 text-slate-500">{routeMeta}</p>
@@ -864,18 +829,18 @@ function OpenTransportRequestDetailPageContent({
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:w-[340px] xl:grid-cols-1">
-                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start xl:w-[300px] xl:flex-col">
+                <div className="flex-1 rounded-[1.1rem] border border-slate-200 bg-slate-50/80 px-3.5 py-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                     Kayit tarihi
                   </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                  <p className="mt-1.5 text-sm font-semibold text-slate-900">
                     {formatDate(request.olusturmaTarihi)}
                   </p>
                 </div>
 
                 <div
-                  className={`rounded-[1.25rem] border px-4 py-4 ${
+                  className={`flex-1 rounded-[1.1rem] border px-3.5 py-3 ${
                     request.hasExistingOffer
                       ? "border-emerald-200 bg-emerald-50/80"
                       : "border-blue-200 bg-blue-50/80"
@@ -888,7 +853,7 @@ function OpenTransportRequestDetailPageContent({
                   >
                     {request.hasExistingOffer ? "Mevcut teklif" : "Hazirlik durumu"}
                   </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                  <p className="mt-1.5 text-sm font-semibold text-slate-900">
                     {request.hasExistingOffer
                       ? currentOffer
                         ? formatCurrency(currentOffer.fiyat)
@@ -899,7 +864,7 @@ function OpenTransportRequestDetailPageContent({
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2 xl:justify-end">
+                <div className="flex flex-wrap gap-2">
                   {currentOffer ? (
                     <Link
                       href={`/dashboard/konusmalar/teklif/${currentOfferThread?.offerId ?? currentOffer.id}`}
@@ -916,14 +881,7 @@ function OpenTransportRequestDetailPageContent({
             </div>
           </section>
 
-          <div data-dashboard-stats className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <CustomerMetricCard
-              label="Fotograf"
-              value={request.images?.length ?? 0}
-              hint="Talebe eklenen gorsel adedi"
-              tone="amber"
-              icon={<i className="pi pi-images text-lg" />}
-            />
+          <div data-dashboard-stats className="grid gap-3 grid-cols-2">
             <CustomerMetricCard
               label="Rota mesafesi"
               value={formatRouteDistanceKm(request.rotaMesafeMetre)}
@@ -938,27 +896,10 @@ function OpenTransportRequestDetailPageContent({
               tone="violet"
               icon={<i className="pi pi-clock text-lg" />}
             />
-            <CustomerMetricCard
-              label="Rota uyumu"
-              value={compatibilityLabel}
-              hint={
-                selectedCarrierRoute
-                  ? "Secili rotanla karsilastirma"
-                  : "Uyum bilgisi rota filtresiyle netlesir"
-              }
-              tone={
-                request.rotaUyumu?.uygunlukEtiketi === "UYGUN"
-                  ? "emerald"
-                  : request.rotaUyumu?.uygunlukEtiketi === "SINIRDA"
-                    ? "amber"
-                    : "blue"
-              }
-              icon={<i className="pi pi-directions text-lg" />}
-            />
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
-            <div className="space-y-6">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
+            <div className="space-y-4">
               {request.images && request.images.length > 0 ? (
                 <RequestImageGallery
                   images={request.images}
@@ -973,53 +914,47 @@ function OpenTransportRequestDetailPageContent({
               )}
 
               <CustomerSectionSurface
-                title="Yuk ozeti"
-                description="Teklif kararini etkileyen temel operasyon bilgileri."
+                title="Yuk ve konum ozeti"
+                description="Kargo, tasima ve konum bilgileri."
               >
-                <div className="grid gap-3 md:grid-cols-2">
-                  <DetailInfoRow label="Yuk tipi" value={getCargoTypeLabel(request.yukTipi)} />
-                  <DetailInfoRow label="Agirlik" value={formatWeightKg(request.agirlikKg)} />
-                  <DetailInfoRow label="Hacim" value={formatVolumeM3(request.hacimM3)} />
-                  <DetailInfoRow
-                    label="Tasima tarihi"
-                    value={
-                      request.tasimaTarihi
-                        ? formatPlannedDate(request.tasimaTarihi)
-                        : "Belirtilmedi"
-                    }
-                  />
-                  <div className="md:col-span-2">
+                <div className="space-y-3">
+                  <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                    <DetailInfoRow label="Yuk tipi" value={getCargoTypeLabel(request.yukTipi)} />
+                    <DetailInfoRow label="Agirlik" value={formatWeightKg(request.agirlikKg)} />
+                    <DetailInfoRow label="Hacim" value={formatVolumeM3(request.hacimM3)} />
+                    <DetailInfoRow
+                      label="Tasima tarihi"
+                      value={
+                        request.tasimaTarihi
+                          ? formatPlannedDate(request.tasimaTarihi)
+                          : "Belirtilmedi"
+                      }
+                    />
                     <DetailInfoRow
                       label="Tasima modeli"
                       value={request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}
                     />
                   </div>
-                </div>
-              </CustomerSectionSurface>
-
-              <CustomerSectionSurface
-                title="Baslangic ve teslim"
-                description="Yukleme ve teslim noktalarinin kayitli detaylari."
-              >
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <DetailAddressCard
-                    title="Baslangic"
-                    location={formatLocationLabel(
-                      request.baslangicKonumMetni,
-                      request.baslangicSehri
-                    )}
-                    city={request.normalizeBaslangicSehir || request.baslangicSehri}
-                    district={request.normalizeBaslangicIlce}
-                  />
-                  <DetailAddressCard
-                    title="Varis"
-                    location={formatLocationLabel(
-                      request.varisKonumMetni,
-                      request.varisSehri
-                    )}
-                    city={request.normalizeVarisSehir || request.varisSehri}
-                    district={request.normalizeVarisIlce}
-                  />
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <DetailAddressCard
+                      title="Baslangic"
+                      location={formatLocationLabel(
+                        request.baslangicKonumMetni,
+                        request.baslangicSehri
+                      )}
+                      city={request.normalizeBaslangicSehir || request.baslangicSehri}
+                      district={request.normalizeBaslangicIlce}
+                    />
+                    <DetailAddressCard
+                      title="Varis"
+                      location={formatLocationLabel(
+                        request.varisKonumMetni,
+                        request.varisSehri
+                      )}
+                      city={request.normalizeVarisSehir || request.varisSehri}
+                      district={request.normalizeVarisIlce}
+                    />
+                  </div>
                 </div>
               </CustomerSectionSurface>
 
@@ -1035,7 +970,7 @@ function OpenTransportRequestDetailPageContent({
               </CustomerSectionSurface>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               {request.hasExistingOffer ? (
                 <OfferSummaryPanel
                   offer={currentOffer}
@@ -1256,116 +1191,6 @@ function OpenTransportRequestDetailPageContent({
                   </div>
                 </CustomerSectionSurface>
               )}
-
-              <CustomerSectionSurface
-                title="Rota ve uygunluk"
-                description="Kayitli rota bilgisi ve secili tasiyici rotanla olan uyum baglami."
-              >
-                <div className="space-y-4">
-                  <div className="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Talep rotasi
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-slate-900">{routeMeta}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
-                        {formatRouteDistanceKm(request.rotaMesafeMetre)}
-                      </span>
-                      <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
-                        {formatRouteDuration(request.rotaSureSaniye)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {selectedCarrierRoute ? (
-                    <div className="rounded-[1.2rem] border border-blue-200 bg-blue-50/70 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
-                        Secili rota
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-blue-950">
-                        {formatLocationLabel(
-                          selectedCarrierRoute.baslangicKonumMetni,
-                          selectedCarrierRoute.baslangicSehri
-                        )}{" "}
-                        {"->"}{" "}
-                        {formatLocationLabel(
-                          selectedCarrierRoute.varisKonumMetni,
-                          selectedCarrierRoute.varisSehri
-                        )}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                          {formatPlannedDate(selectedCarrierRoute.planlananTarih)}
-                        </span>
-                        {typeof selectedMaxSapmaKm === "number" ? (
-                          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                            Maks. sapma {selectedMaxSapmaKm} km
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {request.rotaUyumu ? (
-                    <div className="space-y-3 rounded-[1.2rem] border border-slate-200 bg-white p-4">
-                      <span
-                        className={getRouteCompatibilityBadgeClassName(
-                          request.rotaUyumu.uygunlukEtiketi
-                        )}
-                      >
-                        {getRouteCompatibilityLabelText(request.rotaUyumu.uygunlukEtiketi)}
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                          Ek {formatRouteDistanceKm(request.rotaUyumu.extraMesafeMetre)}
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                          Ek {formatRouteDuration(request.rotaUyumu.extraSureSaniye)}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <InfoBanner tone="slate">
-                      Secili rota filtresi olmadigi icin ayrintili uyum analizi gosterilmiyor.
-                    </InfoBanner>
-                  )}
-                </div>
-              </CustomerSectionSurface>
-
-              <CustomerSectionSurface
-                title="Istek kapsami"
-                description="Kaydin operasyonel baglami ve hizli gecisler."
-              >
-                <div className="space-y-3">
-                  <DetailInfoRow label="Kayit tarihi" value={formatDate(request.olusturmaTarihi)} />
-                  <DetailInfoRow
-                    label="Tasima modeli"
-                    value={request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}
-                  />
-                  <DetailInfoRow
-                    label="Aktif arac"
-                    value={request.hasActiveVehicle ? "Hazir" : "Arac gerekiyor"}
-                  />
-                  <DetailInfoRow
-                    label="Fotograf"
-                    value={`${request.images?.length ?? 0} gorsel`}
-                  />
-                </div>
-
-                <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4">
-                  <Link href={backHref} className="app-button-secondary w-full justify-center">
-                    {request.hasExistingOffer ? "Tekliflerime don" : "Acik isteklere don"}
-                  </Link>
-                  {currentOffer ? (
-                    <Link
-                      href={`/dashboard/konusmalar/teklif/${currentOfferThread?.offerId ?? currentOffer.id}`}
-                      className="app-button-primary w-full justify-center"
-                    >
-                      Konusmaya git
-                    </Link>
-                  ) : null}
-                </div>
-              </CustomerSectionSurface>
             </div>
           </div>
         </div>

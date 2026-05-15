@@ -39,6 +39,16 @@ const FIXED_CAUTION_NOTES = [
   "Ikinci bir aci veya kisa aciklama dogrulugu artirabilir.",
 ] as const;
 
+
+//space_profile_base_bands, AI analizinde tanimlanan her bir alan profili ve boyut 
+// sinifi kombinasyonu icin temel bir hacim bandi tanimlar; bu band, sekil tabanli
+//  hesaplamada modifikasyonlar ve bias'lar uygulanmadan onceki konservatif bir 
+// tahmin olarak kullanilir; AI analizinden gelen alan profili veya boyut sinifi
+//  tanimlamalari beklenmedik sekilde hatali olabilir, bu nedenle her kombinasyon
+//  icin genis bir band tanimlamak, hesaplama sonucunun tamamen anlamsiz olmasini 
+// engellemeye yardimci olur; bu bandlar, nakliye endustrisindeki genel tasima
+//  profilleri ve boyutlari hakkinda uzman bilgisi ve deneyime dayali olarak 
+// belirlenmistir
 const SPACE_PROFILE_BASE_BANDS: Record<
   VolumeAnalysisSpaceProfile,
   Record<VolumeAnalysisSizeClass, VolumeBand>
@@ -121,6 +131,13 @@ const PLACEMENT_RISK_RANK: Record<VolumeAnalysisPlacementRisk, number> = {
   high: 2,
 };
 
+
+
+//shapeBasedVolumeCalculatorService, AI analiz sonucunu kullanarak sekil tabanli bir hacim tahmini yapar;
+//AI analizindeki her bir kalem icin, sekil, boyut sinifi, alan profili, 
+// stacklenebilirlik, hassasiyet, parcali tasima durumu, yerlestirme riski
+//  ve yuk tipi gibi ozelliklere gore uygun modifikasyonlar ve bias'lar
+// uygulayarak kalem bazinda bir hacim tahmini yapar;
 @Injectable()
 export class ShapeBasedVolumeCalculatorService {
   calculate(
@@ -484,6 +501,11 @@ export class ShapeBasedVolumeCalculatorService {
     return lowestItemConfidence;
   }
 
+
+  //resolveNumericOverrideBand fonksiyonu, AI analizindeki belirli kalemler icin onceden tanimlanmis numeric hacim bandlari uygular;
+//bu, AI'nin belirli nesneleri tanimlama veya yorumlama konusunda tutarsiz veya hatali olabilecegi durumlarda daha guvenilir bir tahmin saglamaya yardimci olur; 
+//AI analizindeki kalem label'i belirli anahtar kelimeleri iceriyorsa, ilgili band dondurulur; 
+//bu bandlar, nakliye endustrisindeki yaygin nesneler ve tasima profilleri hakkinda uzman bilgisi ve deneyime dayali olarak belirlenmistir
   private resolveNumericOverrideBand(item: VolumeAnalysisItem): VolumeBand | null {
     const normalizedLabel = normalizeVolumeLabel(item.label);
 

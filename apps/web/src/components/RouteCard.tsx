@@ -53,64 +53,52 @@ export default function RouteCard({ route }: RouteCardProps) {
       {...motionProps}
       className="rounded-[1.45rem] border border-slate-200 bg-white shadow-sm transition-colors will-change-transform hover:border-blue-200"
     >
-      <div className="p-5 md:p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                Rota #{route.id}
-              </span>
-              {route.eslesmeBilgisi ? (
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                  {route.eslesmeBilgisi}
-                </span>
-              ) : null}
-            </div>
-
-            <div className="mt-4">
-              <h2 className="text-[1.65rem] font-black tracking-tight text-slate-950">
-                {route.rotaBaslik}
-              </h2>
-              {route.rotaDetay ? (
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  {route.rotaDetay}
-                </p>
-              ) : null}
-            </div>
-
-            {route.chipler.length > 0 ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {route.chipler.map((chip) => (
-                  <span
-                    key={chip.label}
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      CHIP_TONE_STYLES[chip.tone ?? "default"]
-                    }`}
-                  >
-                    {chip.label}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="xl:w-[240px]">
-            <div className="rounded-[1.2rem] border border-slate-200 bg-slate-50/70 p-4">
-              <span
-                className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                  STATUS_TONE_STYLES[route.durumTonu]
-                }`}
-              >
-                {route.durumEtiketi}
-              </span>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                {route.durumAciklamasi}
-              </p>
-            </div>
-          </div>
+      <div className="p-4 md:p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+            Rota #{route.id}
+          </span>
+          <span
+            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+              STATUS_TONE_STYLES[route.durumTonu]
+            }`}
+          >
+            {route.durumEtiketi}
+          </span>
+          {route.eslesmeBilgisi ? (
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+              {route.eslesmeBilgisi}
+            </span>
+          ) : null}
         </div>
 
-        <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 md:flex-row md:items-center md:justify-between">
+        <div className="mt-3">
+          <h2 className="text-[1.55rem] font-black tracking-tight text-slate-950">
+            {route.rotaBaslik}
+          </h2>
+          {route.rotaDetay ? (
+            <p className="mt-1.5 text-sm leading-6 text-slate-500">
+              {route.rotaDetay}
+            </p>
+          ) : null}
+        </div>
+
+        {route.chipler.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {route.chipler.map((chip) => (
+              <span
+                key={chip.label}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  CHIP_TONE_STYLES[chip.tone ?? "default"]
+                }`}
+              >
+                {chip.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-3.5 md:flex-row md:items-center md:justify-between">
           <p className="text-sm text-slate-500">Kayit: {route.olusturmaBilgisi}</p>
 
           <div className="flex flex-wrap gap-2">

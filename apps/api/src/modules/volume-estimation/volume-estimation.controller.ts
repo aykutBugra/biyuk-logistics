@@ -30,6 +30,10 @@ type UploadedImageFile = {
 const MAX_IMAGE_COUNT = 3;
 const MAX_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
+
+//sadece musterilerin erisebilecegi bir endpoint tanimlanir; kullanici 
+// gorselleri, aciklamayi ve yuk tipini gondererek hacim tahmini sonucunu
+// alabilir
 @Controller("volume-estimates")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(ROLE_NAMES.MUSTERI)
@@ -38,6 +42,10 @@ export class VolumeEstimationController {
     private readonly volumeEstimationService: VolumeEstimationService
   ) {}
 
+  //estimateVolume endpoint'i, kullanici tarafindan secilen gorselleri,
+  // aciklamayi ve yuk tipini alarak hacim tahmini sonucunu dondurur; 
+  // gorseller, multipart/form-data formatinda gonderilir ve dosya boyutu
+  // ile gorsel sayisi sinirlandirilir
   @Post()
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(

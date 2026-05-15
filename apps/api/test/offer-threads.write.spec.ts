@@ -47,6 +47,7 @@ describe("OfferThreadsService write paths", () => {
     senderUserId: currentUser.id,
     senderName: "Customer User",
     senderUsername: currentUser.kullaniciAdi,
+    senderProfileImageStorageKey: null,
   };
 
   const tx = { kind: "thread-tx" };

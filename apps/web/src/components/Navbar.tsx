@@ -278,7 +278,7 @@ export default function Navbar() {
                   >
                     Panelim
                   </Link>
-                  <p className="flex items-center gap-2 px-1 text-sm text-slate-600">
+                  <div className="flex items-center gap-2 px-1 text-sm text-slate-600">
                     <CustomerInitialsAvatar
                       name={`${auth.user?.ad ?? ""} ${auth.user?.soyad ?? ""}`}
                       fallback={auth.user?.kullaniciAdi ?? "NA"}
@@ -287,7 +287,7 @@ export default function Navbar() {
                       tone="blue"
                     />
                     Merhaba, {getAuthLabel(auth)}
-                  </p>
+                  </div>
                   <button
                     type="button"
                     onClick={handleLogout}

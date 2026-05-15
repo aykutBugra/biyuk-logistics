@@ -387,9 +387,18 @@ export class OffersService {
     currentUser: AuthenticatedUser,
     offerId: number
   ): Promise<void> {
-    this.assertCustomerRole(currentUser);
+    this.assertParticipantRole(currentUser);
 
     const offer = await this.requireDecisionContext(currentUser, offerId);
+
+    const lastPriceActorSide = await this.offerThreadsService.getLastPriceActorSide(offerId);
+    const currentUserSide = offer.customerId === currentUser.id ? "customer" : "carrier";
+
+    if (currentUserSide === lastPriceActorSide) {
+      throw new ForbiddenException(
+        "You cannot accept an offer whose last price was set by you."
+      );
+    }
 
     if (!this.isOfferOpen(offer.offerStatusTuru, offer.offerStatusAdi)) {
       throw new ConflictException("Offer can no longer be accepted.");
@@ -542,9 +551,18 @@ export class OffersService {
     currentUser: AuthenticatedUser,
     offerId: number
   ): Promise<void> {
-    this.assertCustomerRole(currentUser);
+    this.assertParticipantRole(currentUser);
 
     const offer = await this.requireDecisionContext(currentUser, offerId);
+
+    const lastPriceActorSide = await this.offerThreadsService.getLastPriceActorSide(offerId);
+    const currentUserSide = offer.customerId === currentUser.id ? "customer" : "carrier";
+
+    if (currentUserSide === lastPriceActorSide) {
+      throw new ForbiddenException(
+        "You cannot reject an offer whose last price was set by you."
+      );
+    }
 
     if (!this.isOfferOpen(offer.offerStatusTuru, offer.offerStatusAdi)) {
       throw new ConflictException("Offer can no longer be rejected.");
@@ -603,7 +621,11 @@ export class OffersService {
   ): Promise<OfferDecisionContextRecord> {
     const offer = await this.offersRepository.findOfferDecisionContextById(offerId);
 
-    if (!offer || offer.requestDeletedAt || offer.customerId !== currentUser.id) {
+    if (
+      !offer ||
+      offer.requestDeletedAt ||
+      (offer.customerId !== currentUser.id && offer.carrierId !== currentUser.id)
+    ) {
       throw new NotFoundException("Offer not found.");
     }
 
@@ -663,6 +685,17 @@ export class OffersService {
     }
 
     throw new ForbiddenException("Only customers can access incoming offers.");
+  }
+
+  private assertParticipantRole(currentUser: AuthenticatedUser) {
+    if (
+      currentUser.roles.includes(ROLE_NAMES.MUSTERI) ||
+      currentUser.roles.includes(ROLE_NAMES.NAKLIYECI)
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException("Only offer participants can perform this action.");
   }
 
   private assertRouteFilterContext(

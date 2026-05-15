@@ -2,12 +2,7 @@
 
 import CarrierActivityPanel from "@/components/CarrierActivityPanel";
 import CarrierMetricCard from "@/components/CarrierMetricCard";
-import CarrierOpportunityPanel from "@/components/CarrierOpportunityPanel";
-import CarrierPerformancePanel from "@/components/CarrierPerformancePanel";
 import CarrierQuickActionsPanel from "@/components/CarrierQuickActionsPanel";
-import CarrierReadinessPanel from "@/components/CarrierReadinessPanel";
-import CarrierRouteDiscoveryPanel from "@/components/CarrierRouteDiscoveryPanel";
-import CarrierVehicleCapacityPanel from "@/components/CarrierVehicleCapacityPanel";
 import type { CarrierHomeData } from "@/lib/dashboard/use-home-data";
 
 type CarrierDashboardOverviewProps = {
@@ -18,8 +13,8 @@ export default function CarrierDashboardOverview({
   home,
 }: CarrierDashboardOverviewProps) {
   return (
-    <div className="space-y-6">
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="space-y-4">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <CarrierMetricCard
           label="Uygun Yuk"
           value={home.suitableOpenRequestCount}
@@ -57,33 +52,10 @@ export default function CarrierDashboardOverview({
         />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)]">
-        <CarrierOpportunityPanel
-          request={home.featuredRequest}
-          routePreview={home.routePreview}
-        />
-        <CarrierReadinessPanel
-          routeCount={home.routeCount}
-          vehicleCount={home.vehicleCount}
-        />
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-2">
-        <CarrierRouteDiscoveryPanel routePreview={home.routePreview} />
-        <CarrierVehicleCapacityPanel vehicle={home.vehiclePreview} />
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.95fr)_minmax(280px,0.95fr)]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
         <CarrierActivityPanel activities={home.recentActivities} />
         <CarrierQuickActionsPanel />
-        <CarrierPerformancePanel
-          offerCount={home.offerCount}
-          openOfferCount={home.openOfferCount}
-          acceptedOfferCount={home.acceptedOfferCount}
-          activeShipmentCount={home.activeShipmentCount}
-          completedShipmentCount={home.completedShipmentCount}
-        />
-      </section>
+      </div>
     </div>
   );
 }

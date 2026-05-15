@@ -1,14 +1,12 @@
 "use client";
 
-import type { ChangeEvent, ReactNode } from "react";
+import type { ChangeEvent } from "react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CarrierMetricCard from "@/components/CarrierMetricCard";
 import CarrierQuickActionsPanel from "@/components/CarrierQuickActionsPanel";
-import CarrierRouteDiscoveryPanel from "@/components/CarrierRouteDiscoveryPanel";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
-import DashboardActionCard from "@/components/DashboardActionCard";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import EmptyStateCard from "@/components/EmptyStateCard";
 import InlineHelpTrigger from "@/components/InlineHelpTrigger";
@@ -20,13 +18,9 @@ import {
   type CarrierRouteDetail,
   type CarrierRouteListItem,
 } from "@/lib/api/carrier-routes";
-import {
-  getOpenOfferRequests,
-  type OpenOfferRequestListItem,
-} from "@/lib/api/offers";
+import { getOpenOfferRequests, type OpenOfferRequestListItem } from "@/lib/api/offers";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
-import type { CarrierRoutePreview } from "@/lib/dashboard/use-home-data";
 import {
   formatLocationLabel,
   formatRouteDistanceKm,
@@ -159,66 +153,6 @@ function compareNullableNumbers(
   return direction === "asc" ? left - right : right - left;
 }
 
-function buildRoutePreview(
-  routes: CarrierRouteListItem[],
-  routeMatchesById: Record<number, OpenOfferRequestListItem[] | null | undefined>
-): CarrierRoutePreview | null {
-  if (routes.length === 0) {
-    return null;
-  }
-
-  const latestRoute =
-    [...routes].sort(
-      (left, right) =>
-        new Date(right.olusturmaTarihi).getTime() -
-        new Date(left.olusturmaTarihi).getTime()
-    )[0] ?? null;
-
-  if (!latestRoute) {
-    return null;
-  }
-
-  let selectedRoute = latestRoute;
-  const initialMatches = routeMatchesById[latestRoute.id];
-  let selectedMatches = Array.isArray(initialMatches) ? initialMatches : [];
-
-  for (const route of routes) {
-    const routeMatches = routeMatchesById[route.id];
-    const matches = Array.isArray(routeMatches) ? routeMatches : [];
-
-    if (matches.length > selectedMatches.length) {
-      selectedRoute = route;
-      selectedMatches = matches;
-      continue;
-    }
-
-    if (
-      matches.length === selectedMatches.length &&
-      new Date(route.olusturmaTarihi).getTime() >
-        new Date(selectedRoute.olusturmaTarihi).getTime()
-    ) {
-      selectedRoute = route;
-      selectedMatches = matches;
-    }
-  }
-
-  const deviations = selectedMatches
-    .map((request) => request.rotaUyumu?.extraMesafeMetre ?? null)
-    .filter((value): value is number => value !== null);
-  const averageDeviationKm =
-    deviations.length > 0
-      ? deviations.reduce((total, value) => total + value, 0) / deviations.length / 1000
-      : null;
-
-  return {
-    route: selectedRoute,
-    suitableCount: selectedMatches.length,
-    averageDeviationKm,
-    maxSapmaKm:
-      selectedRoute.maksimumSapmaKm ?? DEFAULT_ROUTE_MATCH_DEVIATION_KM,
-  };
-}
-
 function Toolbar(props: {
   searchQuery: string;
   activeTab: RouteFilterTab;
@@ -286,60 +220,6 @@ function Toolbar(props: {
   );
 }
 
-function SidebarSection(props: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
-      <h2 className="text-[1.45rem] font-black tracking-tight text-slate-950">
-        {props.title}
-      </h2>
-      {props.description ? (
-        <p className="mt-2 text-sm leading-6 text-slate-500">{props.description}</p>
-      ) : null}
-      <div className="mt-5">{props.children}</div>
-    </section>
-  );
-}
-
-function RouteTipsPanel() {
-  return (
-    <SidebarSection
-      title="Rota ipucu"
-      description="Acik istek taramalarinda daha tutarli eslesme almak icin ana hatlarini temiz tut."
-    >
-      <div className="space-y-3">
-        <div className="rounded-[1rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <p className="text-sm font-semibold text-slate-900">
-            Baslangic ve varis konumunu netlestir
-          </p>
-          <p className="mt-1 text-sm leading-6 text-slate-500">
-            Sehirle birlikte dogru konum secildiginde koordinat hazir durumu daha hizli olusur.
-          </p>
-        </div>
-
-        <div className="rounded-[1rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <p className="text-sm font-semibold text-slate-900">
-            Sapma limitini operasyon gercegine gore belirle
-          </p>
-          <p className="mt-1 text-sm leading-6 text-slate-500">
-            Cok dar limit yeni yukleri kacirabilir, cok genis limit ise operasyona uygun olmayan
-            istekleri one cikarabilir.
-          </p>
-        </div>
-
-        <DashboardActionCard
-          href="/dashboard/acik_istekler"
-          title="Acik isteklerde rota uyumunu kontrol et"
-          description="Kayitli rotani secip kesif sonucunu dogrudan gor."
-          variant="default"
-        />
-      </div>
-    </SidebarSection>
-  );
-}
 
 export default function CarrierRoutesPage() {
   const router = useRouter();
@@ -690,8 +570,6 @@ export default function CarrierRoutesPage() {
     return right.createdSortValue - left.createdSortValue;
   });
 
-  const featuredRoutePreview = buildRoutePreview(routes, routeMatchesById);
-
   const handleResetLocalFilters = () => {
     setSearchQuery("");
     setActiveTab("all");
@@ -730,10 +608,10 @@ export default function CarrierRoutesPage() {
       ) : null}
 
       {!isLoading && !errorMessage ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div
             data-dashboard-stats
-            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
           >
             <CarrierMetricCard
               label="Toplam rota"
@@ -851,8 +729,6 @@ export default function CarrierRoutesPage() {
 
               <div className="space-y-4">
                 <CarrierQuickActionsPanel />
-                <CarrierRouteDiscoveryPanel routePreview={featuredRoutePreview} />
-                <RouteTipsPanel />
               </div>
             </div>
           )}

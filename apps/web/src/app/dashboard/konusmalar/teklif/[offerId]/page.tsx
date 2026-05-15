@@ -7,8 +7,6 @@ import { useParams, useRouter } from "next/navigation";
 import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import DashboardShell from "@/components/DashboardShell";
-import EmptyStateCard from "@/components/EmptyStateCard";
-import OfferThreadDetailLayout from "@/components/OfferThreadDetailLayout";
 import StatusBadge from "@/components/StatusBadge";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
@@ -25,6 +23,8 @@ import { useDashboardAccess } from "@/lib/auth/use-dashboard-access";
 import { useConfirm } from "@/lib/confirm/confirm-context";
 import { formatLocationLabel } from "@/lib/logistics";
 import { useToast } from "@/lib/toast/toast-context";
+
+// ─── formatters ──────────────────────────────────────────────────────────────
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("tr-TR", {
@@ -60,99 +60,11 @@ function getOfferStatusLabel(status: string): string {
   }
 }
 
-function getConversationStateLabel(thread: OfferThreadDetail): string {
-  if (thread.isClosed) {
-    return "Kapali";
-  }
-
-  return "Aktif";
-}
-
-function getSystemEventCopy(
-  code: string | null,
-  teklifFiyati: number | null
-): string {
-  switch (code) {
-    case "OFFER_CREATED":
-      return `Ilk teklif olusturuldu: ${formatCurrency(teklifFiyati ?? 0)}`;
-    case "OFFER_ACCEPTED":
-      return "Teklif kabul edildi.";
-    case "OFFER_REJECTED":
-      return "Teklif reddedildi.";
-    case "THREAD_CLOSED_REQUEST_UNAVAILABLE":
-      return "Bu istek baska bir teklifle anlasildigi icin konusma kapatildi.";
-    default:
-      return "Sistem olayi";
-  }
-}
-
-function getSystemEventLabel(code: string | null): string {
-  switch (code) {
-    case "OFFER_CREATED":
-      return "Teklif";
-    case "OFFER_ACCEPTED":
-      return "Kabul";
-    case "OFFER_REJECTED":
-      return "Ret";
-    case "THREAD_CLOSED_REQUEST_UNAVAILABLE":
-      return "Kapanis";
-    default:
-      return "Sistem";
-  }
-}
-
-function getSystemEventClasses(code: string | null): {
-  shell: string;
-  pill: string;
-  icon: string;
-} {
-  switch (code) {
-    case "OFFER_ACCEPTED":
-      return {
-        shell: "border-emerald-200 bg-emerald-50/80",
-        pill: "bg-emerald-100 text-emerald-700",
-        icon: "pi pi-check-circle text-emerald-700",
-      };
-    case "OFFER_REJECTED":
-      return {
-        shell: "border-red-200 bg-red-50/80",
-        pill: "bg-red-100 text-red-700",
-        icon: "pi pi-times-circle text-red-700",
-      };
-    case "THREAD_CLOSED_REQUEST_UNAVAILABLE":
-      return {
-        shell: "border-amber-200 bg-amber-50/80",
-        pill: "bg-amber-100 text-amber-700",
-        icon: "pi pi-lock text-amber-700",
-      };
-    case "OFFER_CREATED":
-      return {
-        shell: "border-blue-200 bg-blue-50/80",
-        pill: "bg-blue-100 text-blue-700",
-        icon: "pi pi-send text-blue-700",
-      };
-    default:
-      return {
-        shell: "border-slate-200 bg-slate-50/90",
-        pill: "bg-slate-100 text-slate-600",
-        icon: "pi pi-info-circle text-slate-500",
-      };
-  }
-}
-
-function getLatestMessageAt(messages: OfferThreadMessage[]): string | null {
-  if (messages.length === 0) {
-    return null;
-  }
-
-  return messages[messages.length - 1]?.createdAt ?? null;
-}
-
 function getRouteTitle(thread: OfferThreadDetail): string {
   return `${formatLocationLabel(
     thread.baslangicKonumMetni,
     thread.baslangicSehri
-  )} -> ${formatLocationLabel(thread.varisKonumMetni, thread.varisSehri)}`;
+  )} → ${formatLocationLabel(thread.varisKonumMetni, thread.varisSehri)}`;
 }
 
 function getBackHref(thread: OfferThreadDetail): string {
@@ -161,269 +73,164 @@ function getBackHref(thread: OfferThreadDetail): string {
     : `/dashboard/isteklerim/${thread.requestId}`;
 }
 
-function OfferThreadContextSurface({
-  thread,
-  backHref,
-  latestMessageAt,
-}: {
-  thread: OfferThreadDetail;
-  backHref: string;
-  latestMessageAt: string | null;
-}) {
-  const conversationStateLabel = getConversationStateLabel(thread);
-
-  return (
-    <aside className="app-surface-strong rounded-[1.25rem] border border-slate-200 p-4 shadow-sm md:p-5">
-      <div className="space-y-4">
-        <div className="space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
-            Konusma ozeti
-          </p>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge
-              status={thread.durum}
-              label={getOfferStatusLabel(thread.durum)}
-            />
-            <span
-              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
-                thread.isClosed
-                  ? "bg-slate-100 text-slate-700 ring-slate-200"
-                  : "bg-emerald-50 text-emerald-700 ring-emerald-100"
-              }`}
-            >
-              {conversationStateLabel}
-            </span>
-            {thread.unreadCount > 0 ? (
-              <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                {thread.unreadCount} okunmamis
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex items-start gap-4">
-          <CustomerInitialsAvatar
-            name={thread.karsiTarafAdSoyad}
-            fallback={thread.karsiTarafKullaniciAdi}
-            imageUrl={thread.karsiTarafProfileImageUrl}
-            size="md"
-            tone={thread.isClosed ? "slate" : "blue"}
-          />
-
-          <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-black text-slate-950">
-              {getRouteTitle(thread)}
-            </h2>
-
-            <p className="mt-2 text-sm text-slate-600">
-              {thread.karsiTarafAdSoyad}{" "}
-              <span className="text-slate-400">@{thread.karsiTarafKullaniciAdi}</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-[1rem] border border-emerald-200 bg-emerald-50/70 p-4">
-          <p className="text-xs font-semibold uppercase text-emerald-700">
-            Guncel teklif
-          </p>
-          <p className="mt-2 text-3xl font-black leading-none text-emerald-700">
-            {formatCurrency(thread.fiyat)}
-          </p>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-          <div className="rounded-[0.95rem] border border-slate-200 bg-slate-50/80 p-3">
-            <p className="text-xs font-semibold uppercase text-slate-400">
-              Teklif kaydi
-            </p>
-            <p className="mt-2 text-lg font-black tracking-tight text-slate-950">
-              #{thread.offerId}
-            </p>
-          </div>
-
-          <div className="rounded-[0.95rem] border border-slate-200 bg-slate-50/80 p-3">
-            <p className="text-xs font-semibold uppercase text-slate-400">
-              Istek kaydi
-            </p>
-            <p className="mt-2 text-lg font-black tracking-tight text-slate-950">
-              #{thread.requestId}
-            </p>
-          </div>
-
-          <div className="rounded-[0.95rem] border border-slate-200 bg-slate-50/80 p-3">
-            <p className="text-xs font-semibold uppercase text-slate-400">
-              Son hareket
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">
-              {latestMessageAt ? formatDate(latestMessageAt) : "Hareket bekleniyor"}
-            </p>
-          </div>
-
-          <div className="rounded-[0.95rem] border border-slate-200 bg-slate-50/80 p-3">
-            <p className="text-xs font-semibold uppercase text-slate-400">
-              Konusma durumu
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">
-              {thread.isClosed && thread.closedAt
-                ? `${conversationStateLabel} - ${formatDate(thread.closedAt)}`
-                : `${conversationStateLabel} gorusme`}
-            </p>
-          </div>
-        </div>
-
-        <div className="border-t border-slate-100 pt-4">
-          <Link href={backHref} className="app-button-secondary w-full justify-center">
-            Geri don
-          </Link>
-        </div>
-      </div>
-    </aside>
-  );
+function getLatestMessageAt(messages: OfferThreadMessage[]): string | null {
+  if (messages.length === 0) return null;
+  return messages[messages.length - 1]?.createdAt ?? null;
 }
 
-function OfferThreadDecisionSurface({
-  thread,
-  isActingOffer,
-  onDecision,
-}: {
-  thread: OfferThreadDetail;
-  isActingOffer: boolean;
-  onDecision: (action: "accept" | "reject") => void;
-}) {
-  return (
-    <section className="app-surface rounded-[1.25rem] border border-slate-200 p-4 shadow-sm md:p-5">
-      <div className="space-y-3">
-        <div>
-          <p className="text-xs font-semibold uppercase text-blue-700">
-            Teklif karari
-          </p>
-          <h2 className="mt-1 text-lg font-black text-slate-950">
-            Mevcut aksiyonlar
-          </h2>
-          <p className="mt-1 text-sm leading-5 text-slate-500">
-            Bu konusma icin izin verilen karar adimlari burada gorunur.
-          </p>
-        </div>
+// ─── system event helpers ─────────────────────────────────────────────────────
 
-        <div className="grid gap-3">
-          {thread.canAcceptOffer ? (
-            <button
-              type="button"
-              onClick={() => onDecision("accept")}
-              disabled={isActingOffer}
-              className="app-button-primary app-pressable w-full justify-center disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isActingOffer ? "Isleniyor..." : "Kabul Et"}
-            </button>
-          ) : null}
+type EventStyle = { row: string; icon: string; pill: string };
 
-          {thread.canRejectOffer ? (
-            <button
-              type="button"
-              onClick={() => onDecision("reject")}
-              disabled={isActingOffer}
-              className="app-pressable inline-flex w-full items-center justify-center rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isActingOffer ? "Isleniyor..." : "Reddet"}
-            </button>
-          ) : null}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function OfferThreadMessageItem({
-  message,
-}: {
-  message: OfferThreadMessage;
-}) {
-  if (message.type === "SYSTEM_EVENT") {
-    const eventClasses = getSystemEventClasses(message.systemEventCode);
-
-    return (
-      <div className="flex justify-center">
-        <article
-          className={`max-w-2xl rounded-[1rem] border px-4 py-3 shadow-sm ${eventClasses.shell}`}
-        >
-          <div className="flex flex-wrap items-center justify-center gap-2 text-center">
-            <i className={`${eventClasses.icon} text-sm`} />
-            <span
-              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${eventClasses.pill}`}
-            >
-              {getSystemEventLabel(message.systemEventCode)}
-            </span>
-            <span className="text-xs font-semibold text-slate-500">
-              {formatDate(message.createdAt)}
-            </span>
-          </div>
-          <p className="mt-2 text-center text-sm leading-6 text-slate-700">
-            {getSystemEventCopy(message.systemEventCode, message.teklifFiyati)}
-          </p>
-        </article>
-      </div>
-    );
+function getSystemEventStyle(code: string | null): EventStyle {
+  switch (code) {
+    case "OFFER_ACCEPTED":
+      return {
+        row: "border-emerald-200 bg-emerald-50/80 text-emerald-700",
+        icon: "pi pi-check-circle",
+        pill: "bg-emerald-100 text-emerald-700",
+      };
+    case "OFFER_REJECTED":
+      return {
+        row: "border-red-200 bg-red-50/80 text-red-700",
+        icon: "pi pi-times-circle",
+        pill: "bg-red-100 text-red-700",
+      };
+    case "THREAD_CLOSED_REQUEST_UNAVAILABLE":
+      return {
+        row: "border-amber-200 bg-amber-50/80 text-amber-700",
+        icon: "pi pi-lock",
+        pill: "bg-amber-100 text-amber-700",
+      };
+    case "OFFER_CREATED":
+      return {
+        row: "border-blue-200 bg-blue-50/80 text-blue-700",
+        icon: "pi pi-send",
+        pill: "bg-blue-100 text-blue-700",
+      };
+    default:
+      return {
+        row: "border-slate-200 bg-slate-50/90 text-slate-600",
+        icon: "pi pi-info-circle",
+        pill: "bg-slate-100 text-slate-600",
+      };
   }
+}
 
-  const isCounterOffer = message.type === "COUNTER_OFFER";
-  const senderName = message.isMine ? "Sen" : message.senderName ?? "Kullanici";
-  const senderHandle = message.senderUsername ? `@${message.senderUsername}` : null;
+function getSystemEventLabel(code: string | null): string {
+  switch (code) {
+    case "OFFER_CREATED":
+      return "Teklif olusturuldu";
+    case "OFFER_ACCEPTED":
+      return "Teklif kabul edildi";
+    case "OFFER_REJECTED":
+      return "Teklif reddedildi";
+    case "THREAD_CLOSED_REQUEST_UNAVAILABLE":
+      return "Konusma kapatildi";
+    default:
+      return "Sistem olayi";
+  }
+}
+
+function getSystemEventDetail(
+  code: string | null,
+  teklifFiyati: number | null
+): string | null {
+  if (code === "OFFER_CREATED" && teklifFiyati !== null) {
+    return formatCurrency(teklifFiyati);
+  }
+  if (code === "THREAD_CLOSED_REQUEST_UNAVAILABLE") {
+    return "Bu istek baska bir teklifle anlasilda.";
+  }
+  return null;
+}
+
+// ─── message items ────────────────────────────────────────────────────────────
+
+function SystemEventRow({ message }: { message: OfferThreadMessage }) {
+  const style = getSystemEventStyle(message.systemEventCode);
+  const label = getSystemEventLabel(message.systemEventCode);
+  const detail = getSystemEventDetail(
+    message.systemEventCode,
+    message.teklifFiyati
+  );
 
   return (
-    <div className={`flex ${message.isMine ? "justify-end" : "justify-start"}`}>
+    <div className="flex justify-center py-0.5">
       <div
-        className={`flex max-w-[min(100%,44rem)] items-end gap-3 ${
-          message.isMine ? "flex-row-reverse" : ""
-        }`}
+        className={`flex flex-wrap items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${style.row}`}
+      >
+        <i className={`${style.icon} text-xs`} />
+        <span className="font-semibold">{label}</span>
+        {detail ? (
+          <>
+            <span className="opacity-50">·</span>
+            <span>{detail}</span>
+          </>
+        ) : null}
+        <span className="opacity-50">·</span>
+        <span className="opacity-75">{formatDate(message.createdAt)}</span>
+      </div>
+    </div>
+  );
+}
+
+function ChatMessageBubble({ message }: { message: OfferThreadMessage }) {
+  const isCounterOffer = message.type === "COUNTER_OFFER";
+  const isMine = message.isMine;
+  const senderName = isMine ? "Sen" : (message.senderName ?? "Kullanici");
+
+  const bubbleColors = isCounterOffer
+    ? "border-emerald-200 bg-emerald-50/80"
+    : isMine
+      ? "border-blue-200 bg-blue-50/80"
+      : "border-slate-200 bg-white";
+
+  return (
+    <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`flex max-w-[min(85%,22rem)] items-end gap-1.5 ${isMine ? "flex-row-reverse" : ""}`}
       >
         <CustomerInitialsAvatar
           name={message.senderName}
           fallback={message.senderUsername ?? "KN"}
           imageUrl={message.senderProfileImageUrl}
-          size="sm"
-          tone={message.isMine ? "blue" : isCounterOffer ? "amber" : "slate"}
+          size="xs"
+          tone={isMine ? "blue" : isCounterOffer ? "amber" : "slate"}
         />
 
         <article
-          className={`min-w-0 rounded-[1.15rem] border px-4 py-3 shadow-sm ${
-            isCounterOffer
-              ? "border-emerald-200 bg-emerald-50/70"
-              : message.isMine
-                ? "border-blue-200 bg-blue-50/75"
-                : "border-slate-200 bg-white"
-          }`}
+          className={`min-w-0 rounded-2xl border px-3 py-2.5 shadow-sm ${bubbleColors}`}
         >
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-slate-900">{senderName}</p>
-            {senderHandle ? (
-              <span className="text-xs font-medium text-slate-400">{senderHandle}</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold text-slate-800">
+              {senderName}
+            </span>
+            {message.senderUsername && !isMine ? (
+              <span className="text-[10px] text-slate-400">
+                @{message.senderUsername}
+              </span>
             ) : null}
             {isCounterOffer ? (
-              <span className="rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100">
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                 Fiyat revizyonu
               </span>
             ) : null}
           </div>
 
           {isCounterOffer && message.teklifFiyati !== null ? (
-            <div className="mt-3 rounded-[0.9rem] border border-emerald-100 bg-white/80 px-3 py-2.5">
-              <p className="text-[11px] font-semibold uppercase text-emerald-700">
-                Guncellenen fiyat
-              </p>
-              <p className="mt-1.5 text-2xl font-black leading-none text-emerald-700">
-                {formatCurrency(message.teklifFiyati)}
-              </p>
-            </div>
+            <p className="mt-1.5 text-xl font-black leading-none text-emerald-700">
+              {formatCurrency(message.teklifFiyati)}
+            </p>
           ) : null}
 
           {message.text ? (
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+            <p className="mt-1.5 whitespace-pre-wrap text-sm leading-5 text-slate-700">
               {message.text}
             </p>
           ) : null}
 
-          <p className="mt-3 text-[11px] font-semibold uppercase text-slate-400">
+          <p className="mt-1.5 text-[10px] text-slate-400">
             {formatDate(message.createdAt)}
           </p>
         </article>
@@ -432,37 +239,32 @@ function OfferThreadMessageItem({
   );
 }
 
-function OfferThreadMessagesSurface({
-  thread,
-}: {
-  thread: OfferThreadDetail;
-}) {
+// ─── message feed ─────────────────────────────────────────────────────────────
+
+function MessageFeed({ thread }: { thread: OfferThreadDetail }) {
   return (
     <section className="app-surface-strong rounded-[1.25rem] border border-slate-200 shadow-sm">
-      <div className="flex flex-col gap-2 border-b border-slate-100 px-4 py-3 md:px-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-lg font-black text-slate-950">Mesaj akisi</h2>
-          <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-            {thread.messages.length}
-          </span>
-        </div>
-        <p className="text-sm leading-5 text-slate-500">
-          Mesajlar, sistem hareketleri ve fiyat revizyonlari tek akis icinde tutulur.
-        </p>
+      <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
+        <h2 className="text-sm font-bold text-slate-950">Mesaj akisi</h2>
+        <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+          {thread.messages.length}
+        </span>
       </div>
 
-      <div className="p-4 md:p-5">
+      <div className="p-4">
         {thread.messages.length === 0 ? (
-          <EmptyStateCard
-            eyebrow="Mesaj kutusu"
-            title="Henuz mesaj yok"
-            description="Mesaj veya fiyat guncellemesi oldugunda konusma akisi burada gorunecek."
-          />
+          <p className="text-center text-sm text-slate-400">
+            Henuz mesaj yok.
+          </p>
         ) : (
-          <div className="space-y-3">
-            {thread.messages.map((message) => (
-              <OfferThreadMessageItem key={message.id} message={message} />
-            ))}
+          <div className="space-y-2">
+            {thread.messages.map((message) =>
+              message.type === "SYSTEM_EVENT" ? (
+                <SystemEventRow key={message.id} message={message} />
+              ) : (
+                <ChatMessageBubble key={message.id} message={message} />
+              )
+            )}
           </div>
         )}
       </div>
@@ -470,146 +272,349 @@ function OfferThreadMessagesSurface({
   );
 }
 
-function OfferThreadComposerSurface({
-  messageDraft,
-  onChange,
+// ─── negotiation actions panel ────────────────────────────────────────────────
+
+type ActiveAction = "counterOffer" | "message" | null;
+
+function NegotiationActionsPanel({
+  thread,
+  isActingOffer,
   isSendingMessage,
-}: {
-  messageDraft: string;
-  onChange: (value: string) => void;
-  isSendingMessage: boolean;
-}) {
-  return (
-    <section className="app-surface-strong rounded-[1.25rem] border border-slate-200 p-4 shadow-sm md:p-5">
-      <div className="space-y-3">
-        <div>
-          <p className="text-xs font-semibold uppercase text-blue-700">
-            Yeni mesaj
-          </p>
-          <h2 className="mt-1 text-lg font-black text-slate-950">
-            Mesaj gonder
-          </h2>
-          <p className="mt-1 text-sm leading-5 text-slate-500">
-            Bu teklif baglaminda yalnizca ilgili tarafla yazisirsin.
-          </p>
-        </div>
-
-        <textarea
-          value={messageDraft}
-          onChange={(event) => onChange(event.target.value)}
-          rows={4}
-          className="app-input block min-h-[7rem] w-full resize-y text-sm"
-          placeholder="Mesajini yaz..."
-        />
-
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={isSendingMessage || !messageDraft.trim()}
-            className="app-button-primary app-pressable min-w-[11rem] justify-center disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSendingMessage ? "Gonderiliyor..." : "Mesaj gonder"}
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function OfferThreadCounterOfferSurface({
+  isSendingCounterOffer,
+  messageDraft,
   counterOfferAmount,
   counterOfferNote,
-  onAmountChange,
-  onNoteChange,
-  isSendingCounterOffer,
+  isAwaitingCounterparty,
+  isReadOnly,
+  activeAction,
+  onDecision,
+  onMessageDraftChange,
+  onCounterAmountChange,
+  onCounterNoteChange,
+  onSendMessage,
+  onSendCounterOffer,
+  onToggleAction,
 }: {
+  thread: OfferThreadDetail;
+  isActingOffer: boolean;
+  isSendingMessage: boolean;
+  isSendingCounterOffer: boolean;
+  messageDraft: string;
   counterOfferAmount: string;
   counterOfferNote: string;
-  onAmountChange: (value: string) => void;
-  onNoteChange: (value: string) => void;
-  isSendingCounterOffer: boolean;
+  isAwaitingCounterparty: boolean;
+  isReadOnly: boolean;
+  activeAction: ActiveAction;
+  onDecision: (action: "accept" | "reject") => void;
+  onMessageDraftChange: (value: string) => void;
+  onCounterAmountChange: (value: string) => void;
+  onCounterNoteChange: (value: string) => void;
+  onSendMessage: (event: FormEvent<HTMLFormElement>) => void;
+  onSendCounterOffer: (event: FormEvent<HTMLFormElement>) => void;
+  onToggleAction: (action: "counterOffer" | "message") => void;
 }) {
-  return (
-    <section className="app-surface rounded-[1.25rem] border border-slate-200 p-4 shadow-sm md:p-5">
-      <div className="space-y-3">
-        <div>
-          <p className="text-xs font-semibold uppercase text-emerald-700">
-            Pazarlik
-          </p>
-          <h2 className="mt-1 text-lg font-black text-slate-950">
-            Karsi teklif ver
-          </h2>
-          <p className="mt-1 text-sm leading-5 text-slate-500">
-            Yeni fiyatini ve varsa kisa notunu akisa ekle.
-          </p>
-        </div>
+  const hasAnyAction =
+    thread.canAcceptOffer ||
+    thread.canRejectOffer ||
+    thread.canSendCounterOffer ||
+    thread.canSendMessage;
 
-        <div className="space-y-3">
-          <div>
-            <label
-              htmlFor="counterOfferAmount"
-              className="block text-sm font-semibold text-slate-700"
-            >
-              Yeni fiyat
-            </label>
-            <input
-              id="counterOfferAmount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={counterOfferAmount}
-              onChange={(event) => onAmountChange(event.target.value)}
-              className="app-input mt-2 block w-full text-sm"
-              placeholder="Orn: 18500"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="counterOfferNote"
-              className="block text-sm font-semibold text-slate-700"
-            >
-              Not
-            </label>
-            <textarea
-              id="counterOfferNote"
-              value={counterOfferNote}
-              onChange={(event) => onNoteChange(event.target.value)}
-              rows={3}
-              className="app-input mt-2 block min-h-[6rem] w-full resize-y text-sm"
-              placeholder="Opsiyonel not"
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={isSendingCounterOffer || !counterOfferAmount.trim()}
-          className="app-pressable inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isSendingCounterOffer ? "Gonderiliyor..." : "Karsi teklif gonder"}
-        </button>
+  if (isReadOnly) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5">
+        <p className="text-xs font-semibold text-slate-500">
+          Bu konusma kapatildi. Yeni mesaj gonderilemez.
+        </p>
       </div>
-    </section>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {isAwaitingCounterparty ? (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2.5">
+          <i className="pi pi-clock mt-0.5 text-xs text-amber-600" />
+          <p className="text-xs font-medium text-amber-800">
+            {thread.participantSide === "customer"
+              ? "Karsi teklifin nakliyeci yanitini bekliyor."
+              : "Karsi teklifin musteri yanitini bekliyor."}
+          </p>
+        </div>
+      ) : null}
+
+      {thread.canAcceptOffer ? (
+        <button
+          type="button"
+          onClick={() => onDecision("accept")}
+          disabled={isActingOffer}
+          className="app-button-primary app-pressable w-full justify-center py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isActingOffer ? "Isleniyor..." : "Kabul Et"}
+        </button>
+      ) : null}
+
+      {thread.canRejectOffer ? (
+        <button
+          type="button"
+          onClick={() => onDecision("reject")}
+          disabled={isActingOffer}
+          className="app-pressable inline-flex w-full items-center justify-center rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isActingOffer ? "Isleniyor..." : "Reddet"}
+        </button>
+      ) : null}
+
+      {thread.canSendCounterOffer ? (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => onToggleAction("counterOffer")}
+            className={`app-pressable inline-flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+              activeAction === "counterOffer"
+                ? "border-slate-300 bg-slate-100 text-slate-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+            }`}
+          >
+            <i
+              className={`text-xs ${activeAction === "counterOffer" ? "pi pi-times" : "pi pi-sync"}`}
+            />
+            {activeAction === "counterOffer" ? "Iptal" : "Karsi teklif ver"}
+          </button>
+
+          {activeAction === "counterOffer" ? (
+            <form onSubmit={onSendCounterOffer} className="space-y-2">
+              <input
+                id="counterOfferAmount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={counterOfferAmount}
+                onChange={(e) => onCounterAmountChange(e.target.value)}
+                className="app-input block w-full text-sm"
+                placeholder="Yeni fiyat (TL)"
+              />
+              <textarea
+                id="counterOfferNote"
+                value={counterOfferNote}
+                onChange={(e) => onCounterNoteChange(e.target.value)}
+                rows={2}
+                className="app-input block w-full resize-none text-sm"
+                placeholder="Opsiyonel not..."
+              />
+              <button
+                type="submit"
+                disabled={
+                  isSendingCounterOffer || !counterOfferAmount.trim()
+                }
+                className="app-pressable inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSendingCounterOffer ? "Gonderiliyor..." : "Gonder"}
+              </button>
+            </form>
+          ) : null}
+        </div>
+      ) : null}
+
+      {thread.canSendMessage ? (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => onToggleAction("message")}
+            className={`app-pressable inline-flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+              activeAction === "message"
+                ? "border-slate-300 bg-slate-100 text-slate-700"
+                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <i
+              className={`text-xs ${activeAction === "message" ? "pi pi-times" : "pi pi-comment"}`}
+            />
+            {activeAction === "message" ? "Iptal" : "Mesaj yaz"}
+          </button>
+
+          {activeAction === "message" ? (
+            <form onSubmit={onSendMessage} className="space-y-2">
+              <textarea
+                value={messageDraft}
+                onChange={(e) => onMessageDraftChange(e.target.value)}
+                rows={3}
+                className="app-input block w-full resize-none text-sm"
+                placeholder="Mesajini yaz..."
+              />
+              <button
+                type="submit"
+                disabled={isSendingMessage || !messageDraft.trim()}
+                className="app-button-primary app-pressable w-full justify-center py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSendingMessage ? "Gonderiliyor..." : "Gonder"}
+              </button>
+            </form>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!hasAnyAction && !isAwaitingCounterparty ? (
+        <p className="text-xs text-slate-400">Bekleyen aksiyon yok.</p>
+      ) : null}
+    </div>
   );
 }
 
-function OfferThreadReadOnlyNotice() {
+// ─── compact side panel ───────────────────────────────────────────────────────
+
+function NegotiationSidePanel({
+  thread,
+  backHref,
+  latestMessageAt,
+  isActingOffer,
+  isSendingMessage,
+  isSendingCounterOffer,
+  messageDraft,
+  counterOfferAmount,
+  counterOfferNote,
+  isAwaitingCounterparty,
+  isReadOnly,
+  activeAction,
+  onDecision,
+  onMessageDraftChange,
+  onCounterAmountChange,
+  onCounterNoteChange,
+  onSendMessage,
+  onSendCounterOffer,
+  onToggleAction,
+}: {
+  thread: OfferThreadDetail;
+  backHref: string;
+  latestMessageAt: string | null;
+  isActingOffer: boolean;
+  isSendingMessage: boolean;
+  isSendingCounterOffer: boolean;
+  messageDraft: string;
+  counterOfferAmount: string;
+  counterOfferNote: string;
+  isAwaitingCounterparty: boolean;
+  isReadOnly: boolean;
+  activeAction: ActiveAction;
+  onDecision: (action: "accept" | "reject") => void;
+  onMessageDraftChange: (value: string) => void;
+  onCounterAmountChange: (value: string) => void;
+  onCounterNoteChange: (value: string) => void;
+  onSendMessage: (event: FormEvent<HTMLFormElement>) => void;
+  onSendCounterOffer: (event: FormEvent<HTMLFormElement>) => void;
+  onToggleAction: (action: "counterOffer" | "message") => void;
+}) {
+  const conversationState = thread.isClosed ? "Kapali" : "Aktif gorusme";
+
   return (
-    <section className="app-surface rounded-[1.25rem] border border-slate-200 bg-slate-50/80 p-4 shadow-sm md:p-5">
-      <p className="text-xs font-semibold uppercase text-slate-500">
-        Konusma durumu
-      </p>
-      <h2 className="mt-1 text-lg font-black text-slate-950">
-        Bu konusma read-only
-      </h2>
-      <p className="mt-2 text-sm leading-5 text-slate-600">
-        Yeni mesaj veya karsi teklif gonderilemez. Onceki akis ve sistem
-        hareketleri mesaj listesinde gorunmeye devam eder.
-      </p>
-    </section>
+    <aside className="app-surface-strong rounded-[1.25rem] border border-slate-200 p-4 shadow-sm">
+      <div className="space-y-4">
+        {/* Header: counterpart + route */}
+        <div className="flex items-start gap-3">
+          <CustomerInitialsAvatar
+            name={thread.karsiTarafAdSoyad}
+            fallback={thread.karsiTarafKullaniciAdi}
+            imageUrl={thread.karsiTarafProfileImageUrl}
+            size="sm"
+            tone={thread.isClosed ? "slate" : "blue"}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold text-slate-950">
+              {getRouteTitle(thread)}
+            </p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">
+              {thread.karsiTarafAdSoyad}{" "}
+              <span className="text-slate-400">
+                @{thread.karsiTarafKullaniciAdi}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* Current price */}
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+            Guncel teklif
+          </p>
+          <p className="mt-1 text-2xl font-black leading-none text-emerald-700">
+            {formatCurrency(thread.fiyat)}
+          </p>
+        </div>
+
+        {/* Meta info */}
+        <dl className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <dt className="text-xs text-slate-400">Teklif durumu</dt>
+            <dd>
+              <StatusBadge
+                status={thread.durum}
+                label={getOfferStatusLabel(thread.durum)}
+              />
+            </dd>
+          </div>
+          <div className="flex items-center justify-between">
+            <dt className="text-xs text-slate-400">Konusma</dt>
+            <dd className="text-xs font-semibold text-slate-700">
+              {conversationState}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between">
+            <dt className="text-xs text-slate-400">Son hareket</dt>
+            <dd className="text-xs font-semibold text-slate-700">
+              {latestMessageAt ? formatDate(latestMessageAt) : "—"}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between">
+            <dt className="text-xs text-slate-400">Teklif #</dt>
+            <dd className="text-xs font-semibold text-slate-700">
+              {thread.offerId}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between">
+            <dt className="text-xs text-slate-400">Istek #</dt>
+            <dd className="text-xs font-semibold text-slate-700">
+              {thread.requestId}
+            </dd>
+          </div>
+        </dl>
+
+        {/* Action section */}
+        <div className="border-t border-slate-100 pt-3">
+          <NegotiationActionsPanel
+            thread={thread}
+            isActingOffer={isActingOffer}
+            isSendingMessage={isSendingMessage}
+            isSendingCounterOffer={isSendingCounterOffer}
+            messageDraft={messageDraft}
+            counterOfferAmount={counterOfferAmount}
+            counterOfferNote={counterOfferNote}
+            isAwaitingCounterparty={isAwaitingCounterparty}
+            isReadOnly={isReadOnly}
+            activeAction={activeAction}
+            onDecision={onDecision}
+            onMessageDraftChange={onMessageDraftChange}
+            onCounterAmountChange={onCounterAmountChange}
+            onCounterNoteChange={onCounterNoteChange}
+            onSendMessage={onSendMessage}
+            onSendCounterOffer={onSendCounterOffer}
+            onToggleAction={onToggleAction}
+          />
+        </div>
+
+        {/* Back link */}
+        <div className="border-t border-slate-100 pt-3">
+          <Link
+            href={backHref}
+            className="app-button-secondary w-full justify-center text-sm"
+          >
+            Geri don
+          </Link>
+        </div>
+      </div>
+    </aside>
   );
 }
+
+// ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function OfferThreadDetailPage() {
   const router = useRouter();
@@ -619,6 +624,7 @@ export default function OfferThreadDetailPage() {
   const showToast = useToast();
   const { accessToken, isCarrierWorkspace, status } =
     useDashboardAccess("shared-business");
+
   const [thread, setThread] = useState<OfferThreadDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -629,6 +635,7 @@ export default function OfferThreadDetailPage() {
   const [isSendingCounterOffer, setIsSendingCounterOffer] = useState(false);
   const [isActingOffer, setIsActingOffer] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [activeAction, setActiveAction] = useState<ActiveAction>(null);
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
@@ -652,23 +659,18 @@ export default function OfferThreadDetailPage() {
         setErrorMessage(null);
         const response = await getOfferThread(offerId, accessToken);
 
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
 
         setThread(response);
 
         if (response.hasUnread) {
           void markOfferThreadAsRead(offerId, accessToken)
             .then(() => {
-              if (!isMounted) {
-                return;
-              }
-
-              setThread((currentThread) =>
-                currentThread
-                  ? { ...currentThread, hasUnread: false, unreadCount: 0 }
-                  : currentThread
+              if (!isMounted) return;
+              setThread((current) =>
+                current
+                  ? { ...current, hasUnread: false, unreadCount: 0 }
+                  : current
               );
             })
             .catch(() => {
@@ -676,21 +678,17 @@ export default function OfferThreadDetailPage() {
             });
         }
       } catch (error) {
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
 
         if (error instanceof ApiClientError && error.status === 401) {
           clearStoredAuth();
           router.replace("/login");
           return;
         }
-
         if (error instanceof ApiClientError && error.status === 403) {
           router.replace("/");
           return;
         }
-
         if (error instanceof ApiClientError && error.status === 404) {
           setErrorMessage("Bu konusma bulunamadi.");
           return;
@@ -702,9 +700,7 @@ export default function OfferThreadDetailPage() {
             : "Konusma yuklenirken beklenmeyen bir hata olustu."
         );
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -716,9 +712,7 @@ export default function OfferThreadDetailPage() {
   }, [accessToken, offerId, reloadKey, router, status]);
 
   const handleOfferDecision = async (action: "accept" | "reject") => {
-    if (!accessToken || !thread || isActingOffer) {
-      return;
-    }
+    if (!accessToken || !thread || isActingOffer) return;
 
     const confirmed = await confirm({
       title: action === "accept" ? "Teklifi kabul et" : "Teklifi reddet",
@@ -733,9 +727,7 @@ export default function OfferThreadDetailPage() {
       dismissableMask: action !== "reject",
     });
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     try {
       setIsActingOffer(true);
@@ -756,7 +748,7 @@ export default function OfferThreadDetailPage() {
         });
       }
 
-      setReloadKey((currentKey) => currentKey + 1);
+      setReloadKey((k) => k + 1);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
@@ -793,7 +785,7 @@ export default function OfferThreadDetailPage() {
         life: 3600,
         closable: true,
       });
-      setReloadKey((currentKey) => currentKey + 1);
+      setReloadKey((k) => k + 1);
     } finally {
       setIsActingOffer(false);
     }
@@ -801,10 +793,8 @@ export default function OfferThreadDetailPage() {
 
   const handleSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    if (!accessToken || !thread || isSendingMessage || !messageDraft.trim()) {
+    if (!accessToken || !thread || isSendingMessage || !messageDraft.trim())
       return;
-    }
 
     try {
       setIsSendingMessage(true);
@@ -814,7 +804,8 @@ export default function OfferThreadDetailPage() {
         accessToken
       );
       setMessageDraft("");
-      setReloadKey((currentKey) => currentKey + 1);
+      setActiveAction(null);
+      setReloadKey((k) => k + 1);
     } catch (error) {
       showToast({
         severity: "error",
@@ -831,15 +822,13 @@ export default function OfferThreadDetailPage() {
     }
   };
 
-  const handleSendCounterOffer = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSendCounterOffer = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
-
-    if (!accessToken || !thread || isSendingCounterOffer) {
-      return;
-    }
+    if (!accessToken || !thread || isSendingCounterOffer) return;
 
     const parsedAmount = Number(counterOfferAmount);
-
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       showToast({
         severity: "warn",
@@ -863,7 +852,8 @@ export default function OfferThreadDetailPage() {
       );
       setCounterOfferAmount("");
       setCounterOfferNote("");
-      setReloadKey((currentKey) => currentKey + 1);
+      setActiveAction(null);
+      setReloadKey((k) => k + 1);
     } catch (error) {
       showToast({
         severity: "error",
@@ -880,6 +870,10 @@ export default function OfferThreadDetailPage() {
     }
   };
 
+  const handleToggleAction = (action: "counterOffer" | "message") => {
+    setActiveAction((current) => (current === action ? null : action));
+  };
+
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
@@ -892,14 +886,21 @@ export default function OfferThreadDetailPage() {
   const canShowComposer = Boolean(thread?.canSendMessage);
   const canShowCounterOffer = Boolean(thread?.canSendCounterOffer);
   const isReadOnly = Boolean(thread) && !canShowComposer && !canShowCounterOffer;
+  const isAwaitingCounterparty = Boolean(
+    thread &&
+      !thread.isClosed &&
+      !thread.canAcceptOffer &&
+      !thread.canRejectOffer &&
+      (canShowComposer || canShowCounterOffer)
+  );
 
   return (
     <DashboardShell
       title="Teklif konusmasi"
       description={
         isCarrierWorkspace
-          ? "Teklif akisini, fiyat pazarligini ve operasyon kararlarini tek detay ekraninda yonet."
-          : "Teklif akisini, mesajlasmayi ve karar adimlarini tek detay ekraninda takip et."
+          ? "Teklif akisini ve fiyat pazarligini buradan yonet."
+          : "Teklif akisini ve karar adimlarini buradan takip et."
       }
       headerVariant="compact"
       motionPreset="operational"
@@ -914,59 +915,42 @@ export default function OfferThreadDetailPage() {
       ) : null}
 
       {!isLoading && !errorMessage && thread ? (
-        <OfferThreadDetailLayout
-          summary={
-            <OfferThreadContextSurface
+        <div
+          data-dashboard-primary
+          className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start"
+        >
+          {/* Right panel — appears first on mobile so users see context/actions immediately */}
+          <div className="xl:sticky xl:top-4 xl:col-start-2 xl:row-start-1">
+            <NegotiationSidePanel
               thread={thread}
               backHref={getBackHref(thread)}
               latestMessageAt={latestMessageAt}
+              isActingOffer={isActingOffer}
+              isSendingMessage={isSendingMessage}
+              isSendingCounterOffer={isSendingCounterOffer}
+              messageDraft={messageDraft}
+              counterOfferAmount={counterOfferAmount}
+              counterOfferNote={counterOfferNote}
+              isAwaitingCounterparty={isAwaitingCounterparty}
+              isReadOnly={isReadOnly}
+              activeAction={activeAction}
+              onDecision={(action) => {
+                void handleOfferDecision(action);
+              }}
+              onMessageDraftChange={setMessageDraft}
+              onCounterAmountChange={setCounterOfferAmount}
+              onCounterNoteChange={setCounterOfferNote}
+              onSendMessage={handleSendMessage}
+              onSendCounterOffer={handleSendCounterOffer}
+              onToggleAction={handleToggleAction}
             />
-          }
-          timeline={
-            <>
-              <OfferThreadMessagesSurface thread={thread} />
+          </div>
 
-              {canShowComposer ? (
-                <form onSubmit={handleSendMessage}>
-                  <OfferThreadComposerSurface
-                    messageDraft={messageDraft}
-                    onChange={setMessageDraft}
-                    isSendingMessage={isSendingMessage}
-                  />
-                </form>
-              ) : null}
-
-              {isReadOnly ? <OfferThreadReadOnlyNotice /> : null}
-            </>
-          }
-          actions={
-            thread.canAcceptOffer || thread.canRejectOffer || canShowCounterOffer ? (
-              <>
-              {thread.canAcceptOffer || thread.canRejectOffer ? (
-                <OfferThreadDecisionSurface
-                  thread={thread}
-                  isActingOffer={isActingOffer}
-                  onDecision={(action) => {
-                    void handleOfferDecision(action);
-                  }}
-                />
-              ) : null}
-
-              {canShowCounterOffer ? (
-                <form onSubmit={handleSendCounterOffer}>
-                  <OfferThreadCounterOfferSurface
-                    counterOfferAmount={counterOfferAmount}
-                    counterOfferNote={counterOfferNote}
-                    onAmountChange={setCounterOfferAmount}
-                    onNoteChange={setCounterOfferNote}
-                    isSendingCounterOffer={isSendingCounterOffer}
-                  />
-                </form>
-              ) : null}
-              </>
-            ) : null
-          }
-        />
+          {/* Left column — message feed */}
+          <div className="xl:col-start-1 xl:row-start-1">
+            <MessageFeed thread={thread} />
+          </div>
+        </div>
       ) : null}
     </DashboardShell>
   );
