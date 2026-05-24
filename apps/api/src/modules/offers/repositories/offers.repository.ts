@@ -4,6 +4,7 @@ import {
   type PublicEntityId,
   publicEntityWhere,
 } from "../../../common/public-ids/public-entity-id";
+import { findDurumIdByTypeAndNameWithLegacyFallback } from "../../../common/utils/durum-lookup";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
 const OPEN_REQUEST_STATUS = {
@@ -252,26 +253,11 @@ export class OffersRepository {
     durumTuru: string,
     durumAdi: string
   ): Promise<number | null> {
-    const status = await this.prisma.client.durum.findFirst({
-      where: {
-        durumTuru: {
-          equals: durumTuru,
-          mode: Prisma.QueryMode.insensitive,
-        },
-        durumAdi: {
-          equals: durumAdi,
-          mode: Prisma.QueryMode.insensitive,
-        },
-      },
-      orderBy: {
-        id: "asc",
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    return status?.id ?? null;
+    return findDurumIdByTypeAndNameWithLegacyFallback(
+      this.prisma.client,
+      durumTuru,
+      durumAdi
+    );
   }
 
   // Repository tarafinda yalnizca temel discovery havuzu cekilir; rota sapma

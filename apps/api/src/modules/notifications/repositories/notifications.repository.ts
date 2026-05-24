@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { BildirimTipi, Prisma } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 import {
   type PublicEntityId,
@@ -25,7 +25,7 @@ type StoredNotificationQuery = Prisma.BildirimGetPayload<{
 
 export type CreateNotificationRecordInput = {
   kullaniciId: number;
-  tip: string;
+  tip: BildirimTipi;
   baslik: string;
   mesaj: string;
   hedefUrl?: string | null;
@@ -35,7 +35,7 @@ export type CreateNotificationRecordInput = {
 export type StoredNotificationRecord = {
   id: number;
   publicId: string;
-  tip: string;
+  tip: BildirimTipi;
   baslik: string;
   mesaj: string;
   hedefUrl: string | null;

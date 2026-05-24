@@ -18,9 +18,9 @@ git commit -m "Update route distance response and repository fixes"
 git pull --rebase origin main
 git push origin main
 
-
+sadece commit:
 git add .
-git commit -m "feat: migrate public ids to uuid and stabilize delivery flows"
+git commit -m "asdasdasd"
 
 
 prisma güncelleme:

@@ -1,3 +1,4 @@
+import { BildirimTipi } from "@prisma/client";
 import { Injectable, Logger } from "@nestjs/common";
 import { NotificationsRepository } from "./repositories/notifications.repository";
 
@@ -230,7 +231,7 @@ export class NotificationsPublisher {
   private async publish(input: {
     kullaniciId: number;
     actorUserId?: number;
-    tip: string;
+    tip: BildirimTipi;
     baslik: string;
     mesaj: string;
     hedefUrl: string | null;

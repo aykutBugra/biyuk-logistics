@@ -10,12 +10,14 @@ datasource db {
 
 model Durum {
   id         Int      @id @default(autoincrement())
-  durumTuru  String   @db.VarChar(50) 
+  durumTuru  String   @db.VarChar(50)
   durumAdi   String   @db.VarChar(100)
-  
+
   istekler   Istek[]
   teklifler  Teklif[]
   nakliyeler Nakliye[]
+
+  @@unique([durumTuru, durumAdi])
 }
 
 model Rol {
@@ -77,8 +79,10 @@ model AracKutuphanesi {
   id      Int    @id @default(autoincrement())
   marka   String @db.VarChar(100)
   model   String @db.VarChar(100)
-  
+
   gercekAraclar Arac[]
+
+  @@unique([marka, model])
 }
 
 
@@ -143,6 +147,7 @@ model CarrierRoute {
   rotaMesafeMetre         Int?
   rotaSureSaniye          Int?
   planlananTarih          String    @db.VarChar(10)
+  planlananTarihGun       DateTime? @db.Date
   maksimumSapmaKm         Decimal?  @db.Decimal(10, 2)
   olusturmaTarihi         DateTime  @default(now())
   guncellemeTarihi        DateTime  @updatedAt
@@ -184,6 +189,7 @@ model Istek {
   hacimM3                   Decimal?
   yukTipi                   String    @default("GENEL") @db.VarChar(50)
   tasimaTarihi              String?   @db.VarChar(10)
+  tasimaTarihiGun           DateTime? @db.Date
   yukDetay                  String    @db.VarChar(500)
   olusturmaTarihi           DateTime  @default(now())
   silmeTarihi               DateTime?
@@ -195,6 +201,29 @@ model Istek {
   nakliye                   Nakliye?
   capacityReservations      VehicleCapacityReservation[]
   gorseller                 IstekGorsel[]
+  konumlar                  IstekKonum[]
+}
+
+enum KonumYonu {
+  BASLANGIC
+  VARIS
+}
+
+model IstekKonum {
+  id         Int       @id @default(autoincrement())
+  istekId    Int
+  yon        KonumYonu
+  provider   String?   @db.VarChar(50)
+  placeId    String?   @db.VarChar(255)
+  konumMetni String?   @db.VarChar(255)
+  sehir      String    @db.VarChar(100)
+  ilce       String?   @db.VarChar(100)
+  enlem      Decimal   @db.Decimal(9, 6)
+  boylam     Decimal   @db.Decimal(9, 6)
+  istek      Istek     @relation(fields: [istekId], references: [id], onDelete: Cascade)
+
+  @@unique([istekId, yon])
+  @@index([sehir])
 }
 
 model IstekGorsel {
@@ -346,9 +375,9 @@ model VehicleCapacityReservation {
 
 model PuanTanimlari {
   id            Int        @id @default(autoincrement())
-  puanlamaTuru  String     @db.VarChar(100) // "Sayısal", "Sözel" vb.
+  puanlamaTuru  String     @unique @db.VarChar(100)
   aciklama      String?    @db.VarChar(200)
-  
+
   puanlar       Puanlama[]
 }
 
@@ -380,12 +409,25 @@ model Puanlama {
   @@index([puanlananId])
 }
 
+enum BildirimTipi {
+  TEKLIF_GELDI
+  TEKLIF_KABUL_EDILDI
+  TEKLIF_REDDEDILDI
+  MESAJ_GELDI
+  KARSI_TEKLIF_GELDI
+  IS_BASLADI
+  IS_TAMAMLANDI
+  TESLIM_ONAYI_BEKLIYOR
+  RATING_ALDIN
+  RATING_BEKLIYOR
+}
+
 model Bildirim {
-  id              Int       @id @default(autoincrement())
-  publicId        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id              Int           @id @default(autoincrement())
+  publicId        String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   kullaniciId     Int
-  kullanici       Kullanici @relation(fields: [kullaniciId], references: [id])
-  tip             String    @db.VarChar(100)
+  kullanici       Kullanici     @relation(fields: [kullaniciId], references: [id])
+  tip             BildirimTipi
   baslik          String    @db.VarChar(150)
   mesaj           String    @db.VarChar(300)
   hedefUrl        String?   @db.VarChar(255)

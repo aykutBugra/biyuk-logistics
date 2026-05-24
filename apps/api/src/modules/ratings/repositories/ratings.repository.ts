@@ -152,7 +152,21 @@ export class RatingsRepository {
 
   //Puanlama tanim tablosundan SAYISAL_1_5 gibi scheme id'sini bulur.
   async findRatingTypeIdByType(type: string): Promise<number | null> {
-    const ratingType = await this.prisma.client.puanTanimlari.findFirst({
+    const normalizedType = type.trim();
+    const ratingType = await this.prisma.client.puanTanimlari.findUnique({
+      where: {
+        puanlamaTuru: normalizedType,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (ratingType) {
+      return ratingType.id;
+    }
+
+    const legacyRatingType = await this.prisma.client.puanTanimlari.findFirst({
       where: {
         puanlamaTuru: {
           equals: type,
@@ -167,7 +181,7 @@ export class RatingsRepository {
       },
     });
 
-    return ratingType?.id ?? null;
+    return legacyRatingType?.id ?? null;
   }
 
   async findRateableJobByIdAndParticipant(

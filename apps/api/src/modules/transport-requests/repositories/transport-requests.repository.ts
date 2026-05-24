@@ -4,6 +4,12 @@ import {
   type PublicEntityId,
   publicEntityWhere,
 } from "../../../common/public-ids/public-entity-id";
+import { findDurumIdByTypeAndNameWithLegacyFallback } from "../../../common/utils/durum-lookup";
+import {
+  buildIstekKonumUpsertsFromFlatFields,
+  mergeIstekFlatFieldsWithKonumlar,
+  parseDateOnlyToDbDate,
+} from "../../../common/utils/istek-konum-sync";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { StoredSubmittedRatingRecord } from "../../ratings/rating-context.helpers";
 
@@ -64,6 +70,18 @@ const transportRequestSelect = {
     },
     orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { id: "asc" }],
     select: transportRequestImageSelect,
+  },
+  konumlar: {
+    select: {
+      yon: true,
+      provider: true,
+      placeId: true,
+      konumMetni: true,
+      sehir: true,
+      ilce: true,
+      enlem: true,
+      boylam: true,
+    },
   },
   nakliye: {
     select: {
@@ -255,23 +273,11 @@ export class TransportRequestsRepository {
     durumTuru: string,
     durumAdi: string
   ): Promise<number | null> {
-    const status = await this.prisma.client.durum.findFirst({
-      where: {
-        durumTuru: {
-          equals: durumTuru,
-          mode: Prisma.QueryMode.insensitive,
-        },
-        durumAdi: {
-          equals: durumAdi,
-          mode: Prisma.QueryMode.insensitive,
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    return status?.id ?? null;
+    return findDurumIdByTypeAndNameWithLegacyFallback(
+      this.prisma.client,
+      durumTuru,
+      durumAdi
+    );
   }
 
   async create(
@@ -281,32 +287,12 @@ export class TransportRequestsRepository {
     //cevrilir; service katmani number ile calismaya devam eder.
     const transportRequest = await this.prisma.client.istek.create({
       data: {
+        ...this.buildIstekFlatWriteData(input),
         musteriId: input.musteriId,
-        baslangicSehri: input.baslangicSehri,
-        varisSehri: input.varisSehri,
-        baslangicKonumMetni: input.baslangicKonumMetni,
-        varisKonumMetni: input.varisKonumMetni,
-        baslangicProvider: input.baslangicProvider,
-        varisProvider: input.varisProvider,
-        baslangicPlaceId: input.baslangicPlaceId,
-        varisPlaceId: input.varisPlaceId,
-        normalizeBaslangicSehir: input.normalizeBaslangicSehir,
-        normalizeVarisSehir: input.normalizeVarisSehir,
-        normalizeBaslangicIlce: input.normalizeBaslangicIlce,
-        normalizeVarisIlce: input.normalizeVarisIlce,
-        baslangicEnlem: new Prisma.Decimal(input.baslangicEnlem),
-        baslangicBoylam: new Prisma.Decimal(input.baslangicBoylam),
-        varisEnlem: new Prisma.Decimal(input.varisEnlem),
-        varisBoylam: new Prisma.Decimal(input.varisBoylam),
-        rotaMesafeMetre: input.rotaMesafeMetre,
-        rotaSureSaniye: input.rotaSureSaniye,
-        tekTasimaIstiyor: input.tekTasimaIstiyor,
-        agirlikKg: new Prisma.Decimal(input.agirlikKg),
-        hacimM3: new Prisma.Decimal(input.hacimM3),
-        yukTipi: input.yukTipi,
-        tasimaTarihi: input.tasimaTarihi,
-        yukDetay: input.yukDetay,
         durumId: input.durumId,
+        konumlar: {
+          create: buildIstekKonumUpsertsFromFlatFields(input),
+        },
       },
       select: transportRequestSelect,
     });
@@ -327,43 +313,33 @@ export class TransportRequestsRepository {
         musteriId,
         silmeTarihi: null,
       },
-      data: {
-        baslangicSehri: input.baslangicSehri,
-        varisSehri: input.varisSehri,
-        baslangicKonumMetni: input.baslangicKonumMetni,
-        varisKonumMetni: input.varisKonumMetni,
-        baslangicProvider: input.baslangicProvider,
-        varisProvider: input.varisProvider,
-        baslangicPlaceId: input.baslangicPlaceId,
-        varisPlaceId: input.varisPlaceId,
-        normalizeBaslangicSehir: input.normalizeBaslangicSehir,
-        normalizeVarisSehir: input.normalizeVarisSehir,
-        normalizeBaslangicIlce: input.normalizeBaslangicIlce,
-        normalizeVarisIlce: input.normalizeVarisIlce,
-        baslangicEnlem: new Prisma.Decimal(input.baslangicEnlem),
-        baslangicBoylam: new Prisma.Decimal(input.baslangicBoylam),
-        varisEnlem: new Prisma.Decimal(input.varisEnlem),
-        varisBoylam: new Prisma.Decimal(input.varisBoylam),
-        rotaMesafeMetre: input.rotaMesafeMetre,
-        rotaSureSaniye: input.rotaSureSaniye,
-        tekTasimaIstiyor: input.tekTasimaIstiyor,
-        agirlikKg: new Prisma.Decimal(input.agirlikKg),
-        hacimM3: new Prisma.Decimal(input.hacimM3),
-        yukTipi: input.yukTipi,
-        tasimaTarihi: input.tasimaTarihi,
-        yukDetay: input.yukDetay,
-      },
+      data: this.buildIstekFlatWriteData(input),
     });
 
     if (result.count === 0) {
       return null;
     }
 
-    const transportRequest = await this.prisma.client.istek.findFirst({
+    const existing = await this.prisma.client.istek.findFirst({
       where: {
         ...publicEntityWhere(id),
         musteriId,
         silmeTarihi: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    await this.syncKonumlarForIstek(existing.id, input);
+
+    const transportRequest = await this.prisma.client.istek.findFirst({
+      where: {
+        id: existing.id,
       },
       select: transportRequestSelect,
     });
@@ -571,6 +547,79 @@ export class TransportRequestsRepository {
     return typeof id === "number" ? { id } : publicEntityWhere(id);
   }
 
+  private buildIstekFlatWriteData(
+    input: CreateTransportRequestRecordInput | UpdateTransportRequestRecordInput
+  ) {
+    const canonicalBaslangic =
+      input.normalizeBaslangicSehir?.trim() || input.baslangicSehri.trim();
+    const canonicalVaris =
+      input.normalizeVarisSehir?.trim() || input.varisSehri.trim();
+
+    return {
+      baslangicSehri: canonicalBaslangic,
+      varisSehri: canonicalVaris,
+      baslangicKonumMetni: input.baslangicKonumMetni,
+      varisKonumMetni: input.varisKonumMetni,
+      baslangicProvider: input.baslangicProvider,
+      varisProvider: input.varisProvider,
+      baslangicPlaceId: input.baslangicPlaceId,
+      varisPlaceId: input.varisPlaceId,
+      normalizeBaslangicSehir: canonicalBaslangic,
+      normalizeVarisSehir: canonicalVaris,
+      normalizeBaslangicIlce: input.normalizeBaslangicIlce,
+      normalizeVarisIlce: input.normalizeVarisIlce,
+      baslangicEnlem: new Prisma.Decimal(input.baslangicEnlem),
+      baslangicBoylam: new Prisma.Decimal(input.baslangicBoylam),
+      varisEnlem: new Prisma.Decimal(input.varisEnlem),
+      varisBoylam: new Prisma.Decimal(input.varisBoylam),
+      rotaMesafeMetre: input.rotaMesafeMetre,
+      rotaSureSaniye: input.rotaSureSaniye,
+      tekTasimaIstiyor: input.tekTasimaIstiyor,
+      agirlikKg: new Prisma.Decimal(input.agirlikKg),
+      hacimM3: new Prisma.Decimal(input.hacimM3),
+      yukTipi: input.yukTipi,
+      tasimaTarihi: input.tasimaTarihi,
+      tasimaTarihiGun: parseDateOnlyToDbDate(input.tasimaTarihi),
+      yukDetay: input.yukDetay,
+    };
+  }
+
+  private async syncKonumlarForIstek(
+    istekId: number,
+    input: CreateTransportRequestRecordInput | UpdateTransportRequestRecordInput
+  ): Promise<void> {
+    for (const konum of buildIstekKonumUpsertsFromFlatFields(input)) {
+      await this.prisma.client.istekKonum.upsert({
+        where: {
+          istekId_yon: {
+            istekId,
+            yon: konum.yon,
+          },
+        },
+        create: {
+          istekId,
+          yon: konum.yon,
+          provider: konum.provider,
+          placeId: konum.placeId,
+          konumMetni: konum.konumMetni,
+          sehir: konum.sehir,
+          ilce: konum.ilce,
+          enlem: konum.enlem,
+          boylam: konum.boylam,
+        },
+        update: {
+          provider: konum.provider,
+          placeId: konum.placeId,
+          konumMetni: konum.konumMetni,
+          sehir: konum.sehir,
+          ilce: konum.ilce,
+          enlem: konum.enlem,
+          boylam: konum.boylam,
+        },
+      });
+    }
+  }
+
   private mapStoredTransportRequest(
     transportRequest: StoredTransportRequestQuery
   ): StoredTransportRequestRecord {
@@ -580,26 +629,47 @@ export class TransportRequestsRepository {
       this.mapStoredTransportRequestImage(image)
     );
     const primaryImage = images.find((image) => image.isPrimary) ?? null;
+    const locationFields = mergeIstekFlatFieldsWithKonumlar(
+      {
+        baslangicSehri: transportRequest.baslangicSehri,
+        varisSehri: transportRequest.varisSehri,
+        baslangicKonumMetni: transportRequest.baslangicKonumMetni,
+        varisKonumMetni: transportRequest.varisKonumMetni,
+        baslangicProvider: transportRequest.baslangicProvider,
+        varisProvider: transportRequest.varisProvider,
+        baslangicPlaceId: transportRequest.baslangicPlaceId,
+        varisPlaceId: transportRequest.varisPlaceId,
+        normalizeBaslangicSehir: transportRequest.normalizeBaslangicSehir,
+        normalizeVarisSehir: transportRequest.normalizeVarisSehir,
+        normalizeBaslangicIlce: transportRequest.normalizeBaslangicIlce,
+        normalizeVarisIlce: transportRequest.normalizeVarisIlce,
+        baslangicEnlem: transportRequest.baslangicEnlem.toNumber(),
+        baslangicBoylam: transportRequest.baslangicBoylam.toNumber(),
+        varisEnlem: transportRequest.varisEnlem.toNumber(),
+        varisBoylam: transportRequest.varisBoylam.toNumber(),
+      },
+      transportRequest.konumlar
+    );
 
     return {
       id: transportRequest.id,
       publicId: transportRequest.publicId,
-      baslangicSehri: transportRequest.baslangicSehri,
-      varisSehri: transportRequest.varisSehri,
-      baslangicKonumMetni: transportRequest.baslangicKonumMetni,
-      varisKonumMetni: transportRequest.varisKonumMetni,
-      baslangicProvider: transportRequest.baslangicProvider,
-      varisProvider: transportRequest.varisProvider,
-      baslangicPlaceId: transportRequest.baslangicPlaceId,
-      varisPlaceId: transportRequest.varisPlaceId,
-      normalizeBaslangicSehir: transportRequest.normalizeBaslangicSehir,
-      normalizeVarisSehir: transportRequest.normalizeVarisSehir,
-      normalizeBaslangicIlce: transportRequest.normalizeBaslangicIlce,
-      normalizeVarisIlce: transportRequest.normalizeVarisIlce,
-      baslangicEnlem: transportRequest.baslangicEnlem.toNumber(),
-      baslangicBoylam: transportRequest.baslangicBoylam.toNumber(),
-      varisEnlem: transportRequest.varisEnlem.toNumber(),
-      varisBoylam: transportRequest.varisBoylam.toNumber(),
+      baslangicSehri: locationFields.baslangicSehri,
+      varisSehri: locationFields.varisSehri,
+      baslangicKonumMetni: locationFields.baslangicKonumMetni,
+      varisKonumMetni: locationFields.varisKonumMetni,
+      baslangicProvider: locationFields.baslangicProvider,
+      varisProvider: locationFields.varisProvider,
+      baslangicPlaceId: locationFields.baslangicPlaceId,
+      varisPlaceId: locationFields.varisPlaceId,
+      normalizeBaslangicSehir: locationFields.normalizeBaslangicSehir,
+      normalizeVarisSehir: locationFields.normalizeVarisSehir,
+      normalizeBaslangicIlce: locationFields.normalizeBaslangicIlce,
+      normalizeVarisIlce: locationFields.normalizeVarisIlce,
+      baslangicEnlem: locationFields.baslangicEnlem,
+      baslangicBoylam: locationFields.baslangicBoylam,
+      varisEnlem: locationFields.varisEnlem,
+      varisBoylam: locationFields.varisBoylam,
       rotaMesafeMetre: transportRequest.rotaMesafeMetre,
       rotaSureSaniye: transportRequest.rotaSureSaniye,
       tekTasimaIstiyor: transportRequest.tekTasimaIstiyor,

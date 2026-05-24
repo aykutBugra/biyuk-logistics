@@ -4,6 +4,7 @@ import {
   type PublicEntityId,
   publicEntityWhere,
 } from "../../../common/public-ids/public-entity-id";
+import { parseDateOnlyToDbDate } from "../../../common/utils/istek-konum-sync";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
 const carrierRouteSelect = {
@@ -100,19 +101,24 @@ export class CarrierRoutesRepository {
   async create(
     input: CreateCarrierRouteRecordInput
   ): Promise<StoredCarrierRouteRecord> {
+    const canonicalBaslangic =
+      input.normalizeBaslangicSehir?.trim() || input.baslangicSehri.trim();
+    const canonicalVaris =
+      input.normalizeVarisSehir?.trim() || input.varisSehri.trim();
+
     const carrierRoute = await this.prisma.client.carrierRoute.create({
       data: {
         nakliyeciId: input.nakliyeciId,
-        baslangicSehri: input.baslangicSehri,
-        varisSehri: input.varisSehri,
+        baslangicSehri: canonicalBaslangic,
+        varisSehri: canonicalVaris,
         baslangicKonumMetni: input.baslangicKonumMetni,
         varisKonumMetni: input.varisKonumMetni,
         baslangicProvider: input.baslangicProvider,
         varisProvider: input.varisProvider,
         baslangicPlaceId: input.baslangicPlaceId,
         varisPlaceId: input.varisPlaceId,
-        normalizeBaslangicSehir: input.normalizeBaslangicSehir,
-        normalizeVarisSehir: input.normalizeVarisSehir,
+        normalizeBaslangicSehir: canonicalBaslangic,
+        normalizeVarisSehir: canonicalVaris,
         normalizeBaslangicIlce: input.normalizeBaslangicIlce,
         normalizeVarisIlce: input.normalizeVarisIlce,
         baslangicEnlem: new Prisma.Decimal(input.baslangicEnlem),
@@ -122,6 +128,7 @@ export class CarrierRoutesRepository {
         rotaMesafeMetre: input.rotaMesafeMetre,
         rotaSureSaniye: input.rotaSureSaniye,
         planlananTarih: input.planlananTarih,
+        planlananTarihGun: parseDateOnlyToDbDate(input.planlananTarih),
         maksimumSapmaKm:
           input.maksimumSapmaKm === null
             ? null
@@ -173,6 +180,11 @@ export class CarrierRoutesRepository {
     nakliyeciId: number,
     input: UpdateCarrierRouteRecordInput
   ): Promise<StoredCarrierRouteRecord | null> {
+    const canonicalBaslangic =
+      input.normalizeBaslangicSehir?.trim() || input.baslangicSehri.trim();
+    const canonicalVaris =
+      input.normalizeVarisSehir?.trim() || input.varisSehri.trim();
+
     //Guncelleme sahiplik ve soft delete filtresiyle yapilir; sonuc tekrar okunup map edilir.
     const result = await this.prisma.client.carrierRoute.updateMany({
       where: {
@@ -181,16 +193,16 @@ export class CarrierRoutesRepository {
         silmeTarihi: null,
       },
       data: {
-        baslangicSehri: input.baslangicSehri,
-        varisSehri: input.varisSehri,
+        baslangicSehri: canonicalBaslangic,
+        varisSehri: canonicalVaris,
         baslangicKonumMetni: input.baslangicKonumMetni,
         varisKonumMetni: input.varisKonumMetni,
         baslangicProvider: input.baslangicProvider,
         varisProvider: input.varisProvider,
         baslangicPlaceId: input.baslangicPlaceId,
         varisPlaceId: input.varisPlaceId,
-        normalizeBaslangicSehir: input.normalizeBaslangicSehir,
-        normalizeVarisSehir: input.normalizeVarisSehir,
+        normalizeBaslangicSehir: canonicalBaslangic,
+        normalizeVarisSehir: canonicalVaris,
         normalizeBaslangicIlce: input.normalizeBaslangicIlce,
         normalizeVarisIlce: input.normalizeVarisIlce,
         baslangicEnlem: new Prisma.Decimal(input.baslangicEnlem),
@@ -200,6 +212,7 @@ export class CarrierRoutesRepository {
         rotaMesafeMetre: input.rotaMesafeMetre,
         rotaSureSaniye: input.rotaSureSaniye,
         planlananTarih: input.planlananTarih,
+        planlananTarihGun: parseDateOnlyToDbDate(input.planlananTarih),
         maksimumSapmaKm:
           input.maksimumSapmaKm === null
             ? null
