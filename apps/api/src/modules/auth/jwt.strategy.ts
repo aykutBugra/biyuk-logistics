@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
@@ -51,7 +52,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     //aktif kullanıcı yoksa istek red
     if (!user) {
-      throw new UnauthorizedException("Aktif kullanıcı bulunamadı.");
+      throw AppErrors.unauthorized(AppErrorCode.AUTH_USER_NOT_ACTIVE, "Aktif kullanıcı bulunamadı.");
     }
 
     //bu dönen değer request.user içine atanır ve uygulamanın geri 

@@ -4,7 +4,7 @@ import { ROLE_NAMES } from "../src/common/constants/role-names";
 import { MediaStorageService } from "../src/infrastructure/media/media-storage.service";
 import { PrismaService } from "../src/infrastructure/prisma/prisma.service";
 import { CarrierRoutesService } from "../src/modules/carrier-routes/carrier-routes.service";
-import { NotificationsPublisher } from "../src/modules/notifications/notifications.publisher";
+import { NOTIFICATION_PUBLISHER } from "../src/modules/notifications/notification-publisher.token";
 import { OfferThreadsService } from "../src/modules/offer-threads/offer-threads.service";
 import { OffersService } from "../src/modules/offers/offers.service";
 import { OpenRequestRouteAwareEvaluator } from "../src/modules/offers/open-request-route-aware-evaluator.service";
@@ -88,7 +88,7 @@ describe("OffersService.create planned dates", () => {
           useValue: offersRepositoryMock,
         },
         {
-          provide: NotificationsPublisher,
+          provide: NOTIFICATION_PUBLISHER,
           useValue: notificationsPublisherMock,
         },
         {

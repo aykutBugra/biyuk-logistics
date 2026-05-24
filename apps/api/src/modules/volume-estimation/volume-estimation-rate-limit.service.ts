@@ -1,4 +1,5 @@
-import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { ConfigService } from "@nestjs/config";
 
 @Injectable()
@@ -37,16 +38,16 @@ export class VolumeEstimationRateLimitService {
     ).length;
 
     if (shortWindowRequestCount >= shortWindowLimit) {
-      throw new HttpException(
-        `Hacim tahmini icin kisa sureli limit asildi. Lutfen daha sonra tekrar dene.`,
-        HttpStatus.TOO_MANY_REQUESTS
+      throw AppErrors.tooManyRequests(
+        AppErrorCode.VOLUME_RATE_LIMIT,
+        `Hacim tahmini icin kisa sureli limit asildi. Lutfen daha sonra tekrar dene.`
       );
     }
 
     if (activeTimestamps.length >= dailyLimit) {
-      throw new HttpException(
-        `Gunluk hacim tahmini limitine ulasildi. Lutfen yarin tekrar dene.`,
-        HttpStatus.TOO_MANY_REQUESTS
+      throw AppErrors.tooManyRequests(
+        AppErrorCode.VOLUME_RATE_LIMIT,
+        `Gunluk hacim tahmini limitine ulasildi. Lutfen yarin tekrar dene.`
       );
     }
 

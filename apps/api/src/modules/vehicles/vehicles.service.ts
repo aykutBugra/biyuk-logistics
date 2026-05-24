@@ -1,10 +1,5 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
@@ -120,7 +115,7 @@ export class VehiclesService {
     const vehicle = await this.vehiclesRepository.findByIdAndOwnerId(id, currentUser.id);
 
     if (!vehicle) {
-      throw new NotFoundException("Vehicle not found.");
+      throw AppErrors.notFound(AppErrorCode.VEHICLE_NOT_FOUND, "Vehicle not found.");
     }
 
     const capacitySummaries =
@@ -147,7 +142,8 @@ export class VehiclesService {
       );
 
     if (hasActiveShipment) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.VEHICLE_CONFLICT,
         "Vehicle cannot be deleted while it is assigned to an active shipment."
       );
     }
@@ -158,7 +154,7 @@ export class VehiclesService {
     );
 
     if (!wasDeleted) {
-      throw new NotFoundException("Vehicle not found.");
+      throw AppErrors.notFound(AppErrorCode.VEHICLE_NOT_FOUND, "Vehicle not found.");
     }
   }
 
@@ -195,7 +191,7 @@ export class VehiclesService {
       );
 
       if (!updatedVehicle) {
-        throw new NotFoundException("Vehicle not found.");
+        throw AppErrors.notFound(AppErrorCode.VEHICLE_NOT_FOUND, "Vehicle not found.");
       }
 
       const capacitySummaries =
@@ -224,7 +220,7 @@ export class VehiclesService {
     this.assertCarrierRole(currentUser);
 
     if (!file) {
-      throw new BadRequestException("Arac fotografi secmelisin.");
+      throw AppErrors.badRequest(AppErrorCode.VEHICLE_PHOTO_REQUIRED, "Arac fotografi secmelisin.");
     }
 
     this.assertValidVehicleImageFile(file);
@@ -235,7 +231,7 @@ export class VehiclesService {
     );
 
     if (!existingVehicle) {
-      throw new NotFoundException("Vehicle not found.");
+      throw AppErrors.notFound(AppErrorCode.VEHICLE_NOT_FOUND, "Vehicle not found.");
     }
 
     const processedImage = await this.imageProcessingService.processVehicleImage(
@@ -258,7 +254,7 @@ export class VehiclesService {
         );
 
       if (!updatedVehicle) {
-        throw new NotFoundException("Vehicle not found.");
+        throw AppErrors.notFound(AppErrorCode.VEHICLE_NOT_FOUND, "Vehicle not found.");
       }
 
       if (existingVehicle.aracFotografiStorageKey) {
@@ -297,7 +293,7 @@ export class VehiclesService {
     );
 
     if (!existingVehicle) {
-      throw new NotFoundException("Vehicle not found.");
+      throw AppErrors.notFound(AppErrorCode.VEHICLE_NOT_FOUND, "Vehicle not found.");
     }
 
     if (!existingVehicle.aracFotografiStorageKey) {
@@ -322,7 +318,7 @@ export class VehiclesService {
       );
 
     if (!updatedVehicle) {
-      throw new NotFoundException("Vehicle not found.");
+      throw AppErrors.notFound(AppErrorCode.VEHICLE_NOT_FOUND, "Vehicle not found.");
     }
 
     await this.mediaStorageService.deleteFile(previousStorageKey);
@@ -345,7 +341,7 @@ export class VehiclesService {
       return;
     }
 
-    throw new ForbiddenException("Only carriers can manage vehicles.");
+    throw AppErrors.forbidden(AppErrorCode.VEHICLE_FORBIDDEN, "Only carriers can manage vehicles.");
   }
 
   private rethrowUniquePlateAsConflict(error: unknown): never | void {
@@ -359,10 +355,10 @@ export class VehiclesService {
       : [];
 
     if (isVehiclePlateUniqueConstraintTarget(targets)) {
-      throw new ConflictException("Vehicle plate is already in use.");
+      throw AppErrors.conflict(AppErrorCode.VEHICLE_CONFLICT, "Vehicle plate is already in use.");
     }
 
-    throw new ConflictException("Vehicle identifiers must be unique.");
+    throw AppErrors.conflict(AppErrorCode.VEHICLE_CONFLICT, "Vehicle identifiers must be unique.");
   }
 
   private toListItemResponse(
@@ -432,17 +428,18 @@ export class VehiclesService {
   private assertValidVehicleImageFile(file: Express.Multer.File): void {
     //Arac fotografi icin bos dosya, desteklenmeyen mimetype ve 5 MB ustu dosya engellenir.
     if (!file.buffer || file.buffer.length === 0) {
-      throw new BadRequestException("Dosya icerigi okunamadi.");
+      throw AppErrors.badRequest(AppErrorCode.VEHICLE_FILE_UNREADABLE, "Dosya icerigi okunamadi.");
     }
 
     if (!VEHICLE_IMAGE_ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.VEHICLE_FILE_INVALID,
         "Yalnizca JPEG, PNG veya WEBP gorseller yuklenebilir."
       );
     }
 
     if (file.size > MAX_VEHICLE_IMAGE_FILE_SIZE_BYTES) {
-      throw new BadRequestException("Gorsel boyutu en fazla 5 MB olabilir.");
+      throw AppErrors.badRequest(AppErrorCode.VEHICLE_FILE_TOO_LARGE, "Gorsel boyutu en fazla 5 MB olabilir.");
     }
   }
 

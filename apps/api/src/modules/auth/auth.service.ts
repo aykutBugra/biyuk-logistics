@@ -1,8 +1,5 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { Prisma } from "@prisma/client";
@@ -144,7 +141,7 @@ export class AuthService {
 
     //kullanıcı yoksa hata 
     if (!user) {
-      throw new UnauthorizedException("Invalid credentials.");
+      throw AppErrors.unauthorized(AppErrorCode.AUTH_INVALID_CREDENTIALS, "Invalid credentials.");
     }
 
     //girilen şifreninin veritabanı ile karşılaştırması
@@ -152,7 +149,7 @@ export class AuthService {
 
     //şifre yanlışsa hata
     if (!isPasswordValid) {
-      throw new UnauthorizedException("Sifre hatali");
+      throw AppErrors.unauthorized(AppErrorCode.AUTH_INVALID_CREDENTIALS, "Sifre hatali");
     }
 
     //şifre doğruya ac ve ref token oluşturulur ve döndürülür.
@@ -170,12 +167,12 @@ export class AuthService {
         secret: this.refreshSecret,
       });
     } catch {
-      throw new UnauthorizedException("Invalid refresh token.");
+      throw AppErrors.unauthorized(AppErrorCode.AUTH_INVALID_REFRESH_TOKEN, "Invalid refresh token.");
     }
 
     //doğrulanan token'ın gerçekten bir ref token olduğunun kontrolü 
     if (payload.type !== "refresh") {
-      throw new UnauthorizedException("Invalid refresh token.");
+      throw AppErrors.unauthorized(AppErrorCode.AUTH_INVALID_REFRESH_TOKEN, "Invalid refresh token.");
     }
 
     //token payload'undaki kullanıcı id'si ile kullanıcı bulunur.
@@ -188,7 +185,7 @@ export class AuthService {
         : null;
 
     if (!user) {
-      throw new UnauthorizedException("Invalid refresh token.");
+      throw AppErrors.unauthorized(AppErrorCode.AUTH_INVALID_REFRESH_TOKEN, "Invalid refresh token.");
     }
 
     return this.createTokenPair(user);
@@ -205,16 +202,16 @@ export class AuthService {
 
     //aktif kişi bulunamazsa hata fırlatılır.
     if (!user) {
-      throw new UnauthorizedException("Aktif kullanıcı bulunamadı.");
+      throw AppErrors.unauthorized(AppErrorCode.AUTH_USER_NOT_ACTIVE, "Aktif kullanıcı bulunamadı.");
     }
 
     //zaten nakliyeciyse hata fırlatılır . 
     if (user.roles.includes(ROLE_NAMES.NAKLIYECI)) {
-      throw new ConflictException("Kişi zaten nakliyeci rolüne sahip.");
+      throw AppErrors.conflict(AppErrorCode.AUTH_ROLE_CONFLICT, "Kişi zaten nakliyeci rolüne sahip.");
     }
     //müşteri değilse hata fırlatılır çünkü sadece müşteriler nakliyeci olabilir.
     if (!user.roles.includes(ROLE_NAMES.MUSTERI)) {
-      throw new ConflictException("Müşteri değilse nakliyeci olamaz.");
+      throw AppErrors.conflict(AppErrorCode.AUTH_ROLE_CONFLICT, "Müşteri değilse nakliyeci olamaz.");
     }
 
     try {
@@ -251,7 +248,7 @@ export class AuthService {
 
     if (!user) {
       //bulunmazsa hata döner .
-      throw new UnauthorizedException("Aktif kullanıcı bulunamadı.");
+      throw AppErrors.unauthorized(AppErrorCode.AUTH_USER_NOT_ACTIVE, "Aktif kullanıcı bulunamadı.");
     }
 
     return user;
@@ -267,7 +264,7 @@ export class AuthService {
     const user = await this.usersService.dismissDashboardIntro(currentUser.id, role);
 
     if (!user) {
-      throw new UnauthorizedException("Aktif kullanıcı bulunamadı.");
+      throw AppErrors.unauthorized(AppErrorCode.AUTH_USER_NOT_ACTIVE, "Aktif kullanıcı bulunamadı.");
     }
 
     return user;
@@ -346,7 +343,10 @@ export class AuthService {
     const user = await this.usersService.findActiveById(userId);
 
     if (!user) {
-      throw new UnauthorizedException("Current user could not be resolved.");
+      throw AppErrors.unauthorized(
+        AppErrorCode.AUTH_CURRENT_USER_UNRESOLVED,
+        "Current user could not be resolved."
+      );
     }
 
     return this.createAuthResponse(user);
@@ -374,11 +374,11 @@ export class AuthService {
     ]);
 
     if (mailExists) {
-      throw new ConflictException("Mail zaten kullanımda.");
+      throw AppErrors.conflict(AppErrorCode.AUTH_EMAIL_IN_USE, "Mail zaten kullanımda.");
     }
 
     if (usernameExists) {
-      throw new ConflictException("Username zaten kullanımda.");
+      throw AppErrors.conflict(AppErrorCode.AUTH_USERNAME_IN_USE, "Username zaten kullanımda.");
     }
   }
 
@@ -436,18 +436,18 @@ export class AuthService {
       : [];
 
     if (targets.includes("mail")) {
-      throw new ConflictException("Mail zaten kullanımda.");
+      throw AppErrors.conflict(AppErrorCode.AUTH_EMAIL_IN_USE, "Mail zaten kullanımda.");
     }
 
     if (targets.includes("kullaniciAdi")) {
-      throw new ConflictException("Username zaten kullanımda.");
+      throw AppErrors.conflict(AppErrorCode.AUTH_USERNAME_IN_USE, "Username zaten kullanımda.");
     }
 
     if (isVehiclePlateUniqueConstraintTarget(targets)) {
-      throw new ConflictException("Plaka zaten kullanımda.");
+      throw AppErrors.conflict(AppErrorCode.AUTH_PLATE_IN_USE, "Plaka zaten kullanımda.");
     }
 
-    throw new ConflictException("Kullanıcı adı zaten kullanımda.");
+    throw AppErrors.conflict(AppErrorCode.AUTH_DISPLAY_NAME_IN_USE, "Kullanıcı adı zaten kullanımda.");
   }
 
 

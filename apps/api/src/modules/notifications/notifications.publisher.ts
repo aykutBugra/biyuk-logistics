@@ -1,16 +1,15 @@
 import { BildirimTipi } from "@prisma/client";
 import { Injectable, Logger } from "@nestjs/common";
+import type {
+  NotificationPublisherPort,
+  NotificationRouteContext,
+} from "./notification-publisher.port";
 import { NotificationsRepository } from "./repositories/notifications.repository";
-
-type RouteContext = {
-  baslangicSehri: string;
-  varisSehri: string;
-};
 
 //Publisher, is akisi servislerinin bildirim detaylarini bilmeden tek tip bildirim
 //kaydi olusturmasini saglar.
 @Injectable()
-export class NotificationsPublisher {
+export class NotificationsPublisher implements NotificationPublisherPort {
   private readonly logger = new Logger(NotificationsPublisher.name);
 
   constructor(
@@ -24,7 +23,7 @@ export class NotificationsPublisher {
     offerId: string;
     requestId: string;
     actorUserId?: number;
-    route: RouteContext;
+    route: NotificationRouteContext;
   }): Promise<void> {
     await this.publish({
       kullaniciId: input.customerId,
@@ -122,7 +121,7 @@ export class NotificationsPublisher {
     jobId: string;
     requestId: string;
     actorUserId?: number;
-    route: RouteContext;
+    route: NotificationRouteContext;
   }): Promise<void> {
     await this.publish({
       kullaniciId: input.customerId,
@@ -141,7 +140,7 @@ export class NotificationsPublisher {
     jobId: string;
     requestId: string;
     actorUserId?: number;
-    route: RouteContext;
+    route: NotificationRouteContext;
   }): Promise<void> {
     await this.publish({
       kullaniciId: input.customerId,
@@ -159,7 +158,7 @@ export class NotificationsPublisher {
     jobId: string;
     requestId: string;
     actorUserId?: number;
-    route: RouteContext;
+    route: NotificationRouteContext;
   }): Promise<void> {
     await this.publish({
       kullaniciId: input.customerId,
@@ -177,7 +176,7 @@ export class NotificationsPublisher {
     jobId: string;
     requestId: string;
     actorUserId?: number;
-    route: RouteContext;
+    route: NotificationRouteContext;
   }): Promise<void> {
     await this.publish({
       kullaniciId: input.carrierId,
@@ -264,7 +263,7 @@ export class NotificationsPublisher {
   }
 
   // Teklif ve nakliye bildirimlerinde rota bilgisini kısa bir başlık metnine indirger.
-  private formatRoute(route: RouteContext): string {
+  private formatRoute(route: NotificationRouteContext): string {
     return `${route.baslangicSehri} -> ${route.varisSehri}`;
   }
 }

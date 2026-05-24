@@ -1,9 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
@@ -96,7 +92,7 @@ export class CarrierRoutesService {
     );
 
     if (!carrierRoute) {
-      throw new NotFoundException("Carrier route not found.");
+      throw AppErrors.notFound(AppErrorCode.ROUTE_NOT_FOUND, "Carrier route not found.");
     }
 
     return this.toDetailResponse(carrierRoute);
@@ -115,7 +111,7 @@ export class CarrierRoutesService {
       await this.carrierRoutesRepository.findByIdAndCarrierId(id, currentUser.id);
 
     if (!existingCarrierRoute) {
-      throw new NotFoundException("Carrier route not found.");
+      throw AppErrors.notFound(AppErrorCode.ROUTE_NOT_FOUND, "Carrier route not found.");
     }
 
     const locationFields = this.shouldRecalculateRoute(
@@ -142,7 +138,7 @@ export class CarrierRoutesService {
     );
 
     if (!carrierRoute) {
-      throw new NotFoundException("Carrier route not found.");
+      throw AppErrors.notFound(AppErrorCode.ROUTE_NOT_FOUND, "Carrier route not found.");
     }
 
     return this.toDetailResponse(carrierRoute);
@@ -160,7 +156,7 @@ export class CarrierRoutesService {
     );
 
     if (!wasDeleted) {
-      throw new NotFoundException("Carrier route not found.");
+      throw AppErrors.notFound(AppErrorCode.ROUTE_NOT_FOUND, "Carrier route not found.");
     }
   }
 
@@ -169,7 +165,7 @@ export class CarrierRoutesService {
       return;
     }
 
-    throw new ForbiddenException("Only carriers can manage routes.");
+    throw AppErrors.forbidden(AppErrorCode.ROUTE_FORBIDDEN, "Only carriers can manage routes.");
   }
 
   // Liste kartlari icin yeterli olan ozet route alanlarini response'a map eder.
@@ -274,7 +270,8 @@ export class CarrierRoutesService {
       resolvedBaslangicKonum.provider.trim().toLowerCase() !==
       resolvedVarisKonum.provider.trim().toLowerCase()
     ) {
-      throw new InternalServerErrorException(
+      throw AppErrors.internal(
+        AppErrorCode.ROUTE_INTERNAL,
         "Carrier route locations must resolve with the same route provider."
       );
     }

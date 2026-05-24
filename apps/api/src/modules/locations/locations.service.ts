@@ -1,4 +1,5 @@
-import { Inject, Injectable, InternalServerErrorException } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { LOCATION_PROVIDER, ROUTE_ENGINE } from "./location.tokens";
 import type { LocationProvider } from "./location-provider.contract";
 import type {
@@ -58,6 +59,9 @@ export class LocationsService {
       return;
     }
 
-    throw new InternalServerErrorException("Requested location provider is not available.");
+    throw AppErrors.internal(
+      AppErrorCode.LOCATION_PROVIDER_UNAVAILABLE,
+      "Requested location provider is not available."
+    );
   }
 }

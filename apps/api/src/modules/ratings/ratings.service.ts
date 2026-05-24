@@ -1,13 +1,10 @@
-import {
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { Prisma } from "@prisma/client";
 import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
-import { NotificationsPublisher } from "../notifications/notifications.publisher";
+import type { NotificationPublisherPort } from "../notifications/notification-publisher.port";
+import { NOTIFICATION_PUBLISHER } from "../notifications/notification-publisher.token";
 import { CreateRatingDto } from "./dto/create-rating.dto";
 import { MyRatingSummaryResponseDto } from "./dto/my-rating-summary-response.dto";
 import { RatingListItemResponseDto } from "./dto/rating-list-item-response.dto";
@@ -31,7 +28,8 @@ const RATING_TYPE = "SAYISAL_1_5";
 export class RatingsService {
   constructor(
     private readonly ratingsRepository: RatingsRepository,
-    private readonly notificationsPublisher: NotificationsPublisher
+    @Inject(NOTIFICATION_PUBLISHER)
+    private readonly notificationsPublisher: NotificationPublisherPort
   ) {}
 
   async createForJob(
@@ -47,21 +45,24 @@ export class RatingsService {
     );
 
     if (!job) {
-      throw new NotFoundException("Shipment not found.");
+      throw AppErrors.notFound(AppErrorCode.RATING_SHIPMENT_NOT_FOUND, "Shipment not found.");
     }
 
     if (!this.isCompletedJob(job)) {
-      throw new ConflictException("Completed shipment rating is not available yet.");
+      throw AppErrors.conflict(
+        AppErrorCode.RATING_NOT_AVAILABLE,
+        "Completed shipment rating is not available yet."
+      );
     }
 
     const ratedUserId = this.resolveRatedUserId(job, currentUser.id);
 
     if (ratedUserId === null) {
-      throw new NotFoundException("Shipment not found.");
+      throw AppErrors.notFound(AppErrorCode.RATING_SHIPMENT_NOT_FOUND, "Shipment not found.");
     }
 
     if (ratedUserId === currentUser.id) {
-      throw new ConflictException("Self rating is not allowed.");
+      throw AppErrors.conflict(AppErrorCode.RATING_SELF_NOT_ALLOWED, "Self rating is not allowed.");
     }
 
     const existingRating = job.ratings.find(
@@ -70,7 +71,10 @@ export class RatingsService {
     );
 
     if (existingRating) {
-      throw new ConflictException("You have already rated this completed shipment.");
+      throw AppErrors.conflict(
+        AppErrorCode.RATING_ALREADY_EXISTS,
+        "You have already rated this completed shipment."
+      );
     }
 
     //Puanlama tipi seed/config olarak DB'de bulunmali; yoksa sistem hatasi kabul edilir.
@@ -100,7 +104,10 @@ export class RatingsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        throw new ConflictException("You have already rated this completed shipment.");
+        throw AppErrors.conflict(
+        AppErrorCode.RATING_ALREADY_EXISTS,
+        "You have already rated this completed shipment."
+      );
       }
 
       throw error;
@@ -136,7 +143,8 @@ export class RatingsService {
       return ratingTypeId;
     }
 
-    throw new InternalServerErrorException(
+    throw AppErrors.internal(
+      AppErrorCode.RATING_INTERNAL,
       `Rating scheme is not configured: ${RATING_TYPE}.`
     );
   }

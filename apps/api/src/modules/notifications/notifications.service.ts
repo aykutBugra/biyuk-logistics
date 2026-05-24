@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { MarkAllNotificationsAsReadResponseDto } from "./dto/mark-all-notifications-as-read-response.dto";
@@ -53,7 +54,7 @@ export class NotificationsService {
     );
 
     if (!notification) {
-      throw new NotFoundException("Notification not found.");
+      throw AppErrors.notFound(AppErrorCode.NOTIFICATION_NOT_FOUND, "Notification not found.");
     }
 
     return this.toNotificationListItemResponse(notification);

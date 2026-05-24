@@ -6,6 +6,7 @@ import { mkdirSync } from "node:fs";
 import * as classTransformer from "class-transformer";
 import * as classValidator from "class-validator";
 import { AppModule } from "./app.module";
+import { GlobalAppExceptionFilter } from "./common/errors";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -20,6 +21,7 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix("api/v1");
+  app.useGlobalFilters(new GlobalAppExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

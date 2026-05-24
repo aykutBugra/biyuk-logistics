@@ -1,7 +1,8 @@
 import { Test } from "@nestjs/testing";
 import { ROLE_NAMES } from "../src/common/constants/role-names";
 import { PrismaService } from "../src/infrastructure/prisma/prisma.service";
-import { NotificationsPublisher } from "../src/modules/notifications/notifications.publisher";
+import { NOTIFICATION_PUBLISHER } from "../src/modules/notifications/notification-publisher.token";
+import { OfferThreadMediaService } from "../src/modules/offer-threads/offer-thread-media.service";
 import { OfferThreadsService } from "../src/modules/offer-threads/offer-threads.service";
 import { OfferThreadsRepository } from "../src/modules/offer-threads/repositories/offer-threads.repository";
 
@@ -95,12 +96,18 @@ describe("OfferThreadsService role context", () => {
           useValue: offerThreadsRepositoryMock,
         },
         {
-          provide: NotificationsPublisher,
+          provide: NOTIFICATION_PUBLISHER,
           useValue: {},
         },
         {
           provide: PrismaService,
           useValue: { client: {} },
+        },
+        {
+          provide: OfferThreadMediaService,
+          useValue: {
+            toOptionalPublicUrl: jest.fn(),
+          },
         },
       ],
     }).compile();

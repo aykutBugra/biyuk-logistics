@@ -1,10 +1,5 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../errors";
 import { Reflector } from "@nestjs/core";
 import type { RoleName } from "../constants/role-names";
 import { ROLES_KEY } from "../decorators/roles.decorator";
@@ -28,7 +23,7 @@ export class RolesGuard implements CanActivate {
     const currentUser = request.user;
 
     if (!currentUser) {
-      throw new UnauthorizedException("Authentication is required.");
+      throw AppErrors.unauthorized(AppErrorCode.UNAUTHORIZED, "Authentication is required.");
     }
 
     const hasRequiredRole = requiredRoles.some((role) =>
@@ -36,7 +31,7 @@ export class RolesGuard implements CanActivate {
     );
 
     if (!hasRequiredRole) {
-      throw new ForbiddenException("You do not have the required role.");
+      throw AppErrors.forbidden(AppErrorCode.FORBIDDEN, "You do not have the required role.");
     }
 
     return true;

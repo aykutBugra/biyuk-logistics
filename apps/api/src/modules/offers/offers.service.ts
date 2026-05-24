@@ -1,12 +1,5 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-  ServiceUnavailableException,
-} from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import { RequestImageResponseDto } from "../../common/dto/request-image-response.dto";
@@ -52,7 +45,8 @@ import {
   type StoredOfferRecord,
   OffersRepository,
 } from "./repositories/offers.repository";
-import { NotificationsPublisher } from "../notifications/notifications.publisher";
+import type { NotificationPublisherPort } from "../notifications/notification-publisher.port";
+import { NOTIFICATION_PUBLISHER } from "../notifications/notification-publisher.token";
 import { VehicleCapacityService } from "../vehicle-capacity/vehicle-capacity.service";
 
 //db yerine burada tanımlama sebebimiz bu durumları 
@@ -90,7 +84,8 @@ const INITIAL_SHIPMENT_STATUS = {
 export class OffersService {
   constructor(
     private readonly offersRepository: OffersRepository,
-    private readonly notificationsPublisher: NotificationsPublisher,
+    @Inject(NOTIFICATION_PUBLISHER)
+    private readonly notificationsPublisher: NotificationPublisherPort,
     private readonly carrierRoutesService: CarrierRoutesService,
     private readonly openRequestRouteAwareEvaluator: OpenRequestRouteAwareEvaluator,
     private readonly offerThreadsService: OfferThreadsService,
@@ -122,7 +117,8 @@ export class OffersService {
       selectedCarrierRoute &&
       !this.openRequestRouteAwareEvaluator.isCarrierRouteReady(selectedCarrierRoute)
     ) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.OFFER_CONFLICT,
         "Secili rota route filtre icin hazir degil."
       );
     }
@@ -148,7 +144,8 @@ export class OffersService {
         );
 
       if (this.hasUnavailableRouteService(routeEvaluations)) {
-        throw new ServiceUnavailableException(
+        throw AppErrors.serviceUnavailable(
+          AppErrorCode.OFFER_ROUTE_UNAVAILABLE,
           "Secili rota filtresi su anda uygulanamiyor."
         );
       }
@@ -189,7 +186,7 @@ export class OffersService {
     );
 
     if (!request) {
-      throw new NotFoundException("Transport request not found.");
+      throw AppErrors.notFound(AppErrorCode.OFFER_REQUEST_NOT_FOUND, "Transport request not found.");
     }
 
     const hasActiveVehicle = await this.offersRepository.carrierHasActiveVehicle(
@@ -206,7 +203,8 @@ export class OffersService {
 
     if (selectedCarrierRoute) {
       if (!this.openRequestRouteAwareEvaluator.isCarrierRouteReady(selectedCarrierRoute)) {
-        throw new ConflictException(
+        throw AppErrors.conflict(
+          AppErrorCode.OFFER_CONFLICT,
           "Secili rota route filtre icin hazir degil."
         );
       }
@@ -224,15 +222,18 @@ export class OffersService {
           routeCompatibility = routeEvaluation.compatibility;
           break;
         case "OUTSIDE_ROUTE_FILTER":
-          throw new NotFoundException(
+          throw AppErrors.notFound(
+            AppErrorCode.OFFER_REQUEST_NOT_FOUND,
             "Bu istek secili rota filtresine uymuyor."
           );
         case "UNAVAILABLE_DATA":
-          throw new ConflictException(
+          throw AppErrors.conflict(
+            AppErrorCode.OFFER_CONFLICT,
             "Bu istek secili rota filtresi icin degerlendirilemiyor."
           );
         case "UNAVAILABLE_ROUTE_SERVICE":
-          throw new ServiceUnavailableException(
+          throw AppErrors.serviceUnavailable(
+            AppErrorCode.OFFER_ROUTE_UNAVAILABLE,
             "Secili rota filtresi su anda uygulanamiyor."
           );
       }
@@ -257,11 +258,12 @@ export class OffersService {
     );
 
     if (!request || request.silmeTarihi) {
-      throw new NotFoundException("Transport request not found.");
+      throw AppErrors.notFound(AppErrorCode.OFFER_REQUEST_NOT_FOUND, "Transport request not found.");
     }
 
     if (request.musteriId === currentUser.id) {
-      throw new ForbiddenException(
+      throw AppErrors.forbidden(
+        AppErrorCode.OFFER_FORBIDDEN,
         "You cannot create an offer for your own transport request."
       );
     }
@@ -270,7 +272,8 @@ export class OffersService {
       request.hasNakliye ||
       !this.isRequestOpenForOffers(request.durumTuru, request.durumAdi)
     ) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.OFFER_CONFLICT,
         "This transport request is no longer open for offers."
       );
     }
@@ -281,7 +284,8 @@ export class OffersService {
     );
 
     if (!selectedVehicle) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.OFFER_CONFLICT,
         "The selected vehicle is not an active vehicle of the current carrier."
       );
     }
@@ -293,7 +297,8 @@ export class OffersService {
       );
 
     if (hasExistingOffer) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.OFFER_CONFLICT,
         "You have already created an open offer for this transport request."
       );
     }
@@ -387,7 +392,7 @@ export class OffersService {
       );
 
     if (!activeRequestId) {
-      throw new NotFoundException("Transport request not found.");
+      throw AppErrors.notFound(AppErrorCode.OFFER_REQUEST_NOT_FOUND, "Transport request not found.");
     }
 
     const offers = await this.offersRepository.findIncomingOffersByRequestId(
@@ -411,20 +416,22 @@ export class OffersService {
     const currentUserSide = offer.customerId === currentUser.id ? "customer" : "carrier";
 
     if (currentUserSide === lastPriceActorSide) {
-      throw new ForbiddenException(
+      throw AppErrors.forbidden(
+        AppErrorCode.OFFER_FORBIDDEN,
         "You cannot accept an offer whose last price was set by you."
       );
     }
 
     if (!this.isOfferOpen(offer.offerStatusTuru, offer.offerStatusAdi)) {
-      throw new ConflictException("Offer can no longer be accepted.");
+      throw AppErrors.conflict(AppErrorCode.OFFER_CANNOT_ACCEPT, "Offer can no longer be accepted.");
     }
 
     if (
       offer.hasShipment ||
       !this.isRequestOpenForOffers(offer.requestStatusTuru, offer.requestStatusAdi)
     ) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.OFFER_CONFLICT,
         "This transport request is no longer open for offer decisions."
       );
     }
@@ -434,7 +441,8 @@ export class OffersService {
       offer.aracDeletedAt !== null ||
       offer.aracOwnerId !== offer.carrierId
     ) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.OFFER_CONFLICT,
         "Accepted offer no longer has an active vehicle."
       );
     }
@@ -500,7 +508,10 @@ export class OffersService {
             tahminiTeslimTarihi: offer.tahminiTeslimTarihi,
           }),
           (reason) =>
-            new ConflictException(
+            AppErrors.conflict(
+              reason === "shipment_exists"
+                ? AppErrorCode.OFFER_CONFLICT
+                : AppErrorCode.OFFER_CANNOT_ACCEPT,
               reason === "shipment_exists"
                 ? "A shipment has already been created for this transport request."
                 : "Offer can no longer be accepted."
@@ -537,7 +548,8 @@ export class OffersService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        throw new ConflictException(
+        throw AppErrors.conflict(
+          AppErrorCode.OFFER_CONFLICT,
           "A shipment has already been created for this transport request."
         );
       }
@@ -579,20 +591,22 @@ export class OffersService {
     const currentUserSide = offer.customerId === currentUser.id ? "customer" : "carrier";
 
     if (currentUserSide === lastPriceActorSide) {
-      throw new ForbiddenException(
+      throw AppErrors.forbidden(
+        AppErrorCode.OFFER_FORBIDDEN,
         "You cannot reject an offer whose last price was set by you."
       );
     }
 
     if (!this.isOfferOpen(offer.offerStatusTuru, offer.offerStatusAdi)) {
-      throw new ConflictException("Offer can no longer be rejected.");
+      throw AppErrors.conflict(AppErrorCode.OFFER_CANNOT_REJECT, "Offer can no longer be rejected.");
     }
 
     if (
       offer.hasShipment ||
       !this.isRequestOpenForOffers(offer.requestStatusTuru, offer.requestStatusAdi)
     ) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.OFFER_CONFLICT,
         "This transport request is no longer open for offer decisions."
       );
     }
@@ -624,7 +638,7 @@ export class OffersService {
     });
 
     if (!wasRejected) {
-      throw new ConflictException("Offer can no longer be rejected.");
+      throw AppErrors.conflict(AppErrorCode.OFFER_CANNOT_REJECT, "Offer can no longer be rejected.");
     }
 
     await this.notificationsPublisher.publishOfferRejected({
@@ -646,11 +660,12 @@ export class OffersService {
       offer.requestDeletedAt ||
       (offer.customerId !== currentUser.id && offer.carrierId !== currentUser.id)
     ) {
-      throw new NotFoundException("Offer not found.");
+      throw AppErrors.notFound(AppErrorCode.OFFER_NOT_FOUND, "Offer not found.");
     }
 
     if (offer.customerId === offer.carrierId) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.OFFER_CONFLICT,
         "Offer decisions are blocked because the transport request owner and offer carrier resolve to the same user."
       );
     }
@@ -673,7 +688,8 @@ export class OffersService {
         ? parseDateOnlyToUtcDate(createOfferDto.tahminiTeslimTarihi)
         : null;
     } catch {
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.OFFER_VALIDATION,
         "Planlanan alim ve tahmini teslim tarihleri YYYY-MM-DD formatinda olmalidir."
       );
     }
@@ -682,7 +698,8 @@ export class OffersService {
       tahminiTeslimTarihi &&
       tahminiTeslimTarihi.getTime() < planlananAlimTarihi.getTime()
     ) {
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.OFFER_VALIDATION,
         "Tahmini teslim tarihi planlanan alim tarihinden once olamaz."
       );
     }
@@ -707,7 +724,8 @@ export class OffersService {
       return statusId;
     }
 
-    throw new InternalServerErrorException(
+    throw AppErrors.internal(
+      AppErrorCode.OFFER_INTERNAL,
       `${label} is not configured: ${durumTuru}/${durumAdi}.`
     );
   }
@@ -731,7 +749,7 @@ export class OffersService {
       return;
     }
 
-    throw new ForbiddenException("Only carriers can manage offers.");
+    throw AppErrors.forbidden(AppErrorCode.OFFER_FORBIDDEN, "Only carriers can manage offers.");
   }
 
   private assertCustomerRole(currentUser: AuthenticatedUser) {
@@ -739,7 +757,10 @@ export class OffersService {
       return;
     }
 
-    throw new ForbiddenException("Only customers can access incoming offers.");
+    throw AppErrors.forbidden(
+      AppErrorCode.OFFER_FORBIDDEN,
+      "Only customers can access incoming offers."
+    );
   }
 
   private assertParticipantRole(currentUser: AuthenticatedUser) {
@@ -750,7 +771,10 @@ export class OffersService {
       return;
     }
 
-    throw new ForbiddenException("Only offer participants can perform this action.");
+    throw AppErrors.forbidden(
+      AppErrorCode.OFFER_FORBIDDEN,
+      "Only offer participants can perform this action."
+    );
   }
 
   private assertRouteFilterContext(
@@ -758,7 +782,8 @@ export class OffersService {
     maxSapmaKm: number | undefined
   ) {
     if (typeof maxSapmaKm === "number" && !this.hasPublicEntityIdValue(carrierRouteId)) {
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.OFFER_VALIDATION,
         "maxSapmaKm can only be used when carrierRouteId is provided."
       );
     }

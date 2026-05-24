@@ -1,22 +1,17 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  ForbiddenException,
-  InternalServerErrorException,
-  NotFoundException,
-  Optional,
-} from "@nestjs/common";
-import { randomUUID } from "node:crypto";
+import { Inject, Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { formatDateOnlyFromDate } from "../../common/utils/date-only";
-import { ImageProcessingService } from "../../infrastructure/media/image-processing.service";
-import { MediaStorageService } from "../../infrastructure/media/media-storage.service";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { NotificationsPublisher } from "../notifications/notifications.publisher";
+import {
+  MAX_THREAD_IMAGE_COUNT,
+  OfferThreadMediaService,
+} from "./offer-thread-media.service";
+import type { NotificationPublisherPort } from "../notifications/notification-publisher.port";
+import { NOTIFICATION_PUBLISHER } from "../notifications/notification-publisher.token";
 import { CreateCounterOfferDto } from "./dto/create-counter-offer.dto";
 import { CreateOfferThreadImageMessageDto } from "./dto/create-offer-thread-image-message.dto";
 import { CreateOfferThreadMessageDto } from "./dto/create-offer-thread-message.dto";
@@ -30,7 +25,6 @@ import { OfferThreadMessageResponseDto } from "./dto/offer-thread-message-respon
 import { OfferThreadSummaryResponseDto } from "./dto/offer-thread-summary-response.dto";
 import {
   type CreateOfferThreadInput,
-  type CreateOfferThreadImageMessageAttachmentInput,
   type OfferThreadDetailRecord,
   type OfferThreadIdentityRecord,
   type OfferThreadMessageRecord,
@@ -76,13 +70,6 @@ const COMPLETED_JOB_STATUS = {
   durumAdi: "TAMAMLANDI",
 } as const;
 
-const THREAD_IMAGE_ALLOWED_MIME_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
-const MAX_THREAD_IMAGE_COUNT = 4;
-
 const currencyFormatter = new Intl.NumberFormat("tr-TR", {
   style: "currency",
   currency: "TRY",
@@ -93,10 +80,10 @@ const currencyFormatter = new Intl.NumberFormat("tr-TR", {
 export class OfferThreadsService {
   constructor(
     private readonly offerThreadsRepository: OfferThreadsRepository,
-    private readonly notificationsPublisher: NotificationsPublisher,
+    @Inject(NOTIFICATION_PUBLISHER)
+    private readonly notificationsPublisher: NotificationPublisherPort,
     private readonly prisma: PrismaService,
-    @Optional() private readonly imageProcessingService?: ImageProcessingService,
-    @Optional() private readonly mediaStorageService?: MediaStorageService
+    private readonly offerThreadMediaService: OfferThreadMediaService
   ) {}
 
   // Kullanıcının dahil olduğu thread özetlerini toplar. Liste response'u son mesaj,
@@ -157,7 +144,7 @@ export class OfferThreadsService {
     );
 
     if (!record) {
-      throw new NotFoundException("Konusma bulunamadi.");
+      throw AppErrors.notFound(AppErrorCode.THREAD_NOT_FOUND, "Konusma bulunamadi.");
     }
 
     this.assertDistinctParticipants(record);
@@ -214,11 +201,15 @@ export class OfferThreadsService {
     const text = input.mesaj?.trim() ?? null;
 
     if (uploadedFiles.length === 0 && !text) {
-      throw new BadRequestException("Mesaj veya en az bir gorsel gondermelisin.");
+      throw AppErrors.badRequest(
+        AppErrorCode.THREAD_MESSAGE_REQUIRED,
+        "Mesaj veya en az bir gorsel gondermelisin."
+      );
     }
 
     if (uploadedFiles.length > MAX_THREAD_IMAGE_COUNT) {
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.THREAD_VALIDATION,
         `Bir mesajda en fazla ${MAX_THREAD_IMAGE_COUNT} gorsel gonderilebilir.`
       );
     }
@@ -228,51 +219,14 @@ export class OfferThreadsService {
       offerId
     );
 
-    const persistedStorageKeys: string[] = [];
-    const preparedAttachments: CreateOfferThreadImageMessageAttachmentInput[] = [];
+    let persistedStorageKeys: string[] = [];
 
     try {
-      const mediaStorageService = this.requireMediaStorageService();
-
-      for (const [index, file] of uploadedFiles.entries()) {
-        this.assertValidThreadImageFile(file);
-
-        if (!file.buffer || file.buffer.length === 0) {
-          throw new BadRequestException("Dosya icerigi okunamadi.");
-        }
-
-        const processedImage = await this.requireImageProcessingService().processRequestImage(
-          file.buffer
-        );
-        const imageId = randomUUID();
-        const storageKey = `offer-thread-images/${writableContext.offerPublicId}/${imageId}.webp`;
-        const thumbnailStorageKey = `offer-thread-images/${writableContext.offerPublicId}/${imageId}-thumb.webp`;
-
-        await mediaStorageService.saveFile({
-          storageKey,
-          buffer: processedImage.detail.buffer,
-          contentType: processedImage.detail.mimeType,
-        });
-        persistedStorageKeys.push(storageKey);
-
-        await mediaStorageService.saveFile({
-          storageKey: thumbnailStorageKey,
-          buffer: processedImage.thumbnail.buffer,
-          contentType: processedImage.thumbnail.mimeType,
-        });
-        persistedStorageKeys.push(thumbnailStorageKey);
-
-        preparedAttachments.push({
-          storageKey,
-          thumbnailStorageKey,
-          mimeType: processedImage.detail.mimeType,
-          sizeBytes: file.size,
-          width: processedImage.detail.width,
-          height: processedImage.detail.height,
-          sortOrder: index,
-          originalFileName: file.originalname,
-        });
-      }
+      const prepared = await this.offerThreadMediaService.prepareImageAttachments(
+        uploadedFiles,
+        writableContext.offerPublicId
+      );
+      persistedStorageKeys = prepared.persistedStorageKeys;
 
       const { context, message, recipientUserId } =
         await this.writeMessageInTransaction(currentUser.id, offerId, async (tx, writable) => {
@@ -283,7 +237,7 @@ export class OfferThreadsService {
               senderUserId: currentUser.id,
               senderSide,
               text,
-              attachments: preparedAttachments,
+              attachments: prepared.attachments,
             },
             tx
           );
@@ -304,12 +258,7 @@ export class OfferThreadsService {
 
       return this.toMessageResponse(message, currentUser.id);
     } catch (error) {
-      const mediaStorageService = this.requireMediaStorageService();
-      await Promise.allSettled(
-        persistedStorageKeys.map((storageKey) =>
-          mediaStorageService.deleteFile(storageKey)
-        )
-      );
+      await this.offerThreadMediaService.rollbackStorageKeys(persistedStorageKeys);
       throw error;
     }
   }
@@ -369,7 +318,7 @@ export class OfferThreadsService {
     );
 
     if (!record) {
-      throw new NotFoundException("Konusma bulunamadi.");
+      throw AppErrors.notFound(AppErrorCode.THREAD_NOT_FOUND, "Konusma bulunamadi.");
     }
 
     this.assertDistinctParticipants(record);
@@ -401,7 +350,8 @@ export class OfferThreadsService {
     executor?: Prisma.TransactionClient
   ): Promise<void> {
     if (input.customerId === input.carrierId) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.THREAD_CONFLICT,
         "Offer thread creation is blocked because the customer and carrier resolve to the same user."
       );
     }
@@ -486,7 +436,8 @@ export class OfferThreadsService {
     executor?: Prisma.TransactionClient
   ): Promise<void> {
     if (systemEventCode === "DELIVERY_CONFIRMED") {
-      throw new InternalServerErrorException(
+      throw AppErrors.internal(
+        AppErrorCode.THREAD_INTERNAL,
         "Delivery confirmation must close the winning thread via appendDeliveryConfirmedAndCloseByRequestId."
       );
     }
@@ -671,10 +622,8 @@ export class OfferThreadsService {
       isMine: message.senderUserId === currentUserId,
       attachments: message.attachments.map((attachment) => ({
         id: attachment.publicId,
-        url: this.requireMediaStorageService().toPublicUrl(attachment.storageKey),
-        thumbnailUrl: this.requireMediaStorageService().toPublicUrl(
-          attachment.thumbnailStorageKey
-        ),
+        url: this.offerThreadMediaService.toPublicUrl(attachment.storageKey),
+        thumbnailUrl: this.offerThreadMediaService.toPublicUrl(attachment.thumbnailStorageKey),
         mimeType: attachment.mimeType,
         sizeBytes: attachment.sizeBytes,
         width: attachment.width,
@@ -688,9 +637,7 @@ export class OfferThreadsService {
   // Thread listesinde uzun message gövdesi yerine kısa bir satır göstermek için
   // message tipine göre özet metin üretir.
   private toOptionalPublicUrl(storageKey: string | null): string | undefined {
-    return storageKey && this.mediaStorageService
-      ? this.mediaStorageService.toPublicUrl(storageKey)
-      : undefined;
+    return this.offerThreadMediaService.toOptionalPublicUrl(storageKey);
   }
 
   private toLastMessageSummary(message: OfferThreadMessageRecord | null): string | null {
@@ -756,7 +703,7 @@ export class OfferThreadsService {
       );
 
     if (!context) {
-      throw new NotFoundException("Konusma bulunamadi.");
+      throw AppErrors.notFound(AppErrorCode.THREAD_NOT_FOUND, "Konusma bulunamadi.");
     }
 
     this.assertDistinctParticipants(context);
@@ -767,7 +714,7 @@ export class OfferThreadsService {
         : this.isMessageWritable(context);
 
     if (!isWritable) {
-      throw new ConflictException("Bu konusma yazmaya kapali.");
+      throw AppErrors.conflict(AppErrorCode.THREAD_CLOSED, "Bu konusma yazmaya kapali.");
     }
 
     return context;
@@ -824,7 +771,7 @@ export class OfferThreadsService {
     );
 
     if (!identity) {
-      throw new NotFoundException("Konusma bulunamadi.");
+      throw AppErrors.notFound(AppErrorCode.THREAD_NOT_FOUND, "Konusma bulunamadi.");
     }
 
     this.assertDistinctParticipants(identity);
@@ -845,7 +792,7 @@ export class OfferThreadsService {
       );
 
     if (!identity) {
-      throw new NotFoundException("Konusma bulunamadi.");
+      throw AppErrors.notFound(AppErrorCode.THREAD_NOT_FOUND, "Konusma bulunamadi.");
     }
 
     this.assertDistinctParticipants(identity);
@@ -868,7 +815,7 @@ export class OfferThreadsService {
       return "carrier";
     }
 
-    throw new NotFoundException("Konusma bulunamadi.");
+    throw AppErrors.notFound(AppErrorCode.THREAD_NOT_FOUND, "Konusma bulunamadi.");
   }
 
   private resolveRequestedSide(
@@ -883,7 +830,8 @@ export class OfferThreadsService {
       requestedSide === "customer" &&
       !currentUser.roles.includes(ROLE_NAMES.MUSTERI)
     ) {
-      throw new ForbiddenException(
+      throw AppErrors.forbidden(
+        AppErrorCode.THREAD_FORBIDDEN,
         "Customer thread context is not available for the current user."
       );
     }
@@ -892,7 +840,8 @@ export class OfferThreadsService {
       requestedSide === "carrier" &&
       !currentUser.roles.includes(ROLE_NAMES.NAKLIYECI)
     ) {
-      throw new ForbiddenException(
+      throw AppErrors.forbidden(
+        AppErrorCode.THREAD_FORBIDDEN,
         "Carrier thread context is not available for the current user."
       );
     }
@@ -925,7 +874,8 @@ export class OfferThreadsService {
       return;
     }
 
-    throw new ConflictException(
+    throw AppErrors.conflict(
+      AppErrorCode.THREAD_CONFLICT,
       "Offer thread actions are blocked because the customer and carrier resolve to the same user."
     );
   }
@@ -1038,27 +988,4 @@ export class OfferThreadsService {
     };
   }
 
-  private assertValidThreadImageFile(file: Express.Multer.File) {
-    if (!THREAD_IMAGE_ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      throw new BadRequestException(
-        "Yalnizca JPEG, PNG veya WEBP gorseller yuklenebilir."
-      );
-    }
-  }
-
-  private requireMediaStorageService(): MediaStorageService {
-    if (this.mediaStorageService) {
-      return this.mediaStorageService;
-    }
-
-    throw new InternalServerErrorException("Media storage service is not configured.");
-  }
-
-  private requireImageProcessingService(): ImageProcessingService {
-    if (this.imageProcessingService) {
-      return this.imageProcessingService;
-    }
-
-    throw new InternalServerErrorException("Image processing service is not configured.");
-  }
 }

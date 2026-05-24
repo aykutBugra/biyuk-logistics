@@ -1,9 +1,5 @@
-import {
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { Prisma } from "@prisma/client";
 import {
   BUSINESS_ROLE_VALUES,
@@ -51,7 +47,8 @@ export class RolesService {
     roleName: BusinessRoleName
   ): Promise<RoleResponseDto> {
     if (roleName === ROLE_NAMES.NAKLIYECI) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.ROLE_BUSINESS_ROLE_CONFLICT,
         "Nakliyeci rolu profil olusturma islemi sirasinda verilir."
       );
     }
@@ -59,13 +56,16 @@ export class RolesService {
     const user = await this.usersRepository.findActiveById(userId);
 
     if (!user) {
-      throw new NotFoundException("Mevcut kullanici bulunamadi.");
+      throw AppErrors.notFound(AppErrorCode.ROLE_USER_NOT_FOUND, "Mevcut kullanici bulunamadi.");
     }
 
     const currentRoles = this.normalizeRoleNames(user.roleNames);
 
     if (currentRoles.includes(roleName)) {
-      throw new ConflictException("Mevcut kullanici zaten bu is rolune sahip.");
+      throw AppErrors.conflict(
+        AppErrorCode.ROLE_ALREADY_ASSIGNED,
+        "Mevcut kullanici zaten bu is rolune sahip."
+      );
     }
 
     const roleId = await this.requireRoleId(roleName);
@@ -77,7 +77,10 @@ export class RolesService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        throw new ConflictException("Mevcut kullanici zaten bu is rolune sahip.");
+        throw AppErrors.conflict(
+        AppErrorCode.ROLE_ALREADY_ASSIGNED,
+        "Mevcut kullanici zaten bu is rolune sahip."
+      );
       }
 
       throw error;
@@ -105,7 +108,10 @@ export class RolesService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        throw new ConflictException("Mevcut kullanici zaten bu is rolune sahip.");
+        throw AppErrors.conflict(
+        AppErrorCode.ROLE_ALREADY_ASSIGNED,
+        "Mevcut kullanici zaten bu is rolune sahip."
+      );
       }
 
       throw error;
@@ -118,7 +124,8 @@ export class RolesService {
     const role = await this.rolesRepository.findByRoleName(roleName);
 
     if (!role) {
-      throw new InternalServerErrorException(
+      throw AppErrors.internal(
+        AppErrorCode.ROLE_UNSUPPORTED,
         `Kayit rolu yapilandirilmamis: ${roleName}.`
       );
     }
@@ -146,7 +153,7 @@ export class RolesService {
     );
 
     if (invalidRoleNames.length > 0) {
-      throw new InternalServerErrorException("Unsupported role configuration.");
+      throw AppErrors.internal(AppErrorCode.ROLE_UNSUPPORTED, "Unsupported role configuration.");
     }
 
 

@@ -1,8 +1,5 @@
-import {
-  BadRequestException,
-  Injectable,
-  PipeTransform,
-} from "@nestjs/common";
+import { Injectable, PipeTransform } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../errors";
 
 export type PublicEntityId =
   | {
@@ -52,7 +49,7 @@ export function parsePublicEntityId(
     };
   }
 
-  throw new BadRequestException("Invalid public entity id.");
+  throw AppErrors.badRequest(AppErrorCode.PUBLIC_ID_INVALID, "Invalid public entity id.");
 }
 
 export function publicEntityWhere(id: PublicEntityId): { id: number } | { publicId: string } {

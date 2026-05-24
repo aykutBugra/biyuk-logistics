@@ -2,7 +2,7 @@ import { ConflictException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { ROLE_NAMES } from "../src/common/constants/role-names";
 import { PrismaService } from "../src/infrastructure/prisma/prisma.service";
-import { NotificationsPublisher } from "../src/modules/notifications/notifications.publisher";
+import { NOTIFICATION_PUBLISHER } from "../src/modules/notifications/notification-publisher.token";
 import { JobsRepository } from "../src/modules/jobs/repositories/jobs.repository";
 import { JobsService } from "../src/modules/jobs/jobs.service";
 import { VehicleCapacityService } from "../src/modules/vehicle-capacity/vehicle-capacity.service";
@@ -56,7 +56,7 @@ describe("JobsService read context", () => {
           useValue: jobsRepositoryMock,
         },
         {
-          provide: NotificationsPublisher,
+          provide: NOTIFICATION_PUBLISHER,
           useValue: {},
         },
         {

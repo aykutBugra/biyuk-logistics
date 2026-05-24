@@ -1,12 +1,5 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-  Optional,
-} from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
@@ -14,7 +7,8 @@ import type { AuthenticatedUser } from "../../common/types/authenticated-user.ty
 import { formatDateOnlyFromDate } from "../../common/utils/date-only";
 import { unwrapTransactionResult } from "../../common/utils/unwrap-transaction-result";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { NotificationsPublisher } from "../notifications/notifications.publisher";
+import type { NotificationPublisherPort } from "../notifications/notification-publisher.port";
+import { NOTIFICATION_PUBLISHER } from "../notifications/notification-publisher.token";
 import { OfferThreadsService } from "../offer-threads/offer-threads.service";
 import { JobAudienceQueryDto, type JobAudience } from "./dto/job-audience-query.dto";
 import { JobDetailResponseDto } from "./dto/job-detail-response.dto";
@@ -74,7 +68,8 @@ export class JobsService {
     //3. VehicleCapacityService: Nakliye işlemi sırasında araç kapasitesi yönetimi yapmak için 
     //4. PrismaService: Veritabanı işlemlerini yönetmek için kullanılan Prisma ORM'nin servisidir
     private readonly jobsRepository: JobsRepository,
-    private readonly notificationsPublisher: NotificationsPublisher,
+    @Inject(NOTIFICATION_PUBLISHER)
+    private readonly notificationsPublisher: NotificationPublisherPort,
     @Optional()
     @Inject(OfferThreadsService)
     private readonly offerThreadsService: OfferThreadsService | undefined,
@@ -132,13 +127,13 @@ export class JobsService {
     const job = await this.jobsRepository.findByIdAndCarrierId(jobId, currentUser.id);
     //is yoksa bulunamadi don
     if (!job) {
-      throw new NotFoundException("Nakliye bulunamadı.");
+      throw AppErrors.notFound(AppErrorCode.JOB_NOT_FOUND, "Nakliye bulunamadı.");
     }
     //Bu kontrol, nakliyeci ve müşteri aynı kullanıcıysa lifecycle işlemini engeller.
     this.assertDistinctShipmentParticipants(job);
     //İş sadece şu durumdaysa başlatılabilir:NAKLIYE / OLUSTURULDU
     if (!this.isJobCreated(job.durumTuru, job.durumAdi)) {
-      throw new ConflictException("Nakliye artık başlatılamaz.");
+      throw AppErrors.conflict(AppErrorCode.JOB_CANNOT_START, "Nakliye artık başlatılamaz.");
     }
 
     //Burada iki durumun DB id değeri bulunuyor.
@@ -165,7 +160,7 @@ export class JobsService {
     );
 
     if (!wasStarted) {
-      throw new ConflictException("Nakliye artık başlatılamaz.");
+      throw AppErrors.conflict(AppErrorCode.JOB_CANNOT_START, "Nakliye artık başlatılamaz.");
     }
 
     //guncel is tekrar okunur 
@@ -175,7 +170,7 @@ export class JobsService {
     );
 
     if (!updatedJob) {
-      throw new NotFoundException("Nakliye bulunamadı.");
+      throw AppErrors.notFound(AppErrorCode.JOB_NOT_FOUND, "Nakliye bulunamadı.");
     }
 
     //ilgili taraflara bildirim gonderilir 
@@ -213,17 +208,23 @@ export class JobsService {
     const job = await this.jobsRepository.findByIdAndCarrierId(jobId, currentUser.id);
 
     if (!job) {
-      throw new NotFoundException("Nakliye bulunamadÄ±.");
+      throw AppErrors.notFound(AppErrorCode.JOB_NOT_FOUND, "Nakliye bulunamadÄ±.");
     }
 
     this.assertDistinctShipmentParticipants(job);
 
     if (!this.isJobStarted(job.durumTuru, job.durumAdi)) {
-      throw new ConflictException("Nakliye teslim bildirimi icin uygun degil.");
+      throw AppErrors.conflict(
+        AppErrorCode.JOB_DELIVERY_NOT_ELIGIBLE,
+        "Nakliye teslim bildirimi icin uygun degil."
+      );
     }
 
     if (!this.isRequestAgreed(job.requestStatusTuru, job.requestStatusAdi)) {
-      throw new ConflictException("Nakliye teslim bildirimi icin uygun degil.");
+      throw AppErrors.conflict(
+        AppErrorCode.JOB_DELIVERY_NOT_ELIGIBLE,
+        "Nakliye teslim bildirimi icin uygun degil."
+      );
     }
 
     const [startedStatusId, pendingDeliveryStatusId] = await Promise.all([
@@ -248,7 +249,11 @@ export class JobsService {
             startedStatusId,
             pendingDeliveryStatusId,
           }),
-          () => new ConflictException("Nakliye teslim bildirimi icin uygun degil.")
+          () =>
+            AppErrors.conflict(
+              AppErrorCode.JOB_DELIVERY_NOT_ELIGIBLE,
+              "Nakliye teslim bildirimi icin uygun degil."
+            )
         );
 
         await this.requireOfferThreadsService().appendShipmentSystemEventByRequestId(
@@ -269,7 +274,7 @@ export class JobsService {
     );
 
     if (!updatedJob) {
-      throw new NotFoundException("Nakliye bulunamadÄ±.");
+      throw AppErrors.notFound(AppErrorCode.JOB_NOT_FOUND, "Nakliye bulunamadÄ±.");
     }
 
     await this.notificationsPublisher.publishDeliveryConfirmationRequested({
@@ -295,17 +300,23 @@ export class JobsService {
     const job = await this.jobsRepository.findByIdAndCustomerId(jobId, currentUser.id);
 
     if (!job) {
-      throw new NotFoundException("Nakliye bulunamadÄ±.");
+      throw AppErrors.notFound(AppErrorCode.JOB_NOT_FOUND, "Nakliye bulunamadÄ±.");
     }
 
     this.assertDistinctShipmentParticipants(job);
 
     if (!this.isJobPendingDelivery(job.durumTuru, job.durumAdi)) {
-      throw new ConflictException("Nakliye teslim onayi icin uygun degil.");
+      throw AppErrors.conflict(
+        AppErrorCode.JOB_CONFIRM_NOT_ELIGIBLE,
+        "Nakliye teslim onayi icin uygun degil."
+      );
     }
 
     if (!this.isRequestAgreed(job.requestStatusTuru, job.requestStatusAdi)) {
-      throw new ConflictException("Nakliye teslim onayi icin uygun degil.");
+      throw AppErrors.conflict(
+        AppErrorCode.JOB_CONFIRM_NOT_ELIGIBLE,
+        "Nakliye teslim onayi icin uygun degil."
+      );
     }
 
     const [
@@ -349,7 +360,8 @@ export class JobsService {
             completedRequestStatusId,
           }),
           (reason) =>
-            new ConflictException(
+            AppErrors.conflict(
+              AppErrorCode.JOB_CONFIRM_NOT_ELIGIBLE,
               reason === "request_not_agreed"
                 ? "Nakliye teslim onayi icin uygun degil cunku ilgili istek artik anlasildi durumunda degil."
                 : "Nakliye teslim onayi icin uygun degil."
@@ -379,7 +391,7 @@ export class JobsService {
     );
 
     if (!updatedJob) {
-      throw new NotFoundException("Nakliye bulunamadÄ±.");
+      throw AppErrors.notFound(AppErrorCode.JOB_NOT_FOUND, "Nakliye bulunamadÄ±.");
     }
 
     await Promise.all([
@@ -413,7 +425,7 @@ export class JobsService {
       const job = await this.jobsRepository.findByIdAndCarrierId(jobId, currentUser.id);
 
       if (!job) {
-        throw new NotFoundException("Nakliye bulunamadı.");
+        throw AppErrors.notFound(AppErrorCode.JOB_NOT_FOUND, "Nakliye bulunamadı.");
       }
 
       return job;
@@ -422,7 +434,7 @@ export class JobsService {
     const job = await this.jobsRepository.findByIdAndCustomerId(jobId, currentUser.id);
 
     if (!job) {
-      throw new NotFoundException("Nakliye bulunamadı.");
+      throw AppErrors.notFound(AppErrorCode.JOB_NOT_FOUND, "Nakliye bulunamadı.");
     }
 
     return job;
@@ -443,7 +455,8 @@ export class JobsService {
       return statusId;
     }
 
-    throw new InternalServerErrorException(
+    throw AppErrors.internal(
+      AppErrorCode.JOB_INTERNAL,
       `${label} is not configured: ${durumTuru}/${durumAdi}.`
     );
   }
@@ -453,7 +466,10 @@ export class JobsService {
       return this.offerThreadsService;
     }
 
-    throw new InternalServerErrorException("Offer thread service is not configured.");
+    throw AppErrors.internal(
+      AppErrorCode.JOB_THREAD_NOT_CONFIGURED,
+      "Offer thread service is not configured."
+    );
   }
 
   private isCarrier(currentUser: AuthenticatedUser): boolean {
@@ -469,7 +485,10 @@ export class JobsService {
       return;
     }
 
-    throw new ForbiddenException("Only carriers can manage shipment lifecycle.");
+    throw AppErrors.forbidden(
+      AppErrorCode.JOB_FORBIDDEN,
+      "Only carriers can manage shipment lifecycle."
+    );
   }
 
   private assertCustomerRole(currentUser: AuthenticatedUser) {
@@ -477,7 +496,10 @@ export class JobsService {
       return;
     }
 
-    throw new ForbiddenException("Only customers can confirm delivery.");
+    throw AppErrors.forbidden(
+      AppErrorCode.JOB_FORBIDDEN,
+      "Only customers can confirm delivery."
+    );
   }
 
 
@@ -492,12 +514,18 @@ export class JobsService {
     const hasCustomerRole = this.isCustomer(currentUser);
 
     if (!hasCarrierRole && !hasCustomerRole) {
-      throw new ForbiddenException("Sadece nakliyeciler ve müşteriler bu işlere erişebilir.");
+      throw AppErrors.forbidden(
+        AppErrorCode.JOB_FORBIDDEN,
+        "Sadece nakliyeciler ve müşteriler bu işlere erişebilir."
+      );
     }
 
     if (requestedAudience === "carrier") {
       if (!hasCarrierRole) {
-        throw new ForbiddenException("Nakliyeci context'i mevcut kullanıcı için mevcut değil.");
+        throw AppErrors.forbidden(
+          AppErrorCode.JOB_CONTEXT_FORBIDDEN,
+          "Nakliyeci context'i mevcut kullanıcı için mevcut değil."
+        );
       }
 
       return requestedAudience;
@@ -505,7 +533,10 @@ export class JobsService {
 
     if (requestedAudience === "customer") {
       if (!hasCustomerRole) {
-        throw new ForbiddenException("Müşteri context'i mevcut kullanıcı için mevcut değil.");
+        throw AppErrors.forbidden(
+          AppErrorCode.JOB_CONTEXT_FORBIDDEN,
+          "Müşteri context'i mevcut kullanıcı için mevcut değil."
+        );
       }
 
       return requestedAudience;
@@ -513,7 +544,8 @@ export class JobsService {
 
     //Yani hem müşteri hem nakliyeci olan biri liste/detay okurken hangi taraftan baktığını söylemek zorunda:
     if (hasCarrierRole && hasCustomerRole) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.JOB_CONFLICT,
         "cift rolleri olan kullanıcılar, iş okuma işlemleri için ?as=customer veya ?as=carrier parametresini belirtmek zorundadır."
       );
     }
@@ -531,7 +563,8 @@ export class JobsService {
       return;
     }
 
-    throw new ConflictException(
+    throw AppErrors.conflict(
+      AppErrorCode.JOB_CONFLICT,
       "Gönderi yaşam döngüsü, nakliyeci ve müşteri aynı kullanıcıya yönlendirildiği için bloke olmuştur."
     );
   }

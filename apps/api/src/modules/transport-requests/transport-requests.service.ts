@@ -1,12 +1,6 @@
 import { randomUUID } from "node:crypto";
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import { RequestImageResponseDto } from "../../common/dto/request-image-response.dto";
 import { RequestImageSummaryResponseDto } from "../../common/dto/request-image-summary-response.dto";
@@ -159,7 +153,7 @@ export class TransportRequestsService {
 
     if (!transportRequest) {
       
-      throw new BadRequestException("Tasima istegi bulunamadi.");
+      throw AppErrors.badRequest(AppErrorCode.REQUEST_NOT_FOUND, "Tasima istegi bulunamadi.");
     }
 
     return this.toDetailResponse(transportRequest, currentUser);
@@ -183,11 +177,12 @@ export class TransportRequestsService {
       );
 
     if (!existingTransportRequest) {
-      throw new NotFoundException("Tasima istegi bulunamadi.");
+      throw AppErrors.notFound(AppErrorCode.REQUEST_NOT_FOUND, "Tasima istegi bulunamadi.");
     }
 
     if (!this.isTransportRequestMutable(existingTransportRequest)) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.REQUEST_NOT_EDITABLE,
         "Tasima istegi artık degistirilemez."
       );
     }
@@ -220,7 +215,7 @@ export class TransportRequestsService {
       );
 
     if (!transportRequest) {
-      throw new NotFoundException("Tasima istegi bulunamadi.");
+      throw AppErrors.notFound(AppErrorCode.REQUEST_NOT_FOUND, "Tasima istegi bulunamadi.");
     }
 
     return this.toDetailResponse(transportRequest, currentUser);
@@ -242,11 +237,12 @@ export class TransportRequestsService {
       );
 
     if (!existingTransportRequest) {
-      throw new NotFoundException("Tasima istegi bulunamadi.");
+      throw AppErrors.notFound(AppErrorCode.REQUEST_NOT_FOUND, "Tasima istegi bulunamadi.");
     }
 
     if (!this.isTransportRequestMutable(existingTransportRequest)) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.REQUEST_NOT_EDITABLE,
         "Tasima istegi artık silinemez."
       );
     }
@@ -260,7 +256,7 @@ export class TransportRequestsService {
       );
 
     if (!wasDeleted) {
-      throw new NotFoundException("Tasima istegi bulunamadi.");
+      throw AppErrors.notFound(AppErrorCode.REQUEST_NOT_FOUND, "Tasima istegi bulunamadi.");
     }
   }
 
@@ -282,11 +278,12 @@ export class TransportRequestsService {
     );
 
     if (!transportRequest) {
-      throw new NotFoundException("Tasima istegi bulunamadi.");
+      throw AppErrors.notFound(AppErrorCode.REQUEST_NOT_FOUND, "Tasima istegi bulunamadi.");
     }
 
     if (!this.isTransportRequestMutable(transportRequest)) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.REQUEST_NOT_EDITABLE,
         "Tasima istegi artık degistirilemez."
       );
     }
@@ -294,18 +291,22 @@ export class TransportRequestsService {
     const uploadedFiles = files ?? [];
 
     if (uploadedFiles.length === 0) {
-      throw new BadRequestException("En az bir gorsel yuklemelisin.");
+      throw AppErrors.badRequest(AppErrorCode.REQUEST_IMAGE_REQUIRED, "En az bir gorsel yuklemelisin.");
     }
 
     if (
       typeof body.primaryIndex === "number" &&
       body.primaryIndex >= uploadedFiles.length
     ) {
-      throw new BadRequestException("Gecersiz ana gorsel secimi.");
+      throw AppErrors.badRequest(
+        AppErrorCode.REQUEST_PRIMARY_IMAGE_INVALID,
+        "Gecersiz ana gorsel secimi."
+      );
     }
 
     if (transportRequest.imageCount + uploadedFiles.length > MAX_REQUEST_IMAGE_COUNT) {
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.REQUEST_IMAGE_LIMIT,
         `Bir istek icin en fazla ${MAX_REQUEST_IMAGE_COUNT} gorsel yuklenebilir.`
       );
     }
@@ -317,7 +318,7 @@ export class TransportRequestsService {
       for (const file of uploadedFiles) {
         console.log("[uploadImages] file:", file.originalname, "mimetype:", file.mimetype, "size:", file.size, "bufferLength:", file.buffer?.length);
         if (!file.buffer || file.buffer.length === 0) {
-          throw new BadRequestException("Dosya icerigi okunamadi.");
+          throw AppErrors.badRequest(AppErrorCode.REQUEST_FILE_UNREADABLE, "Dosya icerigi okunamadi.");
         }
         this.assertValidRequestImageFile(file);
 
@@ -418,11 +419,12 @@ export class TransportRequestsService {
     );
 
     if (!transportRequest) {
-      throw new NotFoundException("Transport request not found.");
+      throw AppErrors.notFound(AppErrorCode.REQUEST_NOT_FOUND, "Transport request not found.");
     }
 
     if (!this.isTransportRequestMutable(transportRequest)) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.REQUEST_NOT_EDITABLE,
         "Transport request can no longer be modified."
       );
     }
@@ -432,7 +434,10 @@ export class TransportRequestsService {
     );
 
     if (!targetImage) {
-      throw new NotFoundException("Transport request image not found.");
+      throw AppErrors.notFound(
+        AppErrorCode.REQUEST_IMAGE_NOT_FOUND,
+        "Transport request image not found."
+      );
     }
 
     await this.prisma.client.$transaction(async (tx) => {
@@ -449,7 +454,10 @@ export class TransportRequestsService {
         );
 
       if (!wasUpdated) {
-        throw new NotFoundException("Transport request image not found.");
+        throw AppErrors.notFound(
+        AppErrorCode.REQUEST_IMAGE_NOT_FOUND,
+        "Transport request image not found."
+      );
       }
     });
 
@@ -471,11 +479,12 @@ export class TransportRequestsService {
     );
 
     if (!transportRequest) {
-      throw new NotFoundException("Transport request not found.");
+      throw AppErrors.notFound(AppErrorCode.REQUEST_NOT_FOUND, "Transport request not found.");
     }
 
     if (!this.isTransportRequestMutable(transportRequest)) {
-      throw new ConflictException(
+      throw AppErrors.conflict(
+        AppErrorCode.REQUEST_NOT_EDITABLE,
         "Transport request can no longer be modified."
       );
     }
@@ -485,7 +494,10 @@ export class TransportRequestsService {
     );
 
     if (!targetImage) {
-      throw new NotFoundException("Transport request image not found.");
+      throw AppErrors.notFound(
+        AppErrorCode.REQUEST_IMAGE_NOT_FOUND,
+        "Transport request image not found."
+      );
     }
 
     const fallbackPrimaryImage =
@@ -506,7 +518,10 @@ export class TransportRequestsService {
         );
 
       if (!wasDeleted) {
-        throw new NotFoundException("Transport request image not found.");
+        throw AppErrors.notFound(
+        AppErrorCode.REQUEST_IMAGE_NOT_FOUND,
+        "Transport request image not found."
+      );
       }
 
       if (fallbackPrimaryImage) {
@@ -518,7 +533,10 @@ export class TransportRequestsService {
           );
 
         if (!wasUpdated) {
-          throw new NotFoundException("Transport request image not found.");
+          throw AppErrors.notFound(
+        AppErrorCode.REQUEST_IMAGE_NOT_FOUND,
+        "Transport request image not found."
+      );
         }
       }
     });
@@ -544,7 +562,8 @@ export class TransportRequestsService {
       return initialStatusId;
     }
 
-    throw new InternalServerErrorException(
+    throw AppErrors.internal(
+      AppErrorCode.REQUEST_INTERNAL,
       `Transport request initial status is not configured: ${INITIAL_TRANSPORT_REQUEST_STATUS.durumTuru}/${INITIAL_TRANSPORT_REQUEST_STATUS.durumAdi}.`
     );
   }
@@ -568,12 +587,16 @@ export class TransportRequestsService {
       return;
     }
 
-    throw new ForbiddenException("Only customers can manage transport requests.");
+    throw AppErrors.forbidden(
+      AppErrorCode.REQUEST_FORBIDDEN,
+      "Only customers can manage transport requests."
+    );
   }
 
   private assertValidRequestImageFile(file: Express.Multer.File) {
     if (!REQUEST_IMAGE_ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.REQUEST_VALIDATION,
         "Yalnizca JPEG, PNG veya WEBP gorseller yuklenebilir."
       );
     }
@@ -773,7 +796,8 @@ export class TransportRequestsService {
       resolvedBaslangicKonum.provider.trim().toLowerCase() !==
       resolvedVarisKonum.provider.trim().toLowerCase()
     ) {
-      throw new InternalServerErrorException(
+      throw AppErrors.internal(
+        AppErrorCode.REQUEST_INTERNAL,
         "Transport request locations must resolve with the same route provider."
       );
     }

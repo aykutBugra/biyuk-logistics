@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  Logger,
-  ServiceUnavailableException,
-} from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
+import { AppErrorCode, AppErrors, AppServiceUnavailableException } from "../../common/errors";
 import { ConfigService } from "@nestjs/config";
 import OpenAI from "openai";
 import type {
@@ -16,6 +13,7 @@ import type {
   VolumeAnalysisSpaceProfile,
   VolumeAnalysisVolumeProfile,
 } from "./volume-estimation.types";
+import type { VolumeEstimationPort } from "./volume-estimation.port";
 import {
   VOLUME_ANALYSIS_CONFIDENCES,
   VOLUME_ANALYSIS_LOAD_TYPES,
@@ -54,7 +52,7 @@ const REQUEST_TO_ANALYSIS_LOAD_TYPE: Record<string, VolumeAnalysisLoadType> = {
 };
 
 @Injectable()
-export class OpenAiVolumeEstimationService {
+export class OpenAiVolumeEstimationService implements VolumeEstimationPort {
   private readonly logger = new Logger(OpenAiVolumeEstimationService.name);
 
   constructor(private readonly configService: ConfigService) {}
@@ -67,7 +65,8 @@ export class OpenAiVolumeEstimationService {
     const apiKey = this.configService.get<string>("ai.openAiApiKey")?.trim() ?? "";
 
     if (apiKey.length === 0) {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini su anda kullanilamiyor."
       );
     }
@@ -232,14 +231,15 @@ export class OpenAiVolumeEstimationService {
       const responseText = response.output_text?.trim();
 
       if (!responseText) {
-        throw new ServiceUnavailableException(
+        throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
           "AI hacim tahmini gecerli bir sonuc dondurmedi."
         );
       }
 
       return this.parseResponse(responseText);
     } catch (error) {
-      if (error instanceof ServiceUnavailableException) {
+      if (error instanceof AppServiceUnavailableException) {
         throw error;
       }
 
@@ -263,18 +263,21 @@ export class OpenAiVolumeEstimationService {
       });
 
       if (status === 401 || status === 403) {
-        throw new ServiceUnavailableException(
+        throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
           "AI servis yetkilendirmesi gecersiz veya erisime kapali."
         );
       }
 
       if (status === 429) {
-        throw new ServiceUnavailableException(
+        throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
           "AI servis limiti asildi. Lutfen daha sonra tekrar dene."
         );
       }
 
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini su anda tamamlanamadi. Lutfen tekrar dene."
       );
     } finally {
@@ -330,7 +333,8 @@ export class OpenAiVolumeEstimationService {
     try {
       parsedResponse = JSON.parse(responseText) as ParsedAnalysis;
     } catch {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir JSON cevabi uretmedi."
       );
     }
@@ -338,7 +342,8 @@ export class OpenAiVolumeEstimationService {
     const items = this.parseItems(parsedResponse.items);
 
     if (items.length === 0) {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir yuk analizi dondurmedi."
       );
     }
@@ -353,7 +358,8 @@ export class OpenAiVolumeEstimationService {
   private parseBoolean(value: unknown): boolean {
     //AI cevabi schema'li olsa da runtime'da tip kontrolu tekrar yapilir.
     if (typeof value !== "boolean") {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir alan tipi dondurmedi."
       );
     }
@@ -363,7 +369,8 @@ export class OpenAiVolumeEstimationService {
 
   private parseConfidence(value: unknown): VolumeAnalysisConfidence {
     if (typeof value !== "string") {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini guven seviyesi uretmedi."
       );
     }
@@ -378,7 +385,8 @@ export class OpenAiVolumeEstimationService {
       return normalizedValue;
     }
 
-    throw new ServiceUnavailableException(
+    throw AppErrors.serviceUnavailable(
+      AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
       "AI hacim tahmini gecerli bir guven seviyesi uretmedi."
     );
   }
@@ -390,7 +398,8 @@ export class OpenAiVolumeEstimationService {
       !Number.isFinite(value) ||
       value < 1
     ) {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir adet bilgisi dondurmedi."
       );
     }
@@ -401,7 +410,8 @@ export class OpenAiVolumeEstimationService {
   private parseItems(value: unknown): VolumeAnalysisItem[] {
     //items alani yoksa veya array degilse hesaplayiciya gecmek guvenli degildir.
     if (!Array.isArray(value)) {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini urun listesi dondurmedi."
       );
     }
@@ -412,7 +422,8 @@ export class OpenAiVolumeEstimationService {
   private parseItem(value: unknown, index: number): VolumeAnalysisItem {
     //Her item tek tek normalize edilir; hatali alan varsa genel ServiceUnavailableException doner.
     if (typeof value !== "object" || value === null) {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         `AI hacim tahmini ${index + 1}. urun icin gecerli bir nesne dondurmedi.`
       );
     }
@@ -438,7 +449,8 @@ export class OpenAiVolumeEstimationService {
 
   private parseLoadType(value: unknown): VolumeAnalysisLoadType {
     if (typeof value !== "string") {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir loadType dondurmedi."
       );
     }
@@ -457,14 +469,16 @@ export class OpenAiVolumeEstimationService {
       return normalizedValue;
     }
 
-    throw new ServiceUnavailableException(
+    throw AppErrors.serviceUnavailable(
+      AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
       "AI hacim tahmini gecerli bir loadType dondurmedi."
     );
   }
 
   private parseOptionalText(value: unknown, maxLength: number): string {
     if (typeof value !== "string") {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir not alani dondurmedi."
       );
     }
@@ -474,7 +488,8 @@ export class OpenAiVolumeEstimationService {
 
   private parseRequiredText(value: unknown, maxLength: number): string {
     if (typeof value !== "string") {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir metin alani dondurmedi."
       );
     }
@@ -482,7 +497,8 @@ export class OpenAiVolumeEstimationService {
     const trimmed = value.trim();
 
     if (trimmed.length === 0) {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini bos bir metin alani dondurdu."
       );
     }
@@ -492,7 +508,8 @@ export class OpenAiVolumeEstimationService {
 
   private parseShapeType(value: unknown): VolumeAnalysisShapeType {
     if (typeof value !== "string") {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir shapeType dondurmedi."
       );
     }
@@ -510,14 +527,16 @@ export class OpenAiVolumeEstimationService {
       return normalizedValue;
     }
 
-    throw new ServiceUnavailableException(
+    throw AppErrors.serviceUnavailable(
+      AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
       "AI hacim tahmini gecerli bir shapeType dondurmedi."
     );
   }
 
   private parsePlacementRisk(value: unknown): VolumeAnalysisPlacementRisk {
     if (typeof value !== "string") {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir placementRisk dondurmedi."
       );
     }
@@ -532,14 +551,16 @@ export class OpenAiVolumeEstimationService {
       return normalizedValue;
     }
 
-    throw new ServiceUnavailableException(
+    throw AppErrors.serviceUnavailable(
+      AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
       "AI hacim tahmini gecerli bir placementRisk dondurmedi."
     );
   }
 
   private parseSizeClass(value: unknown): VolumeAnalysisSizeClass {
     if (typeof value !== "string") {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir sizeClass dondurmedi."
       );
     }
@@ -555,14 +576,16 @@ export class OpenAiVolumeEstimationService {
       return normalizedValue;
     }
 
-    throw new ServiceUnavailableException(
+    throw AppErrors.serviceUnavailable(
+      AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
       "AI hacim tahmini gecerli bir sizeClass dondurmedi."
     );
   }
 
   private parseSpaceProfile(value: unknown): VolumeAnalysisSpaceProfile {
     if (typeof value !== "string") {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir spaceProfile dondurmedi."
       );
     }
@@ -580,14 +603,16 @@ export class OpenAiVolumeEstimationService {
       return normalizedValue;
     }
 
-    throw new ServiceUnavailableException(
+    throw AppErrors.serviceUnavailable(
+      AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
       "AI hacim tahmini gecerli bir spaceProfile dondurmedi."
     );
   }
 
   private parseVolumeProfile(value: unknown): VolumeAnalysisVolumeProfile {
     if (typeof value !== "string") {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir volumeProfile dondurmedi."
       );
     }
@@ -613,7 +638,8 @@ export class OpenAiVolumeEstimationService {
       return normalizedValue;
     }
 
-    throw new ServiceUnavailableException(
+    throw AppErrors.serviceUnavailable(
+      AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
       "AI hacim tahmini gecerli bir volumeProfile dondurmedi."
     );
   }

@@ -1,8 +1,5 @@
-import {
-  BadGatewayException,
-  Injectable,
-  InternalServerErrorException,
-} from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../../common/errors";
 import { ConfigService } from "@nestjs/config";
 import type { LocationProvider } from "../location-provider.contract";
 import type { CanonicalLocation, LocationSuggestion } from "../location.types";
@@ -42,7 +39,10 @@ export class GoogleLocationProvider implements LocationProvider {
     });
 
     if (!response.ok) {
-      throw new BadGatewayException("Konum onerileri su anda getirilemiyor.");
+      throw AppErrors.badGateway(
+        AppErrorCode.LOCATION_ROUTE_BAD_GATEWAY,
+        "Konum onerileri su anda getirilemiyor."
+      );
     }
 
     const payload = (await response.json()) as unknown;
@@ -76,7 +76,10 @@ export class GoogleLocationProvider implements LocationProvider {
     });
 
     if (!response.ok) {
-      throw new BadGatewayException("Secilen konum ayrintilari getirilemiyor.");
+      throw AppErrors.badGateway(
+        AppErrorCode.LOCATION_ROUTE_BAD_GATEWAY,
+        "Secilen konum ayrintilari getirilemiyor."
+      );
     }
 
     const payload = (await response.json()) as unknown;
@@ -84,7 +87,10 @@ export class GoogleLocationProvider implements LocationProvider {
     try {
       return mapGooglePlaceDetailsResponse(payload as never);
     } catch {
-      throw new BadGatewayException("Secilen konum dogrulanamadi.");
+      throw AppErrors.badGateway(
+        AppErrorCode.LOCATION_ROUTE_BAD_GATEWAY,
+        "Secilen konum dogrulanamadi."
+      );
     }
   }
 
@@ -95,7 +101,8 @@ export class GoogleLocationProvider implements LocationProvider {
       return apiKey;
     }
 
-    throw new InternalServerErrorException(
+    throw AppErrors.internal(
+      AppErrorCode.LOCATION_INTERNAL,
       "Google Maps provider is not configured."
     );
   }

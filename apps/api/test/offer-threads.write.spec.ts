@@ -3,7 +3,8 @@ import { Prisma } from "@prisma/client";
 import { Test } from "@nestjs/testing";
 import { ROLE_NAMES } from "../src/common/constants/role-names";
 import { PrismaService } from "../src/infrastructure/prisma/prisma.service";
-import { NotificationsPublisher } from "../src/modules/notifications/notifications.publisher";
+import { NOTIFICATION_PUBLISHER } from "../src/modules/notifications/notification-publisher.token";
+import { OfferThreadMediaService } from "../src/modules/offer-threads/offer-thread-media.service";
 import { OfferThreadsService } from "../src/modules/offer-threads/offer-threads.service";
 import {
   type OfferThreadMessageRecord,
@@ -122,12 +123,21 @@ describe("OfferThreadsService write paths", () => {
           useValue: offerThreadsRepositoryMock,
         },
         {
-          provide: NotificationsPublisher,
+          provide: NOTIFICATION_PUBLISHER,
           useValue: notificationsPublisherMock,
         },
         {
           provide: PrismaService,
           useValue: prismaServiceMock,
+        },
+        {
+          provide: OfferThreadMediaService,
+          useValue: {
+            prepareImageAttachments: jest.fn(),
+            rollbackStorageKeys: jest.fn(),
+            toPublicUrl: jest.fn(),
+            toOptionalPublicUrl: jest.fn(),
+          },
         },
       ],
     }).compile();

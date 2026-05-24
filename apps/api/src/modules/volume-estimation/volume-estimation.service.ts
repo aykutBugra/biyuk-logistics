@@ -1,16 +1,13 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  ServiceUnavailableException,
-} from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- sharp is a callable CommonJS export in this Nest build.
 import sharp = require("sharp");
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { EstimateVolumeBodyDto } from "./dto/estimate-volume-body.dto";
 import { EstimateVolumeResponseDto } from "./dto/estimate-volume-response.dto";
-import { OpenAiVolumeEstimationService } from "./openai-volume-estimation.service";
+import type { VolumeEstimationPort } from "./volume-estimation.port";
+import { VOLUME_ESTIMATION_PROVIDER } from "./volume-estimation.tokens";
 import { ShapeBasedVolumeCalculatorService } from "./shape-based-volume-calculator.service";
 import type {
   VolumeAnalysisItem,
@@ -69,7 +66,8 @@ export class VolumeEstimationService {
   constructor(
     private readonly configService: ConfigService,
     private readonly rateLimitService: VolumeEstimationRateLimitService,
-    private readonly openAiVolumeEstimationService: OpenAiVolumeEstimationService,
+    @Inject(VOLUME_ESTIMATION_PROVIDER)
+    private readonly volumeEstimationProvider: VolumeEstimationPort,
     private readonly shapeBasedVolumeCalculatorService: ShapeBasedVolumeCalculatorService
   ) {}
 
@@ -97,7 +95,7 @@ export class VolumeEstimationService {
     //Önemli: OpenAI’dan direkt m3 istemiyoruz.
     //OpenAI’dan istenen şey:
     //Fotoğraflardaki yükleri sınıflandır.
-    const analysis = await this.openAiVolumeEstimationService.analyzeShipment({
+    const analysis = await this.volumeEstimationProvider.analyzeShipment({
       description: body.description,
       images: normalizedImages,
       yukTipi: body.yukTipi,
@@ -105,7 +103,8 @@ export class VolumeEstimationService {
     const mergedAnalysis = this.mergeAnalysisItems(analysis);
 
     if (mergedAnalysis.items.length === 0) {
-      throw new ServiceUnavailableException(
+      throw AppErrors.serviceUnavailable(
+        AppErrorCode.VOLUME_SERVICE_UNAVAILABLE,
         "AI hacim tahmini gecerli bir yuk analizi dondurmedi."
       );
     }
@@ -146,11 +145,12 @@ export class VolumeEstimationService {
       12 * 1024 * 1024;
 
     if (files.length === 0) {
-      throw new BadRequestException("En az bir gorsel yuklemelisin.");
+      throw AppErrors.badRequest(AppErrorCode.VOLUME_IMAGES_REQUIRED, "En az bir gorsel yuklemelisin.");
     }
 
     if (files.length > maxImages) {
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.VOLUME_VALIDATION,
         `En fazla ${maxImages} gorsel yukleyebilirsin.`
       );
     }
@@ -161,20 +161,23 @@ export class VolumeEstimationService {
     );
 
     if (totalSizeBytes > maxTotalSizeBytes) {
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.VOLUME_VALIDATION,
         "Toplam gorsel boyutu izin verilen siniri asiyor."
       );
     }
 
     for (const file of files) {
       if (!ACCEPTED_IMAGE_MIME_TYPES.has(file.mimetype)) {
-        throw new BadRequestException(
+        throw AppErrors.badRequest(
+          AppErrorCode.VOLUME_VALIDATION,
           "Sadece JPG, PNG veya WEBP gorseller kabul edilir."
         );
       }
 
       if (file.size > maxFileSizeBytes) {
-        throw new BadRequestException(
+        throw AppErrors.badRequest(
+          AppErrorCode.VOLUME_VALIDATION,
           "Her bir gorsel en fazla 5 MB olabilir."
         );
       }
@@ -225,7 +228,8 @@ export class VolumeEstimationService {
         `Image normalization failed for ${file.originalname}: ${message}`
       );
 
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.VOLUME_VALIDATION,
         "Yuklenen gorsel okunamadi veya islenemedi. Lutfen baska bir JPG, PNG veya WEBP dosyasi dene."
       );
     }
@@ -245,7 +249,8 @@ export class VolumeEstimationService {
     );
 
     if (totalSizeBytes > maxTotalSizeBytes) {
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.VOLUME_VALIDATION,
         "Gorseller normalize edildikten sonra izin verilen toplam boyutu asti."
       );
     }

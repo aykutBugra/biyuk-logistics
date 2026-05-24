@@ -1,5 +1,6 @@
 import sharp from "sharp";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 
 
 //yüklenen görselin işlendiği dosya ve bu işlemin sonucunda 
@@ -85,7 +86,8 @@ export class ImageProcessingService {
     } catch (err) {
       const sharpMessage = err instanceof Error ? err.message : String(err);
       console.error("[ImageProcessingService] Sharp error:", sharpMessage);
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.MEDIA_IMAGE_PROCESS_FAILED,
         `Gorsel islenemedi: ${sharpMessage}`
       );
     }
@@ -115,7 +117,10 @@ export class ImageProcessingService {
     } catch (err) {
       const sharpMessage = err instanceof Error ? err.message : String(err);
       console.error("[ImageProcessingService] Sharp error:", sharpMessage);
-      throw new BadRequestException(`Gorsel islenemedi: ${sharpMessage}`);
+      throw AppErrors.badRequest(
+        AppErrorCode.MEDIA_IMAGE_PROCESS_FAILED,
+        `Gorsel islenemedi: ${sharpMessage}`
+      );
     }
   }
 
@@ -142,7 +147,10 @@ export class ImageProcessingService {
     } catch (err) {
       const sharpMessage = err instanceof Error ? err.message : String(err);
       console.error("[ImageProcessingService] Sharp error:", sharpMessage);
-      throw new BadRequestException(`Gorsel islenemedi: ${sharpMessage}`);
+      throw AppErrors.badRequest(
+        AppErrorCode.MEDIA_IMAGE_PROCESS_FAILED,
+        `Gorsel islenemedi: ${sharpMessage}`
+      );
     }
   }
 

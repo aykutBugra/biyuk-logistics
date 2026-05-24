@@ -1,10 +1,5 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  Optional,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../common/errors";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import {
@@ -182,11 +177,11 @@ export class UsersService {
     file: Express.Multer.File | undefined
   ): Promise<UserProfileResponseDto> {
     if (!file) {
-      throw new BadRequestException("Profil fotografi secmelisin.");
+      throw AppErrors.badRequest(AppErrorCode.USER_PROFILE_IMAGE_REQUIRED, "Profil fotografi secmelisin.");
     }
 
     if (!this.mediaStorageService || !this.imageProcessingService) {
-      throw new BadRequestException("Gorsel yukleme servisi hazir degil.");
+      throw AppErrors.badRequest(AppErrorCode.USER_MEDIA_NOT_READY, "Gorsel yukleme servisi hazir degil.");
     }
 
     this.assertValidUserImageFile(file);
@@ -194,7 +189,7 @@ export class UsersService {
     const currentUser = await this.usersRepository.findProfileById(userId);
 
     if (!currentUser) {
-      throw new UnauthorizedException("Silmek istediginiz profil bulunamadi.");
+      throw AppErrors.unauthorized(AppErrorCode.USER_DELETE_UNAUTHORIZED, "Silmek istediginiz profil bulunamadi.");
     }
 
     const processedImage = await this.imageProcessingService.processProfileImage(
@@ -216,7 +211,7 @@ export class UsersService {
       );
 
       if (!updatedUser) {
-        throw new UnauthorizedException("Silmek istediginiz profil bulunamadi.");
+        throw AppErrors.unauthorized(AppErrorCode.USER_DELETE_UNAUTHORIZED, "Silmek istediginiz profil bulunamadi.");
       }
 
       if (currentUser.profilFotografiStorageKey) {
@@ -239,13 +234,13 @@ export class UsersService {
   //silinir ve kullanıcı kaydında ilgili alan güncellenir.
   async deleteOwnProfileImage(userId: number): Promise<UserProfileResponseDto> {
     if (!this.mediaStorageService) {
-      throw new BadRequestException("Gorsel yukleme servisi hazir degil.");
+      throw AppErrors.badRequest(AppErrorCode.USER_MEDIA_NOT_READY, "Gorsel yukleme servisi hazir degil.");
     }
 
     const currentUser = await this.usersRepository.findProfileById(userId);
 
     if (!currentUser) {
-      throw new UnauthorizedException("Silmek istediginiz profil bulunamadi.");
+      throw AppErrors.unauthorized(AppErrorCode.USER_DELETE_UNAUTHORIZED, "Silmek istediginiz profil bulunamadi.");
     }
 
     if (!currentUser.profilFotografiStorageKey) {
@@ -259,7 +254,7 @@ export class UsersService {
     );
 
     if (!updatedUser) {
-      throw new UnauthorizedException("Silmek istediginiz profil bulunamadi.");
+      throw AppErrors.unauthorized(AppErrorCode.USER_DELETE_UNAUTHORIZED, "Silmek istediginiz profil bulunamadi.");
     }
 
     await this.mediaStorageService.deleteFile(previousStorageKey);
@@ -335,25 +330,30 @@ export class UsersService {
     }
     switch (result.reason) {
       case "NOT_FOUND":
-        throw new UnauthorizedException("Silmek istedigin hesap bulunamadi.");
+        throw AppErrors.unauthorized(AppErrorCode.USER_DELETE_UNAUTHORIZED, "Silmek istedigin hesap bulunamadi.");
       case "ACTIVE_CARRIER_SHIPMENT":
-        throw new ConflictException(
+        throw AppErrors.conflict(
+          AppErrorCode.USER_DELETE_ACTIVE_SHIPMENT,
           "Hesap, aktif bir sevkiyat varken silinemez."
         );
       case "ACTIVE_CUSTOMER_SHIPMENT":
-        throw new ConflictException(
+        throw AppErrors.conflict(
+          AppErrorCode.USER_DELETE_CONFLICT,
           "Hesap, aktif bir müşteri sevkiyatı varken silinemez."
         );
       case "OPEN_CARRIER_OFFER":
-        throw new ConflictException(
+        throw AppErrors.conflict(
+          AppErrorCode.USER_DELETE_CONFLICT,
           "Hesap, aktif bir teklif varken silinemez."
         );
       case "STALE_ACCEPTED_OFFER":
-        throw new ConflictException(
+        throw AppErrors.conflict(
+          AppErrorCode.USER_DELETE_CONFLICT,
           "Hesap, kabul edilen bir teklif tamamen kapatılmadığı için silinemez."
         );
       case "STALE_AGREED_REQUEST":
-        throw new ConflictException(
+        throw AppErrors.conflict(
+          AppErrorCode.USER_DELETE_CONFLICT,
           "Hesap, anlaşmalı bir ulaştırma talebi tamamen kapatılmadığı için silinemez."
         );
     }
@@ -364,17 +364,18 @@ export class UsersService {
   //geçerli olup olmadığını kontrol eder.
   private assertValidUserImageFile(file: Express.Multer.File): void {
     if (!file.buffer || file.buffer.length === 0) {
-      throw new BadRequestException("Dosya icerigi okunamadi.");
+      throw AppErrors.badRequest(AppErrorCode.USER_FILE_UNREADABLE, "Dosya icerigi okunamadi.");
     }
 
     if (!USER_IMAGE_ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      throw new BadRequestException(
+      throw AppErrors.badRequest(
+        AppErrorCode.USER_FILE_TYPE_INVALID,
         "Yalnizca JPEG, PNG veya WEBP gorseller yuklenebilir."
       );
     }
 
     if (file.size > MAX_USER_IMAGE_FILE_SIZE_BYTES) {
-      throw new BadRequestException("Gorsel boyutu en fazla 5 MB olabilir.");
+      throw AppErrors.badRequest(AppErrorCode.USER_FILE_TOO_LARGE, "Gorsel boyutu en fazla 5 MB olabilir.");
     }
   }
 

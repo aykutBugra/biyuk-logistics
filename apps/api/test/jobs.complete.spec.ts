@@ -2,7 +2,7 @@ import { ConflictException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { ROLE_NAMES } from "../src/common/constants/role-names";
 import { PrismaService } from "../src/infrastructure/prisma/prisma.service";
-import { NotificationsPublisher } from "../src/modules/notifications/notifications.publisher";
+import { NOTIFICATION_PUBLISHER } from "../src/modules/notifications/notification-publisher.token";
 import {
   type ConfirmDeliveryJobResult,
   JobsRepository,
@@ -165,7 +165,7 @@ describe("JobsService.markDeliveredById", () => {
           useValue: jobsRepositoryMock,
         },
         {
-          provide: NotificationsPublisher,
+          provide: NOTIFICATION_PUBLISHER,
           useValue: notificationsPublisherMock,
         },
         {

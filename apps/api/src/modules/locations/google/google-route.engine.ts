@@ -1,8 +1,5 @@
-import {
-  BadGatewayException,
-  Injectable,
-  InternalServerErrorException,
-} from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { AppErrorCode, AppErrors } from "../../../common/errors";
 import { ConfigService } from "@nestjs/config";
 import type { RouteEngine } from "../route-engine.contract";
 import type { RouteMetrics, RoutePoint } from "../location.types";
@@ -76,7 +73,10 @@ export class GoogleRouteEngine implements RouteEngine {
 
     // Upstream cevap vermezse evaluator bunu gecici route servis problemi olarak ele alir.
     if (!response.ok) {
-      throw new BadGatewayException("Rota metrikleri su anda hesaplanamiyor.");
+      throw AppErrors.badGateway(
+        AppErrorCode.LOCATION_ROUTE_BAD_GATEWAY,
+        "Rota metrikleri su anda hesaplanamiyor."
+      );
     }
 
     const payload = (await response.json()) as GoogleRoutesResponse;
@@ -93,7 +93,10 @@ export class GoogleRouteEngine implements RouteEngine {
       route.distanceMeters < 0 ||
       durationSeconds === null
     ) {
-      throw new BadGatewayException("Rota metrikleri dogrulanamadi.");
+      throw AppErrors.badGateway(
+        AppErrorCode.LOCATION_ROUTE_BAD_GATEWAY,
+        "Rota metrikleri dogrulanamadi."
+      );
     }
 
     return {
@@ -128,7 +131,8 @@ export class GoogleRouteEngine implements RouteEngine {
       return apiKey;
     }
 
-    throw new InternalServerErrorException(
+    throw AppErrors.internal(
+      AppErrorCode.LOCATION_INTERNAL,
       "Google Maps route engine is not configured."
     );
   }
