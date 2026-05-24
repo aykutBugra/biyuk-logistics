@@ -18,8 +18,8 @@ type OpenRequestCardProps = {
   request: OpenOfferRequestListItem;
   isSelected: boolean;
   detailHref: string;
-  selectedCarrierRouteId: number | null;
-  onCardClick: (requestId: number) => void;
+  selectedCarrierRouteId: string | null;
+  onCardClick: (requestId: string) => void;
   cardRef: (node: HTMLDivElement | null) => void;
 };
 
@@ -152,7 +152,7 @@ export default function OpenRequestCard({
             </div>
 
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-              <span className="rounded-full bg-slate-100 px-2 py-1">#{request.id}</span>
+              <span className="rounded-full bg-slate-100 px-2 py-1">Istek</span>
               <span>{formatDate(request.olusturmaTarihi)}</span>
             </div>
           </div>

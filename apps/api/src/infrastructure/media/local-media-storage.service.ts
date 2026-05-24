@@ -8,6 +8,9 @@ import {
   type SaveMediaFileInput,
 } from "./media-storage.service";
 
+
+//local dosya sistemi üzerinde medya dosyalarını kaydetmek, silmek
+//ve erişilebilir URL'ler oluşturmak için kullanılan bir servis.
 @Injectable()
 export class LocalMediaStorageService extends MediaStorageService {
   constructor(private readonly configService: ConfigService) {
@@ -31,6 +34,8 @@ export class LocalMediaStorageService extends MediaStorageService {
     });
   }
 
+
+  //dosyanın frontendde açılacak url sini oluşturulur .
   toPublicUrl(storageKey: string): string {
     const publicBaseUrl = this.configService.getOrThrow<string>("media.publicBaseUrl");
     const normalizedBaseUrl = publicBaseUrl.replace(/\/+$/, "");

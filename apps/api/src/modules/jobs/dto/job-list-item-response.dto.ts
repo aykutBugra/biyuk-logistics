@@ -1,6 +1,6 @@
 export class JobListItemResponseDto {
-  id!: number;
-  requestId!: number;
+  id!: string;
+  requestId!: string;
   participantSide!: "customer" | "carrier";
   baslangicSehri!: string;
   varisSehri!: string;
@@ -9,8 +9,9 @@ export class JobListItemResponseDto {
   durum!: string;
   olusturmaTarihi!: Date;
   baslangicTarihi!: Date | null;
+  teslimBildirimTarihi!: Date | null;
   teslimTarihi!: Date | null;
-  counterpartyId!: number;
+  counterpartyId!: string;
   counterpartyName!: string;
   counterpartyUsername!: string;
 }

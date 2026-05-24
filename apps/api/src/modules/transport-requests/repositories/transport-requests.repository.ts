@@ -1,10 +1,15 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
+import {
+  type PublicEntityId,
+  publicEntityWhere,
+} from "../../../common/public-ids/public-entity-id";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { StoredSubmittedRatingRecord } from "../../ratings/rating-context.helpers";
 
 const transportRequestImageSelect = {
   id: true,
+  publicId: true,
   storageKey: true,
   thumbnailStorageKey: true,
   mimeType: true,
@@ -17,8 +22,11 @@ const transportRequestImageSelect = {
   createdAt: true,
 } satisfies Prisma.IstekGorselSelect;
 
+//Istek detay ve liste ekranlarinin ihtiyac duydugu ana istek, gorsel ve varsa
+//nakliye iliskilerini tek select yapisinda toplar.
 const transportRequestSelect = {
   id: true,
+  publicId: true,
   baslangicSehri: true,
   varisSehri: true,
   baslangicKonumMetni: true,
@@ -60,9 +68,11 @@ const transportRequestSelect = {
   nakliye: {
     select: {
       id: true,
+      publicId: true,
       anlasilanFiyat: true,
       olusturmaTarihi: true,
       baslangicTarihi: true,
+      teslimBildirimTarihi: true,
       teslimTarihi: true,
       durum: {
         select: {
@@ -73,6 +83,7 @@ const transportRequestSelect = {
       nakliyeci: {
         select: {
           id: true,
+          publicId: true,
           ad: true,
           soyad: true,
           kullaniciAdi: true,
@@ -81,12 +92,14 @@ const transportRequestSelect = {
       arac: {
         select: {
           id: true,
+          publicId: true,
           plaka: true,
         },
       },
       puanlar: {
         select: {
           id: true,
+          publicId: true,
           puanlayanId: true,
           puanlananId: true,
           puanDegeri: true,
@@ -99,7 +112,9 @@ const transportRequestSelect = {
 } satisfies Prisma.IstekSelect;
 
 type PrismaExecutor = Prisma.TransactionClient | PrismaClient;
+type EntityIdSelector = PublicEntityId | number;
 
+//Prisma'nin ham Istek sonucunu repository'nin service'e dondurdugu tipe baglar.
 type StoredTransportRequestQuery = Prisma.IstekGetPayload<{
   select: typeof transportRequestSelect;
 }>;
@@ -157,6 +172,7 @@ export type CreateTransportRequestImageRecordInput = {
 
 export type StoredTransportRequestImageRecord = {
   id: number;
+  publicId: string;
   storageKey: string;
   thumbnailStorageKey: string;
   mimeType: string;
@@ -171,22 +187,27 @@ export type StoredTransportRequestImageRecord = {
 
 export type StoredTransportRequestJobRecord = {
   id: number;
+  publicId: string;
   carrierId: number;
+  carrierPublicId: string;
   carrierName: string;
   carrierUsername: string;
   aracId: number;
+  aracPublicId: string;
   aracPlaka: string;
   durumTuru: string;
   anlasilanFiyat: number;
   durumAdi: string;
   olusturmaTarihi: Date;
   baslangicTarihi: Date | null;
+  teslimBildirimTarihi: Date | null;
   teslimTarihi: Date | null;
   ratings: StoredSubmittedRatingRecord[];
 };
 
 export type StoredTransportRequestRecord = {
   id: number;
+  publicId: string;
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
@@ -224,6 +245,8 @@ export type StoredTransportRequestRecord = {
 export class TransportRequestsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  //Durum tablosunda tur/ad ikilisine gore id bulur. Yeni istek acarken
+  //ISTEK/OLUSTURULDU id'si bu metotla cozulur.
   async findStatusIdByTypeAndName(
     durumTuru: string,
     durumAdi: string
@@ -250,6 +273,8 @@ export class TransportRequestsRepository {
   async create(
     input: CreateTransportRequestRecordInput
   ): Promise<StoredTransportRequestRecord> {
+    //Istek kaydi olusturulurken koordinat ve hacim gibi Decimal alanlar Prisma.Decimal'a
+    //cevrilir; service katmani number ile calismaya devam eder.
     const transportRequest = await this.prisma.client.istek.create({
       data: {
         musteriId: input.musteriId,
@@ -286,13 +311,15 @@ export class TransportRequestsRepository {
   }
 
   async updateByIdAndCustomerId(
-    id: number,
+    id: PublicEntityId,
     musteriId: number,
     input: UpdateTransportRequestRecordInput
   ): Promise<StoredTransportRequestRecord | null> {
+    //Hem id hem musteriId ile updateMany kullanilmasi sahiplik kontrolunu DB seviyesine
+    //indirir; baska musterinin istegi guncellenemez.
     const result = await this.prisma.client.istek.updateMany({
       where: {
-        id,
+        ...publicEntityWhere(id),
         musteriId,
         silmeTarihi: null,
       },
@@ -330,7 +357,7 @@ export class TransportRequestsRepository {
 
     const transportRequest = await this.prisma.client.istek.findFirst({
       where: {
-        id,
+        ...publicEntityWhere(id),
         musteriId,
         silmeTarihi: null,
       },
@@ -340,10 +367,14 @@ export class TransportRequestsRepository {
     return transportRequest ? this.mapStoredTransportRequest(transportRequest) : null;
   }
 
-  async softDeleteByIdAndCustomerId(id: number, musteriId: number): Promise<boolean> {
+  async softDeleteByIdAndCustomerId(
+    id: PublicEntityId,
+    musteriId: number
+  ): Promise<boolean> {
+    //Istekler hard delete edilmez; silmeTarihi setlenerek listelerden dusurulur.
     const result = await this.prisma.client.istek.updateMany({
       where: {
-        id,
+        ...publicEntityWhere(id),
         musteriId,
         silmeTarihi: null,
       },
@@ -356,6 +387,7 @@ export class TransportRequestsRepository {
   }
 
   async findManyByCustomerId(musteriId: number): Promise<StoredTransportRequestRecord[]> {
+    //Musterinin aktif isteklerini yeni olusturulana gore sirali sekilde getirir.
     const transportRequests = await this.prisma.client.istek.findMany({
       where: {
         musteriId,
@@ -371,12 +403,13 @@ export class TransportRequestsRepository {
   }
 
   async findByIdAndCustomerId(
-    id: number,
+    id: PublicEntityId,
     musteriId: number
   ): Promise<StoredTransportRequestRecord | null> {
+    //Detay okuma da sahiplik ve soft delete filtresiyle yapilir.
     const transportRequest = await this.prisma.client.istek.findFirst({
       where: {
-        id,
+        ...publicEntityWhere(id),
         musteriId,
         silmeTarihi: null,
       },
@@ -403,6 +436,7 @@ export class TransportRequestsRepository {
     requestId: number,
     executor?: PrismaExecutor
   ): Promise<number> {
+    //Yeni gorseller mevcut listenin sonuna eklensin diye en buyuk sortOrder bulunur.
     const db = this.getExecutor(executor);
     const lastImage = await db.istekGorsel.findFirst({
       where: {
@@ -422,6 +456,8 @@ export class TransportRequestsRepository {
     inputs: CreateTransportRequestImageRecordInput[],
     executor?: PrismaExecutor
   ): Promise<void> {
+    //Gorsel dosyalari storage'a yazildiktan sonra DB tarafindaki IstekGorsel kayitlari
+    //toplu olarak olusturulur.
     if (inputs.length === 0) {
       return;
     }
@@ -447,6 +483,7 @@ export class TransportRequestsRepository {
     requestId: number,
     executor?: PrismaExecutor
   ): Promise<void> {
+    //Primary gorsel tekil kalsin diye yeni primary atamadan once aktif primary'ler temizlenir.
     const db = this.getExecutor(executor);
     await db.istekGorsel.updateMany({
       where: {
@@ -461,14 +498,14 @@ export class TransportRequestsRepository {
   }
 
   async setPrimaryImageByIdAndRequestId(
-    imageId: number,
+    imageId: EntityIdSelector,
     requestId: number,
     executor?: PrismaExecutor
   ): Promise<boolean> {
     const db = this.getExecutor(executor);
     const result = await db.istekGorsel.updateMany({
       where: {
-        id: imageId,
+        ...this.toEntityWhere(imageId),
         istekId: requestId,
         silmeTarihi: null,
       },
@@ -481,14 +518,14 @@ export class TransportRequestsRepository {
   }
 
   async findActiveImageByIdAndRequestId(
-    imageId: number,
+    imageId: EntityIdSelector,
     requestId: number,
     executor?: PrismaExecutor
   ): Promise<StoredTransportRequestImageRecord | null> {
     const db = this.getExecutor(executor);
     const image = await db.istekGorsel.findFirst({
       where: {
-        id: imageId,
+        ...this.toEntityWhere(imageId),
         istekId: requestId,
         silmeTarihi: null,
       },
@@ -499,15 +536,16 @@ export class TransportRequestsRepository {
   }
 
   async softDeleteImageByIdAndRequestId(
-    imageId: number,
+    imageId: EntityIdSelector,
     requestId: number,
     deletedAt: Date,
     executor?: PrismaExecutor
   ): Promise<boolean> {
+    //Gorsel kaydi fiziksel olarak silinmez; silmeTarihi setlenir ve primary bayragi kaldirilir.
     const db = this.getExecutor(executor);
     const result = await db.istekGorsel.updateMany({
       where: {
-        id: imageId,
+        ...this.toEntityWhere(imageId),
         istekId: requestId,
         silmeTarihi: null,
       },
@@ -521,12 +559,19 @@ export class TransportRequestsRepository {
   }
 
   private getExecutor(executor?: PrismaExecutor): PrismaExecutor {
+    //Metotlar transaction icinden cagrildiginda tx kullanir, normal akista Prisma client'a duser.
     return executor ?? this.prisma.client;
+  }
+
+  private toEntityWhere(id: EntityIdSelector): { id: number } | { publicId: string } {
+    return typeof id === "number" ? { id } : publicEntityWhere(id);
   }
 
   private mapStoredTransportRequest(
     transportRequest: StoredTransportRequestQuery
   ): StoredTransportRequestRecord {
+    //Prisma'nin Decimal ve nested relation yapisini service'in kullanacagi sade
+    //number/null ve nested record formatina cevirir.
     const images = transportRequest.gorseller.map((image) =>
       this.mapStoredTransportRequestImage(image)
     );
@@ -534,6 +579,7 @@ export class TransportRequestsRepository {
 
     return {
       id: transportRequest.id,
+      publicId: transportRequest.publicId,
       baslangicSehri: transportRequest.baslangicSehri,
       varisSehri: transportRequest.varisSehri,
       baslangicKonumMetni: transportRequest.baslangicKonumMetni,
@@ -564,19 +610,25 @@ export class TransportRequestsRepository {
       nakliye: transportRequest.nakliye
         ? {
             id: transportRequest.nakliye.id,
+            publicId: transportRequest.nakliye.publicId,
             carrierId: transportRequest.nakliye.nakliyeci.id,
+            carrierPublicId: transportRequest.nakliye.nakliyeci.publicId,
             carrierName: `${transportRequest.nakliye.nakliyeci.ad} ${transportRequest.nakliye.nakliyeci.soyad}`.trim(),
             carrierUsername: transportRequest.nakliye.nakliyeci.kullaniciAdi,
             aracId: transportRequest.nakliye.arac.id,
+            aracPublicId: transportRequest.nakliye.arac.publicId,
             aracPlaka: transportRequest.nakliye.arac.plaka,
             durumTuru: transportRequest.nakliye.durum.durumTuru,
             anlasilanFiyat: transportRequest.nakliye.anlasilanFiyat.toNumber(),
             durumAdi: transportRequest.nakliye.durum.durumAdi,
             olusturmaTarihi: transportRequest.nakliye.olusturmaTarihi,
             baslangicTarihi: transportRequest.nakliye.baslangicTarihi,
+            teslimBildirimTarihi:
+              transportRequest.nakliye.teslimBildirimTarihi,
             teslimTarihi: transportRequest.nakliye.teslimTarihi,
             ratings: transportRequest.nakliye.puanlar.map((rating) => ({
               id: rating.id,
+              publicId: rating.publicId,
               puanlayanId: rating.puanlayanId,
               puanlananId: rating.puanlananId,
               puanDegeri: rating.puanDegeri,
@@ -596,6 +648,7 @@ export class TransportRequestsRepository {
   ): StoredTransportRequestImageRecord {
     return {
       id: image.id,
+      publicId: image.publicId,
       storageKey: image.storageKey,
       thumbnailStorageKey: image.thumbnailStorageKey,
       mimeType: image.mimeType,

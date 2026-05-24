@@ -1,7 +1,7 @@
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { Reflector } from "@nestjs/core";
-import * as request from "supertest";
+import request from "supertest";
 import { ROLE_NAMES } from "../src/common/constants/role-names";
 import type { AuthenticatedUser } from "../src/common/types/authenticated-user.type";
 import { JwtAuthGuard } from "../src/common/guards/jwt-auth.guard";
@@ -13,6 +13,7 @@ describe("UsersController admin guard", () => {
   let app: INestApplication;
   let currentUser: AuthenticatedUser = {
     id: 10,
+    publicId: "550e8400-e29b-41d4-a716-446655440010",
     mail: "user@example.com",
     kullaniciAdi: "user",
     roles: [ROLE_NAMES.MUSTERI],
@@ -58,6 +59,7 @@ describe("UsersController admin guard", () => {
   it("returns 403 for authenticated non-admin users", async () => {
     currentUser = {
       id: 10,
+      publicId: "550e8400-e29b-41d4-a716-446655440010",
       mail: "user@example.com",
       kullaniciAdi: "user",
       roles: [ROLE_NAMES.MUSTERI],
@@ -70,6 +72,7 @@ describe("UsersController admin guard", () => {
   it("allows admins to access the directory endpoint", async () => {
     currentUser = {
       id: 1,
+      publicId: "550e8400-e29b-41d4-a716-446655440001",
       mail: "admin@example.com",
       kullaniciAdi: "admin",
       roles: [ROLE_NAMES.ADMIN],

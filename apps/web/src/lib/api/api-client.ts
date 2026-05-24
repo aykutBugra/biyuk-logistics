@@ -20,6 +20,7 @@ type ErrorPayload = {
 
 let refreshRequestPromise: Promise<string | null> | null = null;
 
+// Backend hata cevabini UI tarafinda yakalanabilir standart Error nesnesine cevirir.
 export class ApiClientError extends Error {
   status: number;
   body: string;
@@ -56,6 +57,7 @@ function resolveErrorMessage(status: number, statusText: string, body: string): 
   return fallbackMessage;
 }
 
+// HTTP cevabi basarili degilse ApiClientError firlatir, 204 gibi bos cevaplari da guvenli dondurur.
 async function parseApiResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const errorBody = await response.text();
@@ -83,10 +85,12 @@ async function performFetch<T>(
   const isFormDataRequest =
     typeof FormData !== "undefined" && init.body instanceof FormData;
 
+  // FormData dosya yuklemelerinde browser kendi multipart boundary degerini koymali.
   if (!isFormDataRequest && !requestHeaders.has("Content-Type")) {
     requestHeaders.set("Content-Type", "application/json");
   }
 
+  // Token verildiyse her endpoint cagrisina Bearer auth header'i eklenir.
   if (accessTokenOverride ?? accessToken) {
     requestHeaders.set(
       "Authorization",
@@ -103,6 +107,7 @@ async function performFetch<T>(
   return parseApiResponse<T>(response);
 }
 
+// 401 gelince refresh token ile yeni access token alir; ayni anda gelen istekleri tek refresh'e toplar.
 async function refreshAccessToken(): Promise<string | null> {
   const storedAuth = getStoredAuth();
 
@@ -155,6 +160,7 @@ export async function apiFetch<T>(
   try {
     return await performFetch<T>(path, options);
   } catch (error) {
+    // Sadece tokenli isteklerdeki 401 hatasinda refresh denenir, diger hatalar aynen yukari firlatilir.
     if (
       !(error instanceof ApiClientError) ||
       error.status !== 401 ||
@@ -170,6 +176,7 @@ export async function apiFetch<T>(
       throw error;
     }
 
+    // Refresh basarili olursa ayni request yeni access token ile bir kez daha denenir.
     return performFetch<T>(path, options, refreshedAccessToken);
   }
 }

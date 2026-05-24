@@ -4,6 +4,7 @@ import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
 type PrismaExecutor = Prisma.TransactionClient | PrismaClient;
 
+//Nakliye olustugunda aracin aktif kapasitesinden dusulecek rezervasyon girdisi.
 export type CreateVehicleCapacityReservationInput = {
   vehicleId: number;
   shipmentId: number;
@@ -36,6 +37,8 @@ export type VehicleCapacityReservationAggregateRecord = {
 export class VehicleCapacityRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  //Aktif kapasite rezervasyonu olusturur. Decimal alanlar DB'ye yazilirken
+  //Prisma.Decimal'a cevrilir.
   async createActiveReservation(
     input: CreateVehicleCapacityReservationInput,
     executor?: PrismaExecutor
@@ -66,6 +69,7 @@ export class VehicleCapacityRepository {
     releaseReason: string,
     executor?: PrismaExecutor
   ): Promise<boolean> {
+    //Shipment icin henuz releasedAt almamis rezervasyonu kapatir ve neden bilgisini yazar.
     const db = this.getExecutor(executor);
     const result = await db.vehicleCapacityReservation.updateMany({
       where: {
@@ -85,6 +89,7 @@ export class VehicleCapacityRepository {
     shipmentId: number,
     executor?: PrismaExecutor
   ): Promise<ActiveVehicleCapacityReservationRecord | null> {
+    //Arac degistirme gibi islemlerde mevcut aktif rezervasyon snapshot'i gerekir.
     const db = this.getExecutor(executor);
     const reservation = await db.vehicleCapacityReservation.findFirst({
       where: {
@@ -123,6 +128,7 @@ export class VehicleCapacityRepository {
     vehicleIds: number[],
     executor?: PrismaExecutor
   ): Promise<VehicleCapacityReservationAggregateRecord[]> {
+    //Birden fazla arac icin aktif rezervasyonlari tek sorguda cekerek liste ekranlarini besler.
     if (vehicleIds.length === 0) {
       return [];
     }
@@ -152,6 +158,7 @@ export class VehicleCapacityRepository {
   }
 
   private getExecutor(executor?: PrismaExecutor): PrismaExecutor {
+    //Transaction icinden cagrilirsa tx kullanilir, aksi halde normal Prisma client kullanilir.
     return executor ?? this.prisma.client;
   }
 }

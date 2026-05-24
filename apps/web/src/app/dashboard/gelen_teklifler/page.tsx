@@ -50,6 +50,7 @@ function getStatusPriority(status: string): number {
   }
 }
 
+// Musteri gelen teklifleri listeler, kabul/red kararini ve konusmaya gecisi buradan yapar.
 export default function MyIncomingOffersPage() {
   const router = useRouter();
   const { accessToken, status } = useCustomerPageAccess();
@@ -58,10 +59,11 @@ export default function MyIncomingOffersPage() {
   const [offers, setOffers] = useState<MyIncomingOfferItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [actingOfferId, setActingOfferId] = useState<number | null>(null);
+  const [actingOfferId, setActingOfferId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    // Musteri guard hazir olmadan gelen teklifler endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -73,6 +75,7 @@ export default function MyIncomingOffersPage() {
 
     const loadOffers = async () => {
       try {
+        // Teklifler backend'den geldikten sonra ekranda durum onceligine gore siralanir.
         setIsLoading(true);
         setErrorMessage(null);
         const response = await getMyIncomingOffers(accessToken);
@@ -119,6 +122,7 @@ export default function MyIncomingOffersPage() {
     };
   }, [accessToken, reloadKey, router, status]);
 
+  // Kabul veya red aksiyonu ayni handler icinde, action parametresiyle ayrilir.
   const handleOfferDecision = async (
     offer: MyIncomingOfferItem,
     action: "accept" | "reject"
@@ -167,6 +171,7 @@ export default function MyIncomingOffersPage() {
 
       setReloadKey((currentKey) => currentKey + 1);
     } catch (error) {
+      // Token/rol hatasinda kullanici stale teklif ekraninda birakilmaz.
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
         showToast({
@@ -240,7 +245,9 @@ export default function MyIncomingOffersPage() {
     offers.length > 0 ? offers[0].fiyat : 0
   );
   const featuredPendingOffer =
-    [...pendingOffers].sort((left, right) => left.fiyat - right.fiyat || left.id - right.id)[0] ??
+    [...pendingOffers].sort(
+      (left, right) => left.fiyat - right.fiyat || left.id.localeCompare(right.id)
+    )[0] ??
     null;
   const featuredOfferId = featuredPendingOffer?.id ?? null;
   const sortedOffers = [...offers].sort((left, right) => {
@@ -263,7 +270,7 @@ export default function MyIncomingOffersPage() {
       return left.fiyat - right.fiyat;
     }
 
-    return right.id - left.id;
+    return right.id.localeCompare(left.id);
   });
 
   return (

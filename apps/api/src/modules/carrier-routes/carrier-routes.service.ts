@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ROLE_NAMES } from "../../common/constants/role-names";
+import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { LocationsService } from "../locations/locations.service";
 import { CarrierRouteDetailResponseDto } from "./dto/carrier-route-detail-response.dto";
@@ -85,7 +86,7 @@ export class CarrierRoutesService {
   // rota metriklerini detail response uzerinden okuyarak calisir.
   async getMineById(
     currentUser: AuthenticatedUser,
-    id: number
+    id: PublicEntityId
   ): Promise<CarrierRouteDetailResponseDto> {
     this.assertCarrierRole(currentUser);
 
@@ -105,7 +106,7 @@ export class CarrierRoutesService {
   // ayni route korunuyorsa mevcut metrikleri oldugu gibi tasir.
   async updateById(
     currentUser: AuthenticatedUser,
-    id: number,
+    id: PublicEntityId,
     updateCarrierRouteDto: UpdateCarrierRouteDto
   ): Promise<CarrierRouteDetailResponseDto> {
     this.assertCarrierRole(currentUser);
@@ -149,7 +150,7 @@ export class CarrierRoutesService {
 
   async deleteById(
     currentUser: AuthenticatedUser,
-    id: number
+    id: PublicEntityId
   ): Promise<void> {
     this.assertCarrierRole(currentUser);
 
@@ -176,7 +177,7 @@ export class CarrierRoutesService {
     carrierRoute: StoredCarrierRouteRecord
   ): CarrierRouteListItemResponseDto {
     return {
-      id: carrierRoute.id,
+      id: carrierRoute.publicId,
       baslangicSehri: carrierRoute.baslangicSehri,
       varisSehri: carrierRoute.varisSehri,
       baslangicKonumMetni: carrierRoute.baslangicKonumMetni,
@@ -250,6 +251,8 @@ export class CarrierRoutesService {
 
   // Route sapma filtresinin baz aldigi ana route snapshot'ini burada uretir:
   // canonical konumlari cozer, provider uyumunu kontrol eder ve gercek yol metrigini alir.
+ 
+ 
   private async resolveRouteFields(
     baslangicKonum: CreateCarrierRouteDto["baslangicKonum"],
     varisKonum: CreateCarrierRouteDto["varisKonum"]
@@ -280,14 +283,8 @@ export class CarrierRoutesService {
     // hesaplanan gercek yol metrigidir ve evaluator ana rota olarak bunu kullanir.
     const routeMetrics = await this.locationsService.getRouteMetrics(
       resolvedBaslangicKonum.provider,
-      {
-        lat: resolvedBaslangicKonum.lat,
-        lng: resolvedBaslangicKonum.lng,
-      },
-      {
-        lat: resolvedVarisKonum.lat,
-        lng: resolvedVarisKonum.lng,
-      }
+      {lat: resolvedBaslangicKonum.lat,lng: resolvedBaslangicKonum.lng,},
+      {lat: resolvedVarisKonum.lat,lng: resolvedVarisKonum.lng,}
     );
 
     return {

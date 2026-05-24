@@ -38,6 +38,7 @@ function formatFormValue(value: string, suffix = ""): string {
   return trimmedValue ? `${trimmedValue}${suffix}` : "Belirtilmedi";
 }
 
+// Olcu uc alan tamamlanmadan yukleme alani ozetlenmez.
 function formatFormDimensions(values: VehicleFormState): string {
   if (!values.uzunlukCm || !values.genislikCm || !values.yukseklikCm) {
     return "Belirtilmedi";
@@ -55,11 +56,12 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+// Nakliyeci kendi arac kaydini ve fotografini bu sayfadan gunceller.
 export default function EditVehiclePage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
   const params = useParams<{ id: string }>();
-  const vehicleId = Number(params.id);
+  const vehicleId = params.id;
 
   const [form, setForm] = useState<VehicleFormState>(emptyForm);
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
@@ -69,6 +71,7 @@ export default function EditVehiclePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // Duzenleme icin once mevcut arac detayi cekilip form state'e aktarilir.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -76,7 +79,7 @@ export default function EditVehiclePage() {
       return;
     }
 
-    if (!Number.isInteger(vehicleId) || vehicleId <= 0) {
+    if (!vehicleId.trim()) {
       setErrorMessage("Gecersiz arac numarasi.");
       setIsLoading(false);
       return;
@@ -149,6 +152,7 @@ export default function EditVehiclePage() {
     };
   }, [accessToken, router, status, vehicleId]);
 
+  // Form alanlari string olarak tutulur; submitte API input'a cevrilir.
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -161,14 +165,14 @@ export default function EditVehiclePage() {
     }));
   };
 
+  // Kaydetme sirasinda arac bilgileri guncellenir, sonra kullanici detay sayfasina doner.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (
       isSubmitting ||
       !accessToken ||
-      !Number.isInteger(vehicleId) ||
-      vehicleId <= 0
+      !vehicleId.trim()
     ) {
       return;
     }
@@ -193,6 +197,7 @@ export default function EditVehiclePage() {
       const response = await updateVehicle(vehicleId, payload, accessToken);
       router.replace(`/dashboard/araclarim/${response.id}`);
     } catch (error) {
+      // Token/rol hatasinda kullanici duzenleme ekraninda kalmaz.
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
         window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");

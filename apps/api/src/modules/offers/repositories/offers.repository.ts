@@ -1,5 +1,9 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
+import {
+  type PublicEntityId,
+  publicEntityWhere,
+} from "../../../common/public-ids/public-entity-id";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
 const OPEN_REQUEST_STATUS = {
@@ -14,8 +18,10 @@ const OPEN_OFFER_STATUS = {
 
 type PrismaExecutor = Prisma.TransactionClient | PrismaClient;
 
+//Acik istek kartlarinda gosterilecek primary gorsel ozetini temsil eder.
 export type OpenRequestImageRecord = {
   id: number;
+  publicId: string;
   storageKey: string;
   thumbnailStorageKey: string;
   width: number;
@@ -25,6 +31,7 @@ export type OpenRequestImageRecord = {
 
 export type OpenRequestListItemRecord = {
   id: number;
+  publicId: string;
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
@@ -65,7 +72,7 @@ export type OpenRequestDetailRecord = OpenRequestListItemRecord & {
   varisBoylam: number;
   hasExistingOffer: boolean;
   images: OpenRequestImageRecord[];
-  primaryImageId: number | null;
+  primaryImageId: string | null;
 };
 
 export type OpenRequestFilters = {
@@ -82,6 +89,7 @@ export type OpenRequestFilters = {
 
 export type OfferCreateContextRecord = {
   id: number;
+  publicId: string;
   musteriId: number;
   silmeTarihi: Date | null;
   durumTuru: string;
@@ -91,6 +99,7 @@ export type OfferCreateContextRecord = {
 
 export type ActiveVehicleRecord = {
   id: number;
+  publicId: string;
   plaka: string;
 };
 
@@ -105,10 +114,13 @@ export type CreateOfferRecordInput = {
 
 export type StoredOfferRecord = {
   id: number;
+  publicId: string;
   requestId: number;
+  requestPublicId: string;
   baslangicSehri: string;
   varisSehri: string;
   aracId: number | null;
+  aracPublicId: string | null;
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
@@ -117,12 +129,16 @@ export type StoredOfferRecord = {
 
 export type IncomingOfferListItemRecord = {
   id: number;
+  publicId: string;
   requestId: number;
+  requestPublicId: string;
   carrierId: number;
+  carrierPublicId: string;
   carrierName: string;
   carrierUsername: string;
   carrierProfileImageStorageKey: string | null;
   aracId: number | null;
+  aracPublicId: string | null;
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
@@ -131,7 +147,9 @@ export type IncomingOfferListItemRecord = {
 
 export type MyIncomingOfferListItemRecord = {
   id: number;
+  publicId: string;
   requestId: number;
+  requestPublicId: string;
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
@@ -142,10 +160,12 @@ export type MyIncomingOfferListItemRecord = {
   yukTipi: string;
   tasimaTarihi: string | null;
   carrierId: number;
+  carrierPublicId: string;
   carrierName: string;
   carrierUsername: string;
   carrierProfileImageStorageKey: string | null;
   aracId: number | null;
+  aracPublicId: string | null;
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
@@ -154,7 +174,9 @@ export type MyIncomingOfferListItemRecord = {
 
 export type OfferDecisionContextRecord = {
   offerId: number;
+  offerPublicId: string;
   requestId: number;
+  requestPublicId: string;
   customerId: number;
   carrierId: number;
   offerStatusTuru: string;
@@ -188,6 +210,7 @@ export type AcceptOfferResult =
   | {
       ok: true;
       jobId: number;
+      jobPublicId: string;
       reservationSnapshot: {
         vehicleId: number;
         shipmentId: number;
@@ -199,6 +222,7 @@ export type AcceptOfferResult =
       };
       rejectedSiblingOffers: Array<{
         offerId: number;
+        offerPublicId: string;
         carrierId: number;
       }>;
     }
@@ -211,6 +235,7 @@ export type AcceptOfferResult =
 export class OffersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  //Teklif, istek ve nakliye lifecycle durumlari icin gerekli durum id'sini bulur.
   async findStatusIdByTypeAndName(
     durumTuru: string,
     durumAdi: string
@@ -248,6 +273,7 @@ export class OffersRepository {
       orderBy: [{ olusturmaTarihi: "desc" }, { id: "desc" }],
       select: {
         id: true,
+        publicId: true,
         baslangicSehri: true,
         varisSehri: true,
         baslangicKonumMetni: true,
@@ -298,6 +324,7 @@ export class OffersRepository {
           orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { id: "asc" }],
           select: {
             id: true,
+            publicId: true,
             storageKey: true,
             thumbnailStorageKey: true,
             width: true,
@@ -312,6 +339,7 @@ export class OffersRepository {
       primaryImage: request.gorseller[0]
         ? {
             id: request.gorseller[0].id,
+            publicId: request.gorseller[0].publicId,
             storageKey: request.gorseller[0].storageKey,
             thumbnailStorageKey: request.gorseller[0].thumbnailStorageKey,
             width: request.gorseller[0].width,
@@ -321,6 +349,7 @@ export class OffersRepository {
         : null,
       imageCount: request.gorseller.length,
       id: request.id,
+      publicId: request.publicId,
       baslangicSehri: request.baslangicSehri,
       varisSehri: request.varisSehri,
       baslangicKonumMetni: request.baslangicKonumMetni,
@@ -348,12 +377,12 @@ export class OffersRepository {
   // Detail ekraninin route filtresi uygulayabilmesi icin request'in canonical
   // koordinatlari ve ana route metrikleri bu seviyede eksiksiz okunur.
   async findOpenRequestByIdForCarrier(
-    requestId: number,
+    requestId: PublicEntityId,
     carrierId: number
   ): Promise<OpenRequestDetailRecord | null> {
     const request = await this.prisma.client.istek.findFirst({
       where: {
-        id: requestId,
+        ...publicEntityWhere(requestId),
         silmeTarihi: null,
         musteriId: {
           not: carrierId,
@@ -374,6 +403,7 @@ export class OffersRepository {
       },
       select: {
         id: true,
+        publicId: true,
         baslangicSehri: true,
         varisSehri: true,
         baslangicKonumMetni: true,
@@ -430,6 +460,7 @@ export class OffersRepository {
           orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { id: "asc" }],
           select: {
             id: true,
+            publicId: true,
             storageKey: true,
             thumbnailStorageKey: true,
             width: true,
@@ -448,6 +479,7 @@ export class OffersRepository {
       primaryImage: request.gorseller[0]
         ? {
             id: request.gorseller[0].id,
+            publicId: request.gorseller[0].publicId,
             storageKey: request.gorseller[0].storageKey,
             thumbnailStorageKey: request.gorseller[0].thumbnailStorageKey,
             width: request.gorseller[0].width,
@@ -457,6 +489,7 @@ export class OffersRepository {
         : null,
       imageCount: request.gorseller.length,
       id: request.id,
+      publicId: request.publicId,
       baslangicSehri: request.baslangicSehri,
       varisSehri: request.varisSehri,
       baslangicKonumMetni: request.baslangicKonumMetni,
@@ -487,6 +520,7 @@ export class OffersRepository {
       hasExistingOffer: request.teklifler.length > 0,
       images: request.gorseller.map((image) => ({
         id: image.id,
+        publicId: image.publicId,
         storageKey: image.storageKey,
         thumbnailStorageKey: image.thumbnailStorageKey,
         width: image.width,
@@ -494,21 +528,24 @@ export class OffersRepository {
         isPrimary: image.isPrimary,
       })),
       primaryImageId:
-        request.gorseller.find((image) => image.isPrimary)?.id ??
-        request.gorseller[0]?.id ??
+        request.gorseller.find((image) => image.isPrimary)?.publicId ??
+        request.gorseller[0]?.publicId ??
         null,
     };
   }
 
   async findOfferCreateContextByRequestId(
-    requestId: number
+    requestId: PublicEntityId
   ): Promise<OfferCreateContextRecord | null> {
+    //Teklif olusturmadan once istegin sahibi, silinme durumu, aktif durumu ve
+    //nakliyeye donusup donusmedigi tek snapshot olarak okunur.
     const request = await this.prisma.client.istek.findFirst({
       where: {
-        id: requestId,
+        ...publicEntityWhere(requestId),
       },
       select: {
         id: true,
+        publicId: true,
         musteriId: true,
         silmeTarihi: true,
         durum: {
@@ -531,6 +568,7 @@ export class OffersRepository {
 
     return {
       id: request.id,
+      publicId: request.publicId,
       musteriId: request.musteriId,
       silmeTarihi: request.silmeTarihi,
       durumTuru: request.durum.durumTuru,
@@ -540,17 +578,19 @@ export class OffersRepository {
   }
 
   async findActiveVehicleByIdAndOwnerId(
-    aracId: number,
+    aracId: PublicEntityId,
     ownerId: number
   ): Promise<ActiveVehicleRecord | null> {
+    //Nakliyeci sadece kendi aktif araciyla teklif verebilir.
     const vehicle = await this.prisma.client.arac.findFirst({
       where: {
-        id: aracId,
+        ...publicEntityWhere(aracId),
         sahipId: ownerId,
         silmeTarihi: null,
       },
       select: {
         id: true,
+        publicId: true,
         plaka: true,
       },
     });
@@ -559,6 +599,7 @@ export class OffersRepository {
   }
 
   async carrierHasActiveVehicle(carrierId: number): Promise<boolean> {
+    //Acik istek detayinda "teklif verebilir mi" bilgisini beslemek icin kullanilir.
     const vehicle = await this.prisma.client.arac.findFirst({
       where: {
         sahipId: carrierId,
@@ -576,6 +617,7 @@ export class OffersRepository {
     carrierId: number,
     requestId: number
   ): Promise<boolean> {
+    //Ayni nakliyecinin ayni acik istege ikinci bir acik teklif vermesini engellemek icin kullanilir.
     const offer = await this.prisma.client.teklif.findFirst({
       where: {
         nakliyeciId: carrierId,
@@ -603,6 +645,7 @@ export class OffersRepository {
     input: CreateOfferRecordInput,
     executor?: PrismaExecutor
   ): Promise<StoredOfferRecord> {
+    //Teklif kaydini olusturur ve service'in response'a cevirecegi sade offer bilgisini doner.
     const db = this.getExecutor(executor);
     const offer = await db.teklif.create({
       data: {
@@ -615,11 +658,13 @@ export class OffersRepository {
       },
       select: {
         id: true,
+        publicId: true,
         fiyat: true,
         not: true,
         istek: {
           select: {
             id: true,
+            publicId: true,
             baslangicSehri: true,
             varisSehri: true,
           },
@@ -627,6 +672,7 @@ export class OffersRepository {
         arac: {
           select: {
             id: true,
+            publicId: true,
             plaka: true,
           },
         },
@@ -640,10 +686,13 @@ export class OffersRepository {
 
     return {
       id: offer.id,
+      publicId: offer.publicId,
       requestId: offer.istek.id,
+      requestPublicId: offer.istek.publicId,
       baslangicSehri: offer.istek.baslangicSehri,
       varisSehri: offer.istek.varisSehri,
       aracId: offer.arac?.id ?? null,
+      aracPublicId: offer.arac?.publicId ?? null,
       aracPlaka: offer.arac?.plaka ?? null,
       fiyat: offer.fiyat.toNumber(),
       not: offer.not,
@@ -654,6 +703,7 @@ export class OffersRepository {
   async findMyOffersByCarrierId(
     carrierId: number
   ): Promise<StoredOfferRecord[]> {
+    //Nakliyecinin kendi tekliflerini istek ve arac ozetleriyle birlikte getirir.
     const offers = await this.prisma.client.teklif.findMany({
       where: {
         nakliyeciId: carrierId,
@@ -664,11 +714,13 @@ export class OffersRepository {
       orderBy: [{ id: "desc" }],
       select: {
         id: true,
+        publicId: true,
         fiyat: true,
         not: true,
         istek: {
           select: {
             id: true,
+            publicId: true,
             baslangicSehri: true,
             varisSehri: true,
           },
@@ -676,6 +728,7 @@ export class OffersRepository {
         arac: {
           select: {
             id: true,
+            publicId: true,
             plaka: true,
           },
         },
@@ -689,10 +742,13 @@ export class OffersRepository {
 
     return offers.map((offer) => ({
       id: offer.id,
+      publicId: offer.publicId,
       requestId: offer.istek.id,
+      requestPublicId: offer.istek.publicId,
       baslangicSehri: offer.istek.baslangicSehri,
       varisSehri: offer.istek.varisSehri,
       aracId: offer.arac?.id ?? null,
+      aracPublicId: offer.arac?.publicId ?? null,
       aracPlaka: offer.arac?.plaka ?? null,
       fiyat: offer.fiyat.toNumber(),
       not: offer.not,
@@ -701,12 +757,13 @@ export class OffersRepository {
   }
 
   async findActiveRequestIdByCustomerId(
-    requestId: number,
+    requestId: PublicEntityId,
     customerId: number
   ): Promise<number | null> {
+    //Musterinin belirli istege sahip olup olmadigini hafif bir id sorgusuyla kontrol eder.
     const request = await this.prisma.client.istek.findFirst({
       where: {
-        id: requestId,
+        ...publicEntityWhere(requestId),
         musteriId: customerId,
         silmeTarihi: null,
       },
@@ -721,6 +778,7 @@ export class OffersRepository {
   async findIncomingOffersByRequestId(
     requestId: number
   ): Promise<IncomingOfferListItemRecord[]> {
+    //Bir istege gelen teklifleri, nakliyeci ve arac bilgileriyle birlikte listeler.
     const offers = await this.prisma.client.teklif.findMany({
       where: {
         istekId: requestId,
@@ -731,12 +789,19 @@ export class OffersRepository {
       orderBy: [{ id: "desc" }],
       select: {
         id: true,
+        publicId: true,
         fiyat: true,
         not: true,
         istekId: true,
+        istek: {
+          select: {
+            publicId: true,
+          },
+        },
         nakliyeci: {
           select: {
             id: true,
+            publicId: true,
             ad: true,
             soyad: true,
             kullaniciAdi: true,
@@ -746,6 +811,7 @@ export class OffersRepository {
         arac: {
           select: {
             id: true,
+            publicId: true,
             plaka: true,
           },
         },
@@ -759,12 +825,16 @@ export class OffersRepository {
 
     return offers.map((offer) => ({
       id: offer.id,
+      publicId: offer.publicId,
       requestId: offer.istekId,
+      requestPublicId: offer.istek.publicId,
       carrierId: offer.nakliyeci.id,
+      carrierPublicId: offer.nakliyeci.publicId,
       carrierName: `${offer.nakliyeci.ad} ${offer.nakliyeci.soyad}`.trim(),
       carrierUsername: offer.nakliyeci.kullaniciAdi,
       carrierProfileImageStorageKey: offer.nakliyeci.profilFotografiStorageKey,
       aracId: offer.arac?.id ?? null,
+      aracPublicId: offer.arac?.publicId ?? null,
       aracPlaka: offer.arac?.plaka ?? null,
       fiyat: offer.fiyat.toNumber(),
       not: offer.not,
@@ -775,6 +845,7 @@ export class OffersRepository {
   async findMyIncomingOffersByCustomerId(
     customerId: number
   ): Promise<MyIncomingOfferListItemRecord[]> {
+    //Musterinin tum acik isteklerine gelen, halen karar verilebilir durumdaki teklifleri toplar.
     const offers = await this.prisma.client.teklif.findMany({
       where: {
         durum: {
@@ -808,11 +879,13 @@ export class OffersRepository {
       orderBy: [{ id: "desc" }],
       select: {
         id: true,
+        publicId: true,
         fiyat: true,
         not: true,
         istekId: true,
         istek: {
           select: {
+            publicId: true,
             baslangicSehri: true,
             varisSehri: true,
             baslangicKonumMetni: true,
@@ -827,6 +900,7 @@ export class OffersRepository {
         nakliyeci: {
           select: {
             id: true,
+            publicId: true,
             ad: true,
             soyad: true,
             kullaniciAdi: true,
@@ -836,6 +910,7 @@ export class OffersRepository {
         arac: {
           select: {
             id: true,
+            publicId: true,
             plaka: true,
           },
         },
@@ -849,7 +924,9 @@ export class OffersRepository {
 
     return offers.map((offer) => ({
       id: offer.id,
+      publicId: offer.publicId,
       requestId: offer.istekId,
+      requestPublicId: offer.istek.publicId,
       baslangicSehri: offer.istek.baslangicSehri,
       varisSehri: offer.istek.varisSehri,
       baslangicKonumMetni: offer.istek.baslangicKonumMetni,
@@ -860,10 +937,12 @@ export class OffersRepository {
       yukTipi: offer.istek.yukTipi,
       tasimaTarihi: offer.istek.tasimaTarihi,
       carrierId: offer.nakliyeci.id,
+      carrierPublicId: offer.nakliyeci.publicId,
       carrierName: `${offer.nakliyeci.ad} ${offer.nakliyeci.soyad}`.trim(),
       carrierUsername: offer.nakliyeci.kullaniciAdi,
       carrierProfileImageStorageKey: offer.nakliyeci.profilFotografiStorageKey,
       aracId: offer.arac?.id ?? null,
+      aracPublicId: offer.arac?.publicId ?? null,
       aracPlaka: offer.arac?.plaka ?? null,
       fiyat: offer.fiyat.toNumber(),
       not: offer.not,
@@ -872,14 +951,16 @@ export class OffersRepository {
   }
 
   async findOfferDecisionContextById(
-    offerId: number
+    offerId: PublicEntityId
   ): Promise<OfferDecisionContextRecord | null> {
+    //Kabul/red kararinda gereken offer, request ve arac durumlarini tek DB okumasinda toplar.
     const offer = await this.prisma.client.teklif.findFirst({
       where: {
-        id: offerId,
+        ...publicEntityWhere(offerId),
       },
       select: {
         id: true,
+        publicId: true,
         fiyat: true,
         nakliyeciId: true,
         durum: {
@@ -891,6 +972,7 @@ export class OffersRepository {
         istek: {
           select: {
             id: true,
+            publicId: true,
             musteriId: true,
             silmeTarihi: true,
             durum: {
@@ -923,7 +1005,9 @@ export class OffersRepository {
 
     return {
       offerId: offer.id,
+      offerPublicId: offer.publicId,
       requestId: offer.istek.id,
+      requestPublicId: offer.istek.publicId,
       customerId: offer.istek.musteriId,
       carrierId: offer.nakliyeciId,
       offerStatusTuru: offer.durum.durumTuru,
@@ -945,6 +1029,7 @@ export class OffersRepository {
     rejectedStatusId: number,
     executor?: PrismaExecutor
   ): Promise<boolean> {
+    //Sadece halen acik olan teklif reddedilebilir; updateMany bu kosulu atomik kontrol eder.
     const db = this.getExecutor(executor);
     const result = await db.teklif.updateMany({
       where: {
@@ -972,6 +1057,8 @@ export class OffersRepository {
     tx: Prisma.TransactionClient,
     input: AcceptOfferInput
   ): Promise<AcceptOfferResult> {
+    //Teklif kabulunun butun kritik DB adimlari burada ayni transaction icinde yapilir:
+    //kazanan teklif kabul edilir, request anlasildi olur, rakip teklifler reddedilir ve nakliye acilir.
     const requestSnapshot = await tx.istek.findFirst({
       where: {
         id: input.requestId,
@@ -1044,6 +1131,7 @@ export class OffersRepository {
       },
       select: {
         id: true,
+        publicId: true,
         nakliyeciId: true,
       },
     });
@@ -1071,12 +1159,14 @@ export class OffersRepository {
       },
       select: {
         id: true,
+        publicId: true,
       },
     });
 
     return {
       ok: true,
       jobId: shipment.id,
+      jobPublicId: shipment.publicId,
       reservationSnapshot: {
         vehicleId: input.aracId,
         shipmentId: shipment.id,
@@ -1088,12 +1178,14 @@ export class OffersRepository {
       },
       rejectedSiblingOffers: rejectedSiblingOffers.map((offer) => ({
         offerId: offer.id,
+        offerPublicId: offer.publicId,
         carrierId: offer.nakliyeciId,
       })),
     };
   }
 
   private getExecutor(executor?: PrismaExecutor): PrismaExecutor {
+    //Repository metotlari transaction icinden cagrilirsa tx, normal akista Prisma client kullanir.
     return executor ?? this.prisma.client;
   }
 

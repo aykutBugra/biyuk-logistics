@@ -23,6 +23,7 @@ export const metadata: Metadata = {
     "Bi’yük ile tasima taleplerini, tekliflerini, araclarini ve anlasilan nakliyelerini tek akista yonet.",
 };
 
+// Root layout tum route'lari provider, global font ve ortak navbar ile sarar.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html

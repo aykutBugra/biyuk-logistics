@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "primeicons/primeicons.css";
 
+/* Uygulamanin ana renk, yuzey ve layout degiskenleri burada merkezilesir. */
 :root {
   --background: #f3f5f8;
   --foreground: #0f172a;
@@ -24,6 +25,7 @@
   --topbar-height: 4.25rem;
 }
 
+/* Tailwind theme tokenlari CSS degiskenlerine baglanir. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -31,6 +33,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Sayfa geneli sakin dashboard arka planini ve font ailesini kurar. */
 html {
   min-height: 100%;
   background: linear-gradient(180deg, #f8fafc 0%, #f3f5f8 100%);
@@ -43,6 +46,7 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+/* Arka plandaki hafif grid dokusu tum sayfalarda ayni atmosferi verir. */
 body::before {
   content: "";
   position: fixed;
@@ -61,6 +65,7 @@ body::before {
   color: var(--foreground);
 }
 
+/* Ortak surface siniflari dashboard kartlarinin temel cercevesini olusturur. */
 .app-surface {
   border: 1px solid var(--surface-border);
   background: var(--surface);
@@ -86,6 +91,7 @@ body::before {
   color: #0f172a;
 }
 
+/* Ortak buton davranisi; renk varyantlari asagidaki siniflarda ayrilir. */
 .app-button-primary,
 .app-button-secondary,
 .app-button-ghost {
@@ -119,6 +125,7 @@ body::before {
     border-color 140ms ease;
 }
 
+/* Hover hareketleri reduced motion tercihi yoksa aktif edilir. */
 @media (prefers-reduced-motion: no-preference) {
   .app-button-primary:hover,
   .app-button-secondary:hover,
@@ -132,6 +139,7 @@ body::before {
   }
 }
 
+/* Birincil, ikincil ve ghost buton renkleri burada ayrilir. */
 .app-button-primary {
   border: 1px solid rgba(37, 99, 235, 0.16);
   background: #2563eb;
@@ -168,6 +176,7 @@ body::before {
   color: #0f172a;
 }
 
+/* PrimeReact confirm dialog maskesi ve gecisleri uygulama temasina uydurulur. */
 .app-confirm-mask {
   background: rgba(15, 23, 42, 0.32);
   opacity: 0;
@@ -212,6 +221,7 @@ body::before {
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1);
 }
 
+/* Toast mesajlari severity tipine gore renklenir. */
 .app-toast-message.p-toast-message-success {
   border-color: rgba(16, 185, 129, 0.24);
 }
@@ -265,6 +275,7 @@ body::before {
     transform 120ms ease;
 }
 
+/* Kullanici reduced motion istiyorsa overlay/toast gecisleri minimuma indirilir. */
 @media (prefers-reduced-motion: reduce) {
   .app-confirm-mask,
   .app-confirm-transition-enter-active,
@@ -284,6 +295,7 @@ body::before {
   }
 }
 
+/* Form inputlari tum dashboard formlarinda ayni focus, hata ve disabled davranisini kullanir. */
 .app-input {
   width: 100%;
   border-radius: 0.85rem;
@@ -334,6 +346,7 @@ body::before {
   padding: 1.25rem;
 }
 
+/* Form hata, yardim ve submit stilleri tek yerden paylasilir. */
 .app-form-error-banner {
   border-radius: 0.95rem;
   border: 1px solid rgba(248, 113, 113, 0.28);

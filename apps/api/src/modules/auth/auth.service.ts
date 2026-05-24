@@ -11,6 +11,11 @@ import {
   ROLE_NAMES,
   type BusinessRoleName,
 } from "../../common/constants/role-names";
+import {
+  isLegacyNumericEntityId,
+  isLegacyNumericIdsAllowed,
+  isUuidV4,
+} from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import type { DashboardIntroRole } from "../../common/types/dashboard-intro-role.type";
 import type { JwtTtlValue } from "../../config/auth.config";
@@ -28,18 +33,24 @@ import { AuthTokenResponseDto } from "./dto/auth-token-response.dto";
 import { LoginDto } from "./dto/login.dto";
 import { type RegisterRoleName, RegisterDto } from "./dto/register.dto";
 
+//accesstokenpayload ve refreshtokenpayload token oluşturulurken 
+//kullanılan veri yapılarıdır. kayıt olan kullanıcının bilgileri ve 
+//rollerine göre erişim token'ı oluşturulur.
 type AccessTokenPayload = {
-  sub: number;
+  sub: string;
   mail: string;
   kullaniciAdi: string;
   roles: AuthUserRecord["roles"];
 };
 
+
 type RefreshTokenPayload = {
-  sub: number;
+  sub: string | number;
   type: "refresh";
 };
 
+//normalizedregisterinput registerdto dan dönüştürülen ve
+//servis içinde kullanılan veri yapısıdır.
 type NormalizedRegisterInput = {
   ad: string;
   soyad: string;
@@ -51,8 +62,12 @@ type NormalizedRegisterInput = {
   initialVehicle: VehicleDraft | null;
 };
 
+
+
 @Injectable()
 export class AuthService {
+  //authService in kullandığı başka servislerin tanımı ve 
+  //constructor ile bu servislerin örnekleri alınır.
   constructor(
     private readonly usersService: UsersService,
     private readonly rolesService: RolesService,
@@ -61,20 +76,27 @@ export class AuthService {
     private readonly configService: ConfigService
   ) {}
 
+
+  //kullanıcı kaydı ve normalizasyonu . 
   async register(registerDto: RegisterDto): Promise<AuthTokenResponseDto> {
     const normalizedInput = this.normalizeRegisterInput(registerDto);
 
+    //mail ve kullanıcı adı için benzersizlik kontrolü
     await this.assertRegistrationIdentifiersAvailable(
       normalizedInput.mail,
       normalizedInput.kullaniciAdi
     );
 
+    //her kullanıcı önce müşteri olarak açılır . 
     const customerRoleId = await this.rolesService.requireRoleId(ROLE_NAMES.MUSTERI);
+   
+    //şifre hashlenir. hashlenmiş şifre veritabanına kaydedilir .
     const sifreHash = await hash(normalizedInput.password, 12);
 
     let userId: number;
-
     try {
+      //kullanıcı oluşturma işlemi ve eğer kayıt sırasında nakliyeci rolü 
+      //seçilmişse araç oluşturma işlemi tek bir transaction içinde yapılır.
       userId = await this.prisma.client.$transaction(async (tx) => {
         const createdUser =
           await this.usersService.createUserWithResolvedRoleIdInTransaction(tx, {
@@ -86,12 +108,14 @@ export class AuthService {
             sifreHash,
             roleId: customerRoleId,
           });
-
+        
+          //eğer nakliyeci rolü seçilmişse araç oluşturma işlemi yapılır ve kullanıcıya nakliyeci rolü atanır.
         if (normalizedInput.initialVehicle) {
           await createVehicleForOwner(tx, {
             sahipId: createdUser.id,
             ...normalizedInput.initialVehicle,
           });
+          //await ile rollerervice içindeki assignRoleToUserInTransaction fonksiyonu çağrılır ve kullanıcıya nakliyeci rolü atanır.
           await this.rolesService.assignRoleToUserInTransaction(
             tx,
             createdUser.id,
@@ -102,34 +126,46 @@ export class AuthService {
         return createdUser.id;
       });
     } catch (error) {
+      //eğer kayıt sırasında benzersizlik ihlali gibi bir hata oluşursa bu 
+      //hata uygun bir ConflictException olarak yeniden fırlatılır.
       this.rethrowUniqueConstraintAsConflict(error);
       throw error;
     }
 
+    //kayıt başarılıysa kullanıcı id'si ile token oluşturulur ve döndürülür.
     return this.createAuthResponseForUserId(userId);
   }
 
+
+  //kullanıcı giriş işlemi yapılırken kullanıcı adı veya mail adresi kullanılabilir.
   async login(loginDto: LoginDto): Promise<AuthTokenResponseDto> {
     const identifier = loginDto.identifier.trim();
     const user = await this.usersService.findActiveByIdentifier(identifier);
 
+    //kullanıcı yoksa hata 
     if (!user) {
       throw new UnauthorizedException("Invalid credentials.");
     }
 
+    //girilen şifreninin veritabanı ile karşılaştırması
     const isPasswordValid = await compare(loginDto.password, user.sifreHash);
 
+    //şifre yanlışsa hata
     if (!isPasswordValid) {
       throw new UnauthorizedException("Sifre hatali");
     }
 
+    //şifre doğruya ac ve ref token oluşturulur ve döndürülür.
     return this.createAuthResponse(user);
   }
 
+
+  //ac token biterse kişiye yeni yeni token verme işlemi 
   async refresh(refreshToken: string): Promise<AuthTokenResponseDto> {
     let payload: RefreshTokenPayload;
 
     try {
+      //ref token doğrulanır
       payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(refreshToken, {
         secret: this.refreshSecret,
       });
@@ -137,11 +173,19 @@ export class AuthService {
       throw new UnauthorizedException("Invalid refresh token.");
     }
 
+    //doğrulanan token'ın gerçekten bir ref token olduğunun kontrolü 
     if (payload.type !== "refresh") {
       throw new UnauthorizedException("Invalid refresh token.");
     }
 
-    const user = await this.usersService.findActiveById(payload.sub);
+    //token payload'undaki kullanıcı id'si ile kullanıcı bulunur.
+    //eğer kullanıcı yoksa hata fırlatılır.
+    const refreshSubject = String(payload.sub);
+    const user = isUuidV4(refreshSubject)
+      ? await this.usersService.findActiveByPublicId(refreshSubject)
+      : isLegacyNumericIdsAllowed() && isLegacyNumericEntityId(refreshSubject)
+        ? await this.usersService.findActiveById(Number(refreshSubject))
+        : null;
 
     if (!user) {
       throw new UnauthorizedException("Invalid refresh token.");
@@ -150,25 +194,33 @@ export class AuthService {
     return this.createTokenPair(user);
   }
 
+
+  //müşterinin sonradan nakliyeci rolü alması işlemi .
   async completeCarrierOnboarding(
     currentUser: AuthenticatedUser,
     createVehicleDto: CreateVehicleDto
   ): Promise<AuthTokenResponseDto> {
+    //aktif kişiyi bul 
     const user = await this.usersService.findActiveById(currentUser.id);
 
+    //aktif kişi bulunamazsa hata fırlatılır.
     if (!user) {
-      throw new UnauthorizedException("Current user could not be resolved.");
+      throw new UnauthorizedException("Aktif kullanıcı bulunamadı.");
     }
 
+    //zaten nakliyeciyse hata fırlatılır . 
     if (user.roles.includes(ROLE_NAMES.NAKLIYECI)) {
-      throw new ConflictException("Carrier onboarding is already complete.");
+      throw new ConflictException("Kişi zaten nakliyeci rolüne sahip.");
     }
-
+    //müşteri değilse hata fırlatılır çünkü sadece müşteriler nakliyeci olabilir.
     if (!user.roles.includes(ROLE_NAMES.MUSTERI)) {
-      throw new ConflictException("Current user is not eligible for carrier onboarding.");
+      throw new ConflictException("Müşteri değilse nakliyeci olamaz.");
     }
 
     try {
+      //araç oluşturulur ve kişiye nakliyeci rolü verilir . 
+      //bu işlemler tek bir transaction içinde yapılır. böylece herhangi bir adımda 
+      //hata olursa tüm işlemler geri alınır ve veri tutarlılığı sağlanır.
       await this.prisma.client.$transaction(async (tx) => {
         await createVehicleForOwner(tx, {
           sahipId: user.id,
@@ -185,21 +237,29 @@ export class AuthService {
       throw error;
     }
 
+    //yeni rol ile güncel token döner . 
     return this.createAuthResponseForUserId(user.id);
   }
 
+
+  //giriş yapan kullanıcının bilgilerini döndürür.
   async getCurrentUser(
     currentUser: AuthenticatedUser
   ): Promise<UserProfileResponseDto> {
+    //aktif kullanıcı id'si ile kullanıcının profil bilgileri bulunur ve döndürülür.
     const user = await this.usersService.findProfileById(currentUser.id);
 
     if (!user) {
-      throw new UnauthorizedException("Current user could not be resolved.");
+      //bulunmazsa hata döner .
+      throw new UnauthorizedException("Aktif kullanıcı bulunamadı.");
     }
 
     return user;
   }
 
+
+  //dashboard intro kapatma işlemi . kullanıcı dashboard intro'yu kapattığında bu bilgi veritabanına kaydedilir.
+  //bu sayede kişi kayıttan sonra sadece bir kez dashboard intro görür ve tekrar giriş yaptığında intro gösterilmez.
   async dismissDashboardIntro(
     currentUser: AuthenticatedUser,
     role: DashboardIntroRole
@@ -207,12 +267,17 @@ export class AuthService {
     const user = await this.usersService.dismissDashboardIntro(currentUser.id, role);
 
     if (!user) {
-      throw new UnauthorizedException("Current user could not be resolved.");
+      throw new UnauthorizedException("Aktif kullanıcı bulunamadı.");
     }
 
     return user;
   }
 
+
+  //update ve delete işlemleri . kullanıcı kendi profil fotoğrafını güncelleyebilir 
+  //veya silebilir. ayrıca kendi hesabını silebilir.
+  //asıl iş burda yapılmaz usersService içindeki fonksiyonlar çağrılır. 
+  //authService sadece bu işlemi koordine eder.
   async updateCurrentUserProfileImage(
     currentUser: AuthenticatedUser,
     file: Express.Multer.File | undefined
@@ -230,30 +295,41 @@ export class AuthService {
     await this.usersService.deleteOwnAccount(currentUser.id);
   }
 
+
+
+  //ac ve ref token burada üretilir .
   private async createTokenPair(user: AuthUserRecord): Promise<AuthTokenResponseDto> {
+    
+    //ac token payload'u oluşturulur. bu payload içinde kullanıcının id'si, maili, kullanıcı adı ve rolleri bulunur.
     const accessPayload: AccessTokenPayload = {
-      sub: user.id,
+      sub: user.publicId,
       mail: user.mail,
       kullaniciAdi: user.kullaniciAdi,
       roles: user.roles,
     };
 
+    //ref token payload'u oluşturulur. bu payload içinde sadece kullanıcı id'si ve token'ın 
+    //ref token olduğunu belirten bir type alanı bulunur.
     const refreshPayload: RefreshTokenPayload = {
-      sub: user.id,
+      sub: user.publicId,
       type: "refresh",
     };
 
+    //jwtService kullanılarak ac ve ref token'ları oluşturulur. 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(accessPayload, {
         secret: this.accessSecret,
         expiresIn: this.accessTtl,
       }),
+      //secret ve süreler auth.config içinden alınır. 
+      //bu sayede token yapılandırması merkezi bir yerden yönetilir
       this.jwtService.signAsync(refreshPayload, {
         secret: this.refreshSecret,
         expiresIn: this.refreshTtl,
       }),
     ]);
 
+    //dönen cevap
     return {
       accessToken,
       refreshToken,
@@ -261,6 +337,9 @@ export class AuthService {
     };
   }
 
+
+  //createAuthResponseForUserId fonksiyonu, kullanıcı id'si ile kullanıcının bilgilerini bulur
+  //ve bu bilgilerle token oluşturur.
   private async createAuthResponseForUserId(
     userId: number
   ): Promise<AuthTokenResponseDto> {
@@ -282,6 +361,9 @@ export class AuthService {
     };
   }
 
+
+  //kayıt sırasında mail ve kullanıcı adı benzersiz olmalıdır. bu fonksiyon kayıt işlemi sırasında
+  //girilen mail ve kullanıcı adının veritabanında zaten var olup olmadığını kontrol eder.
   private async assertRegistrationIdentifiersAvailable(
     mail: string,
     kullaniciAdi: string
@@ -292,14 +374,16 @@ export class AuthService {
     ]);
 
     if (mailExists) {
-      throw new ConflictException("Mail is already in use.");
+      throw new ConflictException("Mail zaten kullanımda.");
     }
 
     if (usernameExists) {
-      throw new ConflictException("Username is already in use.");
+      throw new ConflictException("Username zaten kullanımda.");
     }
   }
 
+
+  //kayıt verisini temizler ve normalize eder .
   private normalizeRegisterInput(registerDto: RegisterDto): NormalizedRegisterInput {
     const normalizedRole = this.normalizeRegisterRole(registerDto.role);
 
@@ -312,6 +396,8 @@ export class AuthService {
       password: registerDto.password,
       role: normalizedRole,
       initialVehicle:
+      //eğer rol nakliyeci ise araç bilgileri registerDto'dan alınır ve normalize edilerek
+      //initialVehicle alanına atanır.
         normalizedRole === ROLE_NAMES.NAKLIYECI
           ? {
               marka: registerDto.marka ?? "",
@@ -329,6 +415,8 @@ export class AuthService {
     };
   }
 
+
+  //rol seçilmezse müsteri kabul edilir .
   private normalizeRegisterRole(role?: RegisterRoleName): BusinessRoleName {
     if (!role || role === "KULLANICI") {
       return ROLE_NAMES.MUSTERI;
@@ -337,6 +425,7 @@ export class AuthService {
     return role;
   }
 
+  //veritabanı benzersizlik ihlali hatalarını yakalar ve bu hataları uygun ConflictException'lara dönüştürür.
   private rethrowUniqueConstraintAsConflict(error: unknown): never | void {
     if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
       return;
@@ -347,23 +436,26 @@ export class AuthService {
       : [];
 
     if (targets.includes("mail")) {
-      throw new ConflictException("Mail is already in use.");
+      throw new ConflictException("Mail zaten kullanımda.");
     }
 
     if (targets.includes("kullaniciAdi")) {
-      throw new ConflictException("Username is already in use.");
+      throw new ConflictException("Username zaten kullanımda.");
     }
 
     if (isVehiclePlateUniqueConstraintTarget(targets)) {
-      throw new ConflictException("Vehicle plate is already in use.");
+      throw new ConflictException("Plaka zaten kullanımda.");
     }
 
-    throw new ConflictException("User identifiers must be unique.");
+    throw new ConflictException("Kullanıcı adı zaten kullanımda.");
   }
 
+
+  //touseridentity fonksiyonu, AuthUserRecord içinden kullanıcı kimliğini temsil eden bilgileri seçer ve döndürür.
   private toUserIdentity(user: AuthUserRecord): Omit<AuthUserRecord, "sifreHash"> {
     return {
       id: user.id,
+      publicId: user.publicId,
       ad: user.ad,
       soyad: user.soyad,
       mail: user.mail,
@@ -377,6 +469,9 @@ export class AuthService {
     };
   }
 
+
+  //swt secret get fonksiyonları auth.config içindeki değerleri alır. 
+  //bu sayede token yapılandırması merkezi bir yerden yönetilir.
   private get accessSecret(): string {
     return this.configService.getOrThrow<string>("auth.accessSecret");
   }

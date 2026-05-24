@@ -28,7 +28,7 @@ export type VehicleCapacitySummary = {
 };
 
 export type VehicleListItem = {
-  id: number;
+  id: string;
   plaka: string;
   marka: string;
   model: string;
@@ -45,6 +45,7 @@ export type VehicleListItem = {
 
 export type VehicleDetail = VehicleListItem;
 
+// Nakliyeci arac eklerken formdaki sayisal alanlar create input olarak backend'e gider.
 export function createVehicle(input: CreateVehicleInput, accessToken: string) {
   return apiFetch<VehicleDetail>("/vehicles", {
     method: "POST",
@@ -53,6 +54,7 @@ export function createVehicle(input: CreateVehicleInput, accessToken: string) {
   });
 }
 
+// Araclarim ekraninda kullanicinin aktif arac filosu ve kapasite ozeti listelenir.
 export function getMyVehicles(accessToken: string) {
   return apiFetch<VehicleListItem[]>("/vehicles/my", {
     method: "GET",
@@ -60,15 +62,17 @@ export function getMyVehicles(accessToken: string) {
   });
 }
 
-export function getVehicleDetail(id: number, accessToken: string) {
+// Detay/duzenleme ekranlari tek aracin tum kapasite bilgisini bu endpoint'ten alir.
+export function getVehicleDetail(id: string, accessToken: string) {
   return apiFetch<VehicleDetail>(`/vehicles/${id}`, {
     method: "GET",
     accessToken,
   });
 }
 
+// Arac bilgilerinin guncellenmesi sahiplik kontroluyle backend tarafinda yapilir.
 export function updateVehicle(
-  id: number,
+  id: string,
   input: UpdateVehicleInput,
   accessToken: string
 ) {
@@ -79,15 +83,17 @@ export function updateVehicle(
   });
 }
 
-export function deleteVehicle(id: number, accessToken: string) {
+// Silme islemi UI'da tek istek gibi gorunur, backend uygunluk ve sahiplik kontrol eder.
+export function deleteVehicle(id: string, accessToken: string) {
   return apiFetch<void>(`/vehicles/${id}`, {
     method: "DELETE",
     accessToken,
   });
 }
 
+// Arac fotografi FormData ile gonderilir; JSON content-type api client tarafindan eklenmez.
 export function uploadVehicleImage(
-  id: number,
+  id: string,
   formData: FormData,
   accessToken: string
 ) {
@@ -98,7 +104,8 @@ export function uploadVehicleImage(
   });
 }
 
-export function deleteVehicleImage(id: number, accessToken: string) {
+// Arac fotografini kaldirinca detay response'u guncel haliyle geri gelir.
+export function deleteVehicleImage(id: string, accessToken: string) {
   return apiFetch<VehicleDetail>(`/vehicles/${id}/image`, {
     method: "DELETE",
     accessToken,

@@ -5,7 +5,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseIntPipe,
   Post,
   Query,
   UseGuards,
@@ -14,6 +13,10 @@ import { ROLE_NAMES } from "../../common/constants/role-names";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import {
+  type PublicEntityId,
+  PublicEntityIdPipe,
+} from "../../common/public-ids/public-entity-id";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { CreateOfferDto } from "./dto/create-offer.dto";
@@ -45,7 +48,7 @@ export class OffersController {
   @Roles(ROLE_NAMES.NAKLIYECI)
   getOpenRequestById(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Param("requestId", ParseIntPipe) requestId: number,
+    @Param("requestId", PublicEntityIdPipe) requestId: PublicEntityId,
     @Query() query: OpenRequestDetailQueryDto
   ): Promise<OpenRequestDetailResponseDto> {
     return this.offersService.getOpenRequestById(currentUser, requestId, query);
@@ -56,7 +59,7 @@ export class OffersController {
   @Roles(ROLE_NAMES.NAKLIYECI)
   create(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Param("requestId", ParseIntPipe) requestId: number,
+    @Param("requestId", PublicEntityIdPipe) requestId: PublicEntityId,
     @Body() createOfferDto: CreateOfferDto
   ): Promise<OfferResponseDto> {
     return this.offersService.create(currentUser, requestId, createOfferDto);
@@ -67,7 +70,7 @@ export class OffersController {
   @Roles(ROLE_NAMES.MUSTERI, ROLE_NAMES.NAKLIYECI)
   async acceptById(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Param("offerId", ParseIntPipe) offerId: number
+    @Param("offerId", PublicEntityIdPipe) offerId: PublicEntityId
   ): Promise<void> {
     await this.offersService.acceptById(currentUser, offerId);
   }
@@ -77,7 +80,7 @@ export class OffersController {
   @Roles(ROLE_NAMES.MUSTERI, ROLE_NAMES.NAKLIYECI)
   async rejectById(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Param("offerId", ParseIntPipe) offerId: number
+    @Param("offerId", PublicEntityIdPipe) offerId: PublicEntityId
   ): Promise<void> {
     await this.offersService.rejectById(currentUser, offerId);
   }
@@ -102,7 +105,7 @@ export class OffersController {
   @Roles(ROLE_NAMES.MUSTERI)
   getIncomingForRequest(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Param("requestId", ParseIntPipe) requestId: number
+    @Param("requestId", PublicEntityIdPipe) requestId: PublicEntityId
   ): Promise<IncomingOfferListItemResponseDto[]> {
     return this.offersService.getIncomingForRequest(currentUser, requestId);
   }

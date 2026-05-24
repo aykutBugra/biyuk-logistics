@@ -11,6 +11,11 @@ import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import { RequestImageResponseDto } from "../../common/dto/request-image-response.dto";
 import { RequestImageSummaryResponseDto } from "../../common/dto/request-image-summary-response.dto";
+import {
+  isLegacyNumericIdsAllowed,
+  parsePublicEntityId,
+  type PublicEntityId,
+} from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { unwrapTransactionResult } from "../../common/utils/unwrap-transaction-result";
 import { MediaStorageService } from "../../infrastructure/media/media-storage.service";
@@ -46,6 +51,7 @@ import {
 import { NotificationsPublisher } from "../notifications/notifications.publisher";
 import { VehicleCapacityService } from "../vehicle-capacity/vehicle-capacity.service";
 
+//db yerine burada tanımlama sebebimiz bu durumları 
 const OPEN_OFFER_STATUS = {
   durumTuru: "TEKLIF",
   durumAdi: "OLUSTURULDU",
@@ -100,12 +106,12 @@ export class OffersService {
 
     // Route filtresi yalnizca carrierRouteId secildiyse devreye girer; route secimi
     // yoksa ekran klasik discovery havuzu ile calisir.
+    const selectedCarrierRouteId = this.parseOptionalPublicEntityId(
+      query.carrierRouteId
+    );
     const selectedCarrierRoute =
-      typeof query.carrierRouteId === "number"
-        ? await this.carrierRoutesService.getMineById(
-            currentUser,
-            query.carrierRouteId
-          )
+      selectedCarrierRouteId
+        ? await this.carrierRoutesService.getMineById(currentUser, selectedCarrierRouteId)
         : null;
 
     if (
@@ -165,7 +171,7 @@ export class OffersService {
 
   async getOpenRequestById(
     currentUser: AuthenticatedUser,
-    requestId: number,
+    requestId: PublicEntityId,
     query: OpenRequestDetailQueryDto
   ): Promise<OpenRequestDetailResponseDto> {
     // Detail ekraninda da ayni route filtresi zorlanir; secili route'a uymayan bir
@@ -185,12 +191,12 @@ export class OffersService {
     const hasActiveVehicle = await this.offersRepository.carrierHasActiveVehicle(
       currentUser.id
     );
+    const selectedCarrierRouteId = this.parseOptionalPublicEntityId(
+      query.carrierRouteId
+    );
     const selectedCarrierRoute =
-      typeof query.carrierRouteId === "number"
-        ? await this.carrierRoutesService.getMineById(
-            currentUser,
-            query.carrierRouteId
-          )
+      selectedCarrierRouteId
+        ? await this.carrierRoutesService.getMineById(currentUser, selectedCarrierRouteId)
         : null;
     let routeCompatibility: OpenRequestRouteCompatibilityResult | null = null;
 
@@ -237,7 +243,7 @@ export class OffersService {
 
   async create(
     currentUser: AuthenticatedUser,
-    requestId: number,
+    requestId: PublicEntityId,
     createOfferDto: CreateOfferDto
   ): Promise<OfferResponseDto> {
     this.assertCarrierRole(currentUser);
@@ -266,7 +272,7 @@ export class OffersService {
     }
 
     const selectedVehicle = await this.offersRepository.findActiveVehicleByIdAndOwnerId(
-      createOfferDto.aracId,
+      parsePublicEntityId(createOfferDto.aracId, isLegacyNumericIdsAllowed()),
       currentUser.id
     );
 
@@ -279,7 +285,7 @@ export class OffersService {
     const hasExistingOffer =
       await this.offersRepository.carrierHasExistingOfferForRequest(
         currentUser.id,
-        requestId
+        request.id
       );
 
     if (hasExistingOffer) {
@@ -296,7 +302,7 @@ export class OffersService {
     const offer = await this.prisma.client.$transaction(async (tx) => {
       const createdOffer = await this.offersRepository.create(
         {
-          istekId: requestId,
+          istekId: request.id,
           nakliyeciId: currentUser.id,
           aracId: selectedVehicle.id,
           fiyat: createOfferDto.fiyat,
@@ -311,7 +317,7 @@ export class OffersService {
       await this.offerThreadsService.bootstrapThreadForOffer(
         {
           offerId: createdOffer.id,
-          requestId,
+          requestId: request.id,
           customerId: request.musteriId,
           carrierId: currentUser.id,
           teklifFiyati: createdOffer.fiyat,
@@ -324,8 +330,8 @@ export class OffersService {
 
     await this.notificationsPublisher.publishIncomingOffer({
       customerId: request.musteriId,
-      offerId: offer.id,
-      requestId,
+      offerId: offer.publicId,
+      requestId: request.publicId,
       actorUserId: currentUser.id,
       route: {
         baslangicSehri: offer.baslangicSehri,
@@ -362,7 +368,7 @@ export class OffersService {
 
   async getIncomingForRequest(
     currentUser: AuthenticatedUser,
-    requestId: number
+    requestId: PublicEntityId
   ): Promise<IncomingOfferListItemResponseDto[]> {
     this.assertCustomerRole(currentUser);
 
@@ -385,13 +391,15 @@ export class OffersService {
 
   async acceptById(
     currentUser: AuthenticatedUser,
-    offerId: number
+    offerId: PublicEntityId
   ): Promise<void> {
     this.assertParticipantRole(currentUser);
 
     const offer = await this.requireDecisionContext(currentUser, offerId);
 
-    const lastPriceActorSide = await this.offerThreadsService.getLastPriceActorSide(offerId);
+    const lastPriceActorSide = await this.offerThreadsService.getLastPriceActorSide(
+      offer.offerId
+    );
     const currentUserSide = offer.customerId === currentUser.id ? "customer" : "carrier";
 
     if (currentUserSide === lastPriceActorSide) {
@@ -491,7 +499,7 @@ export class OffersService {
 
         // Kazanan offer kendi thread'ini kabul event'i ile kapatır; rakip açık thread'ler
         // ise request artık müsait değil mantığıyla ayrı ayrı read-only kapanır.
-        await this.offerThreadsService.closeAcceptedOfferThread(
+        await this.offerThreadsService.appendAcceptedOfferThread(
           offer.offerId,
           currentUser.id,
           tx
@@ -529,9 +537,9 @@ export class OffersService {
 
     await this.notificationsPublisher.publishOfferAccepted({
       carrierId: offer.carrierId,
-      offerId: offer.offerId,
-      requestId: offer.requestId,
-      jobId: result.jobId,
+      offerId: offer.offerPublicId,
+      requestId: offer.requestPublicId,
+      jobId: result.jobPublicId,
       actorUserId: currentUser.id,
     });
 
@@ -539,8 +547,8 @@ export class OffersService {
       result.rejectedSiblingOffers.map((rejectedOffer) =>
         this.notificationsPublisher.publishOfferRejected({
           carrierId: rejectedOffer.carrierId,
-          offerId: rejectedOffer.offerId,
-          requestId: offer.requestId,
+          offerId: rejectedOffer.offerPublicId,
+          requestId: offer.requestPublicId,
           actorUserId: currentUser.id,
         })
       )
@@ -549,13 +557,15 @@ export class OffersService {
 
   async rejectById(
     currentUser: AuthenticatedUser,
-    offerId: number
+    offerId: PublicEntityId
   ): Promise<void> {
     this.assertParticipantRole(currentUser);
 
     const offer = await this.requireDecisionContext(currentUser, offerId);
 
-    const lastPriceActorSide = await this.offerThreadsService.getLastPriceActorSide(offerId);
+    const lastPriceActorSide = await this.offerThreadsService.getLastPriceActorSide(
+      offer.offerId
+    );
     const currentUserSide = offer.customerId === currentUser.id ? "customer" : "carrier";
 
     if (currentUserSide === lastPriceActorSide) {
@@ -609,15 +619,15 @@ export class OffersService {
 
     await this.notificationsPublisher.publishOfferRejected({
       carrierId: offer.carrierId,
-      offerId: offer.offerId,
-      requestId: offer.requestId,
+      offerId: offer.offerPublicId,
+      requestId: offer.requestPublicId,
       actorUserId: currentUser.id,
     });
   }
 
   private async requireDecisionContext(
     currentUser: AuthenticatedUser,
-    offerId: number
+    offerId: PublicEntityId
   ): Promise<OfferDecisionContextRecord> {
     const offer = await this.offersRepository.findOfferDecisionContextById(offerId);
 
@@ -699,14 +709,26 @@ export class OffersService {
   }
 
   private assertRouteFilterContext(
-    carrierRouteId: number | undefined,
+    carrierRouteId: string | undefined,
     maxSapmaKm: number | undefined
   ) {
-    if (typeof maxSapmaKm === "number" && typeof carrierRouteId !== "number") {
+    if (typeof maxSapmaKm === "number" && !this.hasPublicEntityIdValue(carrierRouteId)) {
       throw new BadRequestException(
         "maxSapmaKm can only be used when carrierRouteId is provided."
       );
     }
+  }
+
+  private parseOptionalPublicEntityId(value: string | undefined): PublicEntityId | undefined {
+    if (!this.hasPublicEntityIdValue(value)) {
+      return undefined;
+    }
+
+    return parsePublicEntityId(value.trim(), isLegacyNumericIdsAllowed());
+  }
+
+  private hasPublicEntityIdValue(value: string | undefined): value is string {
+    return typeof value === "string" && value.trim().length > 0;
   }
 
   private toOpenRequestListItemResponse(
@@ -716,7 +738,7 @@ export class OffersService {
     // Liste response'u, route filtresi uygulanmissa evaluator'dan gelen compatibility
     // nesnesini de kartlarda gosterilecek sekilde disari tasir.
     return {
-      id: request.id,
+      id: request.publicId,
       baslangicSehri: request.baslangicSehri,
       varisSehri: request.varisSehri,
       baslangicKonumMetni: request.baslangicKonumMetni,
@@ -774,7 +796,7 @@ export class OffersService {
     image: OpenRequestImageRecord
   ): RequestImageSummaryResponseDto {
     return {
-      id: image.id,
+      id: image.publicId,
       thumbnailUrl: this.mediaStorageService.toPublicUrl(image.thumbnailStorageKey),
       width: image.width,
       height: image.height,
@@ -827,11 +849,11 @@ export class OffersService {
 
   private toOfferResponse(offer: StoredOfferRecord): OfferResponseDto {
     return {
-      id: offer.id,
-      requestId: offer.requestId,
+      id: offer.publicId,
+      requestId: offer.requestPublicId,
       baslangicSehri: offer.baslangicSehri,
       varisSehri: offer.varisSehri,
-      aracId: offer.aracId,
+      aracId: offer.aracPublicId,
       aracPlaka: offer.aracPlaka,
       fiyat: offer.fiyat,
       not: offer.not,
@@ -849,15 +871,15 @@ export class OffersService {
     offer: IncomingOfferListItemRecord
   ): IncomingOfferListItemResponseDto {
     return {
-      id: offer.id,
-      requestId: offer.requestId,
-      carrierId: offer.carrierId,
+      id: offer.publicId,
+      requestId: offer.requestPublicId,
+      carrierId: offer.carrierPublicId,
       carrierName: offer.carrierName,
       carrierUsername: offer.carrierUsername,
       carrierProfileImageUrl: this.toOptionalPublicUrl(
         offer.carrierProfileImageStorageKey
       ),
-      aracId: offer.aracId,
+      aracId: offer.aracPublicId,
       aracPlaka: offer.aracPlaka,
       fiyat: offer.fiyat,
       not: offer.not,
@@ -869,8 +891,8 @@ export class OffersService {
     offer: MyIncomingOfferListItemRecord
   ): MyIncomingOfferListItemResponseDto {
     return {
-      id: offer.id,
-      requestId: offer.requestId,
+      id: offer.publicId,
+      requestId: offer.requestPublicId,
       baslangicSehri: offer.baslangicSehri,
       varisSehri: offer.varisSehri,
       baslangicKonumMetni: offer.baslangicKonumMetni,
@@ -880,13 +902,13 @@ export class OffersService {
       hacimM3: offer.hacimM3,
       yukTipi: offer.yukTipi,
       tasimaTarihi: offer.tasimaTarihi,
-      carrierId: offer.carrierId,
+      carrierId: offer.carrierPublicId,
       carrierName: offer.carrierName,
       carrierUsername: offer.carrierUsername,
       carrierProfileImageUrl: this.toOptionalPublicUrl(
         offer.carrierProfileImageStorageKey
       ),
-      aracId: offer.aracId,
+      aracId: offer.aracPublicId,
       aracPlaka: offer.aracPlaka,
       fiyat: offer.fiyat,
       not: offer.not,

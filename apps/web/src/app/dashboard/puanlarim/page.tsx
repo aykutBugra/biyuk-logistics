@@ -74,6 +74,7 @@ function resolveOverallAverage(ratings: RatingListItem[]): number | null {
   return Number((total / ratings.length).toFixed(1));
 }
 
+// Ortalama veya tek puan degeri 5 yildiz ikonuna cevrilir.
 function renderStars(score: number | null) {
   return Array.from({ length: 5 }, (_, index) => {
     const isFilled = score !== null && index < Math.round(score);
@@ -88,6 +89,7 @@ function renderStars(score: number | null) {
   });
 }
 
+// Aktif dashboard rolune gore kullanici puanlari hangi rolde goruyor belirlenir.
 function resolveActiveRole(
   direction: RatingDirection,
   roleContext: string
@@ -101,6 +103,7 @@ function resolveActiveRole(
   return normalizedRole === "NAKLIYECI" ? "MUSTERI" : "NAKLIYECI";
 }
 
+// Verilen/alinan puan kayitlari tek liste kart modeline normalize edilir.
 function resolveRatingDetailModel(
   item: RatingListItem,
   direction: RatingDirection
@@ -147,6 +150,7 @@ function resolveLatestRatingDate(ratings: RatingListItem[]): string | null {
   return latestRating ? formatDate(latestRating.tarih) : null;
 }
 
+// Puanlarim sayfasi verilen, alinan ve ozet puanlari tek ekranda toplar.
 export default function RatingsPage() {
   const {
     accessToken,
@@ -166,6 +170,7 @@ export default function RatingsPage() {
   const [selectedFilter, setSelectedFilter] = useState<RatingFilter>("all");
 
   useEffect(() => {
+    // Dashboard guard hazir olmadan rating endpoint'leri cagrilmaz.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -177,6 +182,7 @@ export default function RatingsPage() {
 
     const loadRatings = async () => {
       try {
+        // Verilen, alinan ve ozet endpoint'leri ayni anda cekilir.
         setIsLoading(true);
         setErrorMessage(null);
 
@@ -229,6 +235,7 @@ export default function RatingsPage() {
   }, [accessToken, status]);
 
   useEffect(() => {
+    // Aktif workspace degisince onceki filtre yeni rol ekranina tasinmaz.
     setSelectedFilter("all");
   }, [primaryRole]);
 
@@ -259,7 +266,7 @@ export default function RatingsPage() {
         return timeDifference;
       }
 
-      return right.item.id - left.item.id;
+      return right.item.id.localeCompare(left.item.id);
     });
   const filteredRatings = combinedRatings.filter((rating) =>
     matchesRatingFilter(rating, selectedFilter)

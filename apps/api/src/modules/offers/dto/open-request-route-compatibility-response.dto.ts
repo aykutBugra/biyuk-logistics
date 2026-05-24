@@ -1,5 +1,5 @@
 export class OpenRequestRouteCompatibilityResponseDto {
-  carrierRouteId!: number;
+  carrierRouteId!: string;
   extraMesafeMetre!: number;
   extraSureSaniye!: number;
   uygunlukEtiketi!: "UYGUN" | "SINIRDA" | "UYGUN_DEGIL";

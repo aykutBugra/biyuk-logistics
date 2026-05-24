@@ -32,6 +32,8 @@ const ACCEPTED_IMAGE_MIME_TYPES = new Set([
   "image/webp",
 ]);
 
+//AI analizindeki risk ve sekil degerlerini karsilastirirken daha konservatif olani
+//secmek icin siralama tablolaridir.
 const PLACEMENT_RISK_RANK: Record<VolumeAnalysisPlacementRisk, number> = {
   low: 0,
   medium: 1,
@@ -71,11 +73,15 @@ export class VolumeEstimationService {
     private readonly shapeBasedVolumeCalculatorService: ShapeBasedVolumeCalculatorService
   ) {}
 
+
+  //Bu metod tüm akışı yönetiyor.
   async estimateVolume(
     currentUser: AuthenticatedUser,
     body: EstimateVolumeBodyDto,
     files: UploadedImageFile[] | undefined
   ): Promise<EstimateVolumeResponseDto> {
+    //Hacim tahmini akisi: gorseller validate edilir, normalize edilir, kullanici limiti
+    //kontrol edilir, AI analizi alinir ve sonuc sekil tabanli hesaplayiciya verilir.
     const safeFiles = files ?? [];
 
     this.assertValidUploadedImages(safeFiles);
@@ -87,6 +93,10 @@ export class VolumeEstimationService {
     this.assertTotalNormalizedSize(normalizedImages);
     this.rateLimitService.assertWithinLimit(currentUser.id);
 
+    //Bu aşamada OpenAI’ye gidiliyor.
+    //Önemli: OpenAI’dan direkt m3 istemiyoruz.
+    //OpenAI’dan istenen şey:
+    //Fotoğraflardaki yükleri sınıflandır.
     const analysis = await this.openAiVolumeEstimationService.analyzeShipment({
       description: body.description,
       images: normalizedImages,
@@ -224,6 +234,8 @@ export class VolumeEstimationService {
   private assertTotalNormalizedSize(
     normalizedImages: NormalizedVolumeEstimationImage[]
   ) {
+    //Sharp isleminden sonra da toplam boyut kontrol edilir; normalize edilen gorseller
+    //AI servisine gidecegi icin ikinci bir guvenlik siniri vardir.
     const maxTotalSizeBytes =
       this.configService.get<number>("ai.volumeEstimationMaxTotalSizeBytes") ??
       12 * 1024 * 1024;
@@ -239,9 +251,17 @@ export class VolumeEstimationService {
     }
   }
 
+
+  //mergeAnalysisItems fonksiyonu, AI'nin benzer kalemleri farkli sekilde tanimlamasi durumunda
+  // bu kalemleri birlestirerek daha tutarlı ve kullanisli bir analiz sonucu olusturur; 
+  // benzer kalemler, normalleştirilmis label, yuk tipi, boyut sinifi ve alan profiline gore gruplandiktan sonra
+  // her grup icin tahmini adet, stacklenebilirlik, hassasiyet, parcali tasima durumu, yerlestirme riski ve sekil yorumu gibi
+  // ozellikler konservatif bir sekilde birlestirilir; herhangi bir belirsizlik durumunda uygun mesajlar uretir
   private mergeAnalysisItems(
     analysis: VolumeAnalysisResult
   ): VolumeAnalysisResult {
+    //AI ayni esyayi farkli acilardan birden fazla kalem gibi dondurebilir.
+    //Benzer kalemler tek kayitta birlestirilir ve celiskiler uyariya cevrilir.
     const groupedItems = new Map<
       string,
       {
@@ -261,6 +281,7 @@ export class VolumeEstimationService {
       const normalizedKey = [
         normalizeVolumeLabel(item.label),
         item.loadType,
+        item.volumeProfile,
         item.sizeClass,
         item.spaceProfile,
       ].join("|");
@@ -386,6 +407,7 @@ export class VolumeEstimationService {
     left: VolumeAnalysisPlacementRisk,
     right: VolumeAnalysisPlacementRisk
   ): VolumeAnalysisPlacementRisk {
+    //Iki analiz ayni kalem icin farkli risk verdiyse yuksek risk korunur.
     return PLACEMENT_RISK_RANK[left] >= PLACEMENT_RISK_RANK[right] ? left : right;
   }
 
@@ -393,6 +415,7 @@ export class VolumeEstimationService {
     left: VolumeAnalysisShapeType,
     right: VolumeAnalysisShapeType
   ): VolumeAnalysisShapeType {
+    //Sekil yorumunda belirsizlik varsa daha konservatif siradaki shapeType tercih edilir.
     return SHAPE_TYPE_RANK[left] >= SHAPE_TYPE_RANK[right] ? left : right;
   }
 }

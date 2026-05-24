@@ -404,7 +404,7 @@ describe("UsersService.deleteOwnAccount", () => {
     });
 
     await expect(service.deleteOwnAccount(77)).rejects.toThrow(
-      new ConflictException("Account cannot be deleted while you have an active shipment.")
+      new ConflictException("Hesap, aktif bir sevkiyat varken silinemez.")
     );
   });
 
@@ -415,7 +415,7 @@ describe("UsersService.deleteOwnAccount", () => {
     });
 
     await expect(service.deleteOwnAccount(77)).rejects.toThrow(
-      new UnauthorizedException("Current user could not be resolved.")
+      new UnauthorizedException("Silmek istedigin hesap bulunamadi.")
     );
   });
 });

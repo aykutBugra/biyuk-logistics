@@ -9,6 +9,7 @@ const COMPLETED_JOB_STATUS = {
 
 export type StoredSubmittedRatingRecord = {
   id: number;
+  publicId: string;
   puanlayanId: number;
   puanlananId: number;
   puanDegeri: number;
@@ -33,10 +34,13 @@ function isCompletedShipment(durumTuru: string, durumAdi: string): boolean {
 }
 
 export function toSubmittedRatingResponse(
-  rating: Pick<StoredSubmittedRatingRecord, "id" | "puanDegeri" | "yorum" | "tarih">
+  rating: Pick<
+    StoredSubmittedRatingRecord,
+    "publicId" | "puanDegeri" | "yorum" | "tarih"
+  >
 ): SubmittedRatingResponseDto {
   return {
-    id: rating.id,
+    id: rating.publicId,
     puanDegeri: rating.puanDegeri,
     yorum: rating.yorum,
     tarih: rating.tarih,

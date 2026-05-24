@@ -20,6 +20,8 @@ import { JwtStrategy } from "./jwt.strategy";
     PassportModule.register({
       defaultStrategy: "jwt",
     }),
+
+    //jwt ayarları sabit bir şekilde JwtModule içinde değil, ConfigService üzerinden dinamik olarak alınır.
     JwtModule.registerAsync({   //JwtModule, JWT tabanlı kimlik doğrulama işlemleri için yapılandırılır
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -17,5 +17,5 @@ export class TransportRequestDetailResponseDto extends TransportRequestListItemR
   varisBoylam!: number;
   nakliye!: TransportRequestJobSummaryResponseDto | null;
   images?: RequestImageResponseDto[];
-  primaryImageId?: number | null;
+  primaryImageId?: string | null;
 }

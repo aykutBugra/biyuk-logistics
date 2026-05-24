@@ -25,6 +25,7 @@ type SurfaceRevealOptions = {
 
 const revealedMotionKeys = new Set<string>();
 
+// Tekil yuzey veya icindeki cocuk kartlar icin tekrar etmeyen reveal animasyonu saglar.
 export function useSurfaceReveal(
   targetRef: RefObject<HTMLElement | null>,
   {
@@ -46,10 +47,12 @@ export function useSurfaceReveal(
     () => {
       const target = targetRef.current;
 
+      // Animasyon kapaliysa veya kullanici reduced motion istiyorsa DOM'a dokunulmaz.
       if (!target || disabled || reducedMotion || hasAnimatedRef.current) {
         return;
       }
 
+      // rememberKey verilirse ayni yuzey session boyunca ikinci kez animasyon oynamaz.
       if (rememberKey && revealedMotionKeys.has(rememberKey)) {
         hasAnimatedRef.current = true;
         return;
@@ -72,6 +75,7 @@ export function useSurfaceReveal(
       if (childSelector) {
         const childTargets = target.querySelectorAll<HTMLElement>(childSelector);
 
+        // Child selector verilirse ana yuzeyden sonra kartlar/listeler sirayla gorunur.
         if (childTargets.length > 0) {
           timeline.from(
             childTargets,

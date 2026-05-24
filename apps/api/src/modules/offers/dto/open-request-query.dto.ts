@@ -57,11 +57,10 @@ const toBoolean = ({ value }: { value: unknown }) => {
 };
 
 export class OpenRequestQueryDto {
-  @Transform(toNumber)
+  @Transform(trimString)
   @IsOptional()
-  @IsNumber({ allowInfinity: false, allowNaN: false, maxDecimalPlaces: 0 })
-  @Min(1)
-  carrierRouteId?: number;
+  @IsString()
+  carrierRouteId?: string;
 
   @Transform(toNumber)
   @IsOptional()

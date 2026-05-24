@@ -22,6 +22,7 @@ function getServerAuthSnapshot(): StoredAuth | null | undefined {
   return undefined;
 }
 
+// Sadece nakliyeci sayfalarinda kullanilir; yetki yoksa uygun yere yonlendirir.
 export function useCarrierPageAccess(): CarrierPageAccess {
   const router = useRouter();
   const auth = useSyncExternalStore(
@@ -31,6 +32,7 @@ export function useCarrierPageAccess(): CarrierPageAccess {
   );
 
   useEffect(() => {
+    // Auth snapshot gelmeden redirect calistirmamak hydration farklarini onler.
     if (auth === undefined) {
       return;
     }
@@ -45,6 +47,7 @@ export function useCarrierPageAccess(): CarrierPageAccess {
       return;
     }
 
+    // Bu guard'in gectigi sayfalarda aktif dashboard modu nakliyeci olarak sabitlenir.
     setStoredDashboardWorkspaceMode("carrier");
   }, [auth, router]);
 

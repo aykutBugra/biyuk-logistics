@@ -1,9 +1,14 @@
 import { Prisma } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
+import {
+  type PublicEntityId,
+  publicEntityWhere,
+} from "../../../common/public-ids/public-entity-id";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
 const vehicleSelect = {
   id: true,
+  publicId: true,
   plaka: true,
   yil: true,
   maksimumAgirlikKg: true,
@@ -21,6 +26,8 @@ const vehicleSelect = {
   },
 } satisfies Prisma.AracSelect;
 
+//Arac sorgularinda ortak kullanilan select yapisi. Marka/model AracKutuphanesi
+//iliski tablosundan gelir, servis tarafina tek kayit gibi aktarilir.
 type StoredVehicleQuery = Prisma.AracGetPayload<{
   select: typeof vehicleSelect;
 }>;
@@ -47,6 +54,7 @@ export type CreateVehicleLibraryRecordInput = {
 
 export type StoredVehicleRecord = {
   id: number;
+  publicId: string;
   plaka: string;
   marka: string;
   model: string;
@@ -64,6 +72,7 @@ export type StoredVehicleRecord = {
 export class VehiclesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  //Marka/model kombinasyonu kutuphanede daha once varsa yeni kayit acmadan id'sini kullaniriz.
   async findVehicleLibraryByBrandAndModel(
     marka: string,
     model: string
@@ -93,6 +102,7 @@ export class VehiclesRepository {
   async createVehicleLibrary(
     input: CreateVehicleLibraryRecordInput
   ): Promise<number> {
+    //Kutuphanede olmayan marka/model icin yeni referans kaydi olusturur.
     const vehicleLibrary = await this.prisma.client.aracKutuphanesi.create({
       data: {
         marka: input.marka,
@@ -107,6 +117,7 @@ export class VehiclesRepository {
   }
 
   async create(input: CreateVehicleRecordInput): Promise<StoredVehicleRecord> {
+    //Arac kaydi olusturulurken kapasite alanlari Decimal olarak saklanir.
     const vehicle = await this.prisma.client.arac.create({
       data: {
         sahipId: input.sahipId,
@@ -126,10 +137,14 @@ export class VehiclesRepository {
     return this.mapStoredVehicle(vehicle);
   }
 
-  async softDeleteByIdAndOwnerId(id: number, sahipId: number): Promise<boolean> {
+  async softDeleteByIdAndOwnerId(
+    id: PublicEntityId,
+    sahipId: number
+  ): Promise<boolean> {
+    //Araclar fiziksel olarak silinmez; sahiplik ve aktiflik kosuluyla silmeTarihi setlenir.
     const result = await this.prisma.client.arac.updateMany({
       where: {
-        id,
+        ...publicEntityWhere(id),
         sahipId,
         silmeTarihi: null,
       },
@@ -142,13 +157,14 @@ export class VehiclesRepository {
   }
 
   async updateByIdAndOwnerId(
-    id: number,
+    id: PublicEntityId,
     sahipId: number,
     input: UpdateVehicleRecordInput
   ): Promise<StoredVehicleRecord | null> {
+    //Guncelleme sahiplik kontroluyle yapilir; baskasinin araci update edilemez.
     const result = await this.prisma.client.arac.updateMany({
       where: {
-        id,
+        ...publicEntityWhere(id),
         sahipId,
         silmeTarihi: null,
       },
@@ -171,7 +187,7 @@ export class VehiclesRepository {
 
     const vehicle = await this.prisma.client.arac.findFirst({
       where: {
-        id,
+        ...publicEntityWhere(id),
         sahipId,
         silmeTarihi: null,
       },
@@ -182,13 +198,14 @@ export class VehiclesRepository {
   }
 
   async hasNonTerminalShipmentByIdAndOwnerId(
-    id: number,
+    id: PublicEntityId,
     sahipId: number
   ): Promise<boolean> {
+    //Tamamlanmamis nakliye varsa arac silme engellenir.
     const shipment = await this.prisma.client.nakliye.findFirst({
       where: {
-        aracId: id,
         arac: {
+          ...publicEntityWhere(id),
           sahipId,
         },
         NOT: {
@@ -213,6 +230,7 @@ export class VehiclesRepository {
   }
 
   async findManyByOwnerId(sahipId: number): Promise<StoredVehicleRecord[]> {
+    //Nakliyecinin sadece aktif araclari listelenir.
     const vehicles = await this.prisma.client.arac.findMany({
       where: {
         sahipId,
@@ -226,12 +244,13 @@ export class VehiclesRepository {
   }
 
   async findByIdAndOwnerId(
-    id: number,
+    id: PublicEntityId,
     sahipId: number
   ): Promise<StoredVehicleRecord | null> {
+    //Detay okuma da id+sahipId ile yapilir; sahip olmayan kullanici null alir.
     const vehicle = await this.prisma.client.arac.findFirst({
       where: {
-        id,
+        ...publicEntityWhere(id),
         sahipId,
         silmeTarihi: null,
       },
@@ -242,13 +261,14 @@ export class VehiclesRepository {
   }
 
   async updateImageStorageKeyByIdAndOwnerId(
-    id: number,
+    id: PublicEntityId,
     sahipId: number,
     storageKey: string | null
   ): Promise<StoredVehicleRecord | null> {
+    //Arac fotografi storage key'i sahiplik ve soft delete filtresiyle guncellenir.
     const result = await this.prisma.client.arac.updateMany({
       where: {
-        id,
+        ...publicEntityWhere(id),
         sahipId,
         silmeTarihi: null,
       },
@@ -265,8 +285,10 @@ export class VehiclesRepository {
   }
 
   private mapStoredVehicle(vehicle: StoredVehicleQuery): StoredVehicleRecord {
+    //Prisma Decimal ve nested aracBilgisi kaydini service'in kullandigi sade tipe cevirir.
     return {
       id: vehicle.id,
+      publicId: vehicle.publicId,
       plaka: vehicle.plaka,
       marka: vehicle.aracBilgisi.marka,
       model: vehicle.aracBilgisi.model,

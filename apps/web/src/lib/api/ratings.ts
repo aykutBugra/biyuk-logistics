@@ -1,7 +1,7 @@
 import { apiFetch } from "./api-client";
 
 export type SubmittedRating = {
-  id: number;
+  id: string;
   puanDegeri: number;
   yorum: string | null;
   tarih: string;
@@ -18,15 +18,15 @@ export type CreateRatingInput = {
 };
 
 export type RatingListItem = {
-  id: number;
-  jobId: number;
-  requestId: number;
+  id: string;
+  jobId: string;
+  requestId: string;
   puanDegeri: number;
   yorum: string | null;
   tarih: string;
   baslangicSehri: string;
   varisSehri: string;
-  counterpartyId: number;
+  counterpartyId: string;
   counterpartyName: string;
   counterpartyUsername: string;
   rolBaglami: string;
@@ -42,8 +42,9 @@ export type MyRatingSummary = {
   asCustomer: MyRatingSummaryBucket;
 };
 
+// Tamamlanan bir nakliye sonrasinda karsi tarafa puan ve opsiyonel yorum gonderir.
 export function createRatingForJob(
-  jobId: number,
+  jobId: string,
   input: CreateRatingInput,
   accessToken: string
 ) {
@@ -54,6 +55,7 @@ export function createRatingForJob(
   });
 }
 
+// Kullanici tarafindan verilen puanlari Puanlarim ekraninda listeler.
 export function getMyGivenRatings(accessToken: string) {
   return apiFetch<RatingListItem[]>("/ratings/my/given", {
     method: "GET",
@@ -61,6 +63,7 @@ export function getMyGivenRatings(accessToken: string) {
   });
 }
 
+// Kullanicinin aldigi puanlar roluyle beraber profil/puan ekraninda gosterilir.
 export function getMyReceivedRatings(accessToken: string) {
   return apiFetch<RatingListItem[]>("/ratings/my/received", {
     method: "GET",
@@ -68,6 +71,7 @@ export function getMyReceivedRatings(accessToken: string) {
   });
 }
 
+// Ortalama puanlar musteri ve nakliyeci rolleri icin ayri bucket olarak gelir.
 export function getMyRatingSummary(accessToken: string) {
   return apiFetch<MyRatingSummary>("/ratings/my/summary", {
     method: "GET",

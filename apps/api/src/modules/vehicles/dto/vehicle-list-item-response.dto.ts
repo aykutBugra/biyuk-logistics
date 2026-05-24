@@ -1,7 +1,7 @@
 import { VehicleCapacitySummaryResponseDto } from "./vehicle-capacity-summary-response.dto";
 
 export class VehicleListItemResponseDto {
-  id!: number;
+  id!: string;
   plaka!: string;
   marka!: string;
   model!: string;

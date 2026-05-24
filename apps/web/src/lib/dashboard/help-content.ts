@@ -18,6 +18,7 @@ export type DashboardHelpContent = {
   bullets?: string[];
 };
 
+// Inline yardim aciklamalari endpoint'ten degil, UI icindeki sabit icerikten okunur.
 export const DASHBOARD_HELP_CONTENT: Record<
   DashboardHelpKey,
   DashboardHelpContent

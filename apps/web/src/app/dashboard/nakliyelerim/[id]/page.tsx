@@ -12,8 +12,8 @@ import RatingComposerCard from "@/components/RatingComposerCard";
 import StatusBadge from "@/components/StatusBadge";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
-  completeJob,
   getJobDetail,
+  markJobDelivered,
   startJob,
   type JobDetail,
 } from "@/lib/api/jobs";
@@ -65,6 +65,8 @@ function getJobStatusLabel(status: string): string {
       return "Hazir";
     case "BASLATILDI":
       return "Yolda";
+    case "TESLIM_BEKLIYOR":
+      return "Teslim edildi, musteri onayi bekleniyor";
     case "TAMAMLANDI":
       return "Teslim edildi";
     default:
@@ -72,6 +74,7 @@ function getJobStatusLabel(status: string): string {
   }
 }
 
+// Job durumuna gore detay sayfasindaki bilgilendirme metni belirlenir.
 function getJobStatusCopy(status: string): { title: string; description: string } {
   switch (status.trim().toUpperCase()) {
     case "OLUSTURULDU":
@@ -85,6 +88,12 @@ function getJobStatusCopy(status: string): { title: string; description: string 
         title: "Nakliye operasyonu aktif",
         description:
           "Tasima sureci resmen basladi. Baslangic ve teslim adimlari bu kayit uzerinden izlenir.",
+      };
+    case "TESLIM_BEKLIYOR":
+      return {
+        title: "Teslim edildi, musteri onayi bekleniyor",
+        description:
+          "Teslimat bildirildi. Nakliye, musteri onayi geldikten sonra tamamlanacak.",
       };
     case "TAMAMLANDI":
       return {
@@ -183,13 +192,14 @@ function InfoBanner({
   );
 }
 
+// Nakliyeci tek nakliye kaydini, baslat/tamamla aksiyonunu ve puanlamayi yonetir.
 export default function CarrierJobDetailPage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
   const confirm = useConfirm();
   const showToast = useToast();
   const params = useParams<{ id: string }>();
-  const jobId = Number(params.id);
+  const jobId = params.id;
   const [job, setJob] = useState<JobDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -198,6 +208,7 @@ export default function CarrierJobDetailPage() {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    // Job id ve nakliyeci token'i hazir olmadan detay endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -205,7 +216,7 @@ export default function CarrierJobDetailPage() {
       return;
     }
 
-    if (!Number.isInteger(jobId) || jobId <= 0) {
+    if (!jobId.trim()) {
       setErrorMessage("Gecersiz nakliye numarasi.");
       setIsLoading(false);
       return;
@@ -215,6 +226,7 @@ export default function CarrierJobDetailPage() {
 
     const loadJob = async () => {
       try {
+        // Detay response'u lifecycle capability ve ratingContext bilgilerini de tasir.
         setIsLoading(true);
         setErrorMessage(null);
         const response = await getJobDetail(jobId, accessToken, "carrier");
@@ -266,6 +278,7 @@ export default function CarrierJobDetailPage() {
     };
   }, [accessToken, jobId, reloadKey, router, status]);
 
+  // Nakliye baslatma/tamamlama aksiyonlari tek handler'da action parametresiyle ayrilir.
   const handleLifecycleAction = async (action: "start" | "complete") => {
     if (!accessToken || !job || actingAction !== null) {
       return;
@@ -274,12 +287,12 @@ export default function CarrierJobDetailPage() {
     const confirmMessage =
       action === "start"
         ? "Bu isi baslatmak istedigine emin misin?"
-        : "Bu isi tamamlamak istedigine emin misin?";
+        : "Teslimati musteri onayina gondermek istedigine emin misin?";
 
     const isConfirmed = await confirm({
-      title: action === "start" ? "Nakliyeyi baslat" : "Nakliyeyi tamamla",
+      title: action === "start" ? "Nakliyeyi baslat" : "Teslimati bildir",
       message: confirmMessage,
-      confirmLabel: action === "start" ? "Baslat" : "Tamamla",
+      confirmLabel: action === "start" ? "Baslat" : "Teslimati bildir",
       cancelLabel: "Vazgec",
       defaultFocus: "accept",
       dismissableMask: true,
@@ -300,17 +313,18 @@ export default function CarrierJobDetailPage() {
           detail: "Is artik aktif surecte.",
         });
       } else {
-        await completeJob(job.id, accessToken);
+        await markJobDelivered(job.id, accessToken);
         emitNotificationsChanged();
         showToast({
           severity: "success",
-          summary: "Nakliye tamamlandi",
-          detail: "Is durumu basariyla guncellendi.",
+          summary: "Teslimat bildirildi",
+          detail: "Musteri onayi bekleniyor.",
         });
       }
 
       setReloadKey((currentKey) => currentKey + 1);
     } catch (error) {
+      // Auth/rol/bulunamama hatalarinda stale detay sayfasinda kalinmaz.
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
         showToast({
@@ -364,6 +378,7 @@ export default function CarrierJobDetailPage() {
     }
   };
 
+  // Tamamlanan is icin nakliyeci karsi tarafa puan verir ve detay yeniden yuklenir.
   const handleCreateRating = async (input: { puanDegeri: number; yorum?: string }) => {
     if (!accessToken || !job || isSubmittingRating) {
       return;
@@ -471,10 +486,10 @@ export default function CarrierJobDetailPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={job.durum} label={getJobStatusLabel(job.durum)} />
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                    Nakliye #{job.id}
+                    Nakliye detayi
                   </span>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                    Istek #{job.requestId}
+                    Bagli istek
                   </span>
                 </div>
 
@@ -538,14 +553,14 @@ export default function CarrierJobDetailPage() {
                       {actingAction === "start" ? "Baslatiliyor..." : "Baslat"}
                     </button>
                   ) : null}
-                  {job.canComplete ? (
+                  {job.canMarkDelivered ? (
                     <button
                       type="button"
                       onClick={() => void handleLifecycleAction("complete")}
                       disabled={actingAction !== null}
                       className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {actingAction === "complete" ? "Tamamlaniyor..." : "Tamamla"}
+                      {actingAction === "complete" ? "Bildiriliyor..." : "Teslimati bildir"}
                     </button>
                   ) : null}
                   <Link href="/dashboard/nakliyelerim" className="app-button-secondary">
@@ -611,11 +626,14 @@ export default function CarrierJobDetailPage() {
                   />
                   <TimelineStep
                     step={3}
-                    title="Teslim edildi"
-                    description="Teslim kaydi tamamlandiginda operasyon kapanir."
-                    value={formatDateTime(job.teslimTarihi)}
+                    title="Teslimat onayi"
+                    description="Nakliyeci teslimati bildirir, musteri onayi gelince operasyon kapanir."
+                    value={formatDateTime(job.teslimTarihi ?? job.teslimBildirimTarihi)}
                     isComplete={job.teslimTarihi !== null}
-                    isCurrent={job.canComplete}
+                    isCurrent={
+                      job.canMarkDelivered ||
+                      job.durum.trim().toUpperCase() === "TESLIM_BEKLIYOR"
+                    }
                     isLast
                   />
                 </div>
@@ -710,6 +728,7 @@ export default function CarrierJobDetailPage() {
                   <DetailInfoRow label="Anlasilan fiyat" value={formatCurrency(job.anlasilanFiyat)} />
                   <DetailInfoRow label="Kayit tarihi" value={formatDateTime(job.olusturmaTarihi)} />
                   <DetailInfoRow label="Baslangic" value={formatDateTime(job.baslangicTarihi)} />
+                  <DetailInfoRow label="Teslim bildirimi" value={formatDateTime(job.teslimBildirimTarihi)} />
                   <DetailInfoRow label="Teslim" value={formatDateTime(job.teslimTarihi)} />
                 </dl>
 
@@ -780,14 +799,14 @@ export default function CarrierJobDetailPage() {
                       {actingAction === "start" ? "Baslatiliyor..." : "Nakliyeyi baslat"}
                     </button>
                   ) : null}
-                  {job.canComplete ? (
+                  {job.canMarkDelivered ? (
                     <button
                       type="button"
                       onClick={() => void handleLifecycleAction("complete")}
                       disabled={actingAction !== null}
                       className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {actingAction === "complete" ? "Tamamlaniyor..." : "Teslim edildi olarak isaretle"}
+                      {actingAction === "complete" ? "Bildiriliyor..." : "Teslimati bildir"}
                     </button>
                   ) : null}
                   <Link href="/dashboard/nakliyelerim" className="app-button-secondary w-full justify-center">

@@ -6,6 +6,7 @@ function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
 
+// Bildirim okundu/degisti aksiyonundan sonra topbar ve sayfalarin sayaclarini tazelemesini saglar.
 export function emitNotificationsChanged() {
   if (!isBrowser()) {
     return;
@@ -14,6 +15,7 @@ export function emitNotificationsChanged() {
   window.dispatchEvent(new Event(NOTIFICATIONS_CHANGE_EVENT));
 }
 
+// Bildirim degisim event'ini dinleyen hook/component icin unsubscribe fonksiyonu dondurur.
 export function subscribeToNotificationChanges(
   callback: () => void
 ): () => void {

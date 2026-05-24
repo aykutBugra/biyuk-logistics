@@ -1,13 +1,13 @@
 export class OfferThreadSummaryResponseDto {
-  id!: number;
-  offerId!: number;
-  requestId!: number;
+  id!: string;
+  offerId!: string;
+  requestId!: string;
   participantSide!: "customer" | "carrier";
   baslangicSehri!: string;
   varisSehri!: string;
   baslangicKonumMetni!: string | null;
   varisKonumMetni!: string | null;
-  karsiTarafId!: number;
+  karsiTarafId!: string;
   karsiTarafAdSoyad!: string;
   karsiTarafKullaniciAdi!: string;
   karsiTarafProfileImageUrl?: string;

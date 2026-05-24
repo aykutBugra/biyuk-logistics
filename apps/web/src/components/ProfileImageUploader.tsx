@@ -126,7 +126,7 @@ export default function ProfileImageUploader({
   };
 
   return (
-    <section className="rounded-[1.35rem] border border-slate-200 bg-slate-50/70 p-4">
+    <section className="rounded-[1.35rem] border border-slate-200 bg-slate-50/70 p-4 mb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-4">
           <CustomerInitialsAvatar

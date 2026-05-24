@@ -24,6 +24,23 @@ export const VOLUME_ANALYSIS_SIZE_CLASSES = [
   "huge",
 ] as const;
 
+export const VOLUME_ANALYSIS_VOLUME_PROFILES = [
+  "box_crate",
+  "pallet_load",
+  "desk_table",
+  "chair",
+  "sofa",
+  "shelf_bookcase",
+  "cabinet_wardrobe",
+  "bed_mattress",
+  "appliance",
+  "long_material",
+  "bag_sack",
+  "room_load",
+  "household_load",
+  "mixed_unknown",
+] as const;
+
 export const VOLUME_ANALYSIS_SPACE_PROFILES = [
   "compact",
   "tall",
@@ -57,6 +74,8 @@ export type VolumeAnalysisShapeType =
   (typeof VOLUME_ANALYSIS_SHAPE_TYPES)[number];
 export type VolumeAnalysisSizeClass =
   (typeof VOLUME_ANALYSIS_SIZE_CLASSES)[number];
+export type VolumeAnalysisVolumeProfile =
+  (typeof VOLUME_ANALYSIS_VOLUME_PROFILES)[number];
 export type VolumeAnalysisSpaceProfile =
   (typeof VOLUME_ANALYSIS_SPACE_PROFILES)[number];
 export type VolumeAnalysisPlacementRisk =
@@ -66,11 +85,18 @@ export type VolumeAnalysisConfidence =
 export type VolumeEstimateConfidenceLevel =
   (typeof VOLUME_ESTIMATE_CONFIDENCE_LEVELS)[number];
 
+
+  // VolumeAnalysisItem, VolumeAnalysisResult, ShapeBasedVolumeCalculationResult 
+  // tipleri, hacim tahmini surecinde kullanilan ara veri yapilarini tanimlar; 
+  // VolumeAnalysisItem, tek bir tespit edilen nesne veya nesne grubunu temsil ederken, 
+  // VolumeAnalysisResult, tum analiz sonucunu ve genel guven seviyesini icerir; 
+  // ShapeBasedVolumeCalculationResult ise sekil tabanli hesaplama sonucunu ve ilgili bilgileri tutar
 export type VolumeAnalysisItem = {
   label: string;
   loadType: VolumeAnalysisLoadType;
   shapeType: VolumeAnalysisShapeType;
   sizeClass: VolumeAnalysisSizeClass;
+  volumeProfile: VolumeAnalysisVolumeProfile;
   estimatedCount: number;
   stackable: boolean;
   confidence: VolumeAnalysisConfidence;

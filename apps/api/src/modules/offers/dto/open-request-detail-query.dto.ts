@@ -1,5 +1,5 @@
 import { Transform } from "class-transformer";
-import { IsNumber, IsOptional, Max, Min } from "class-validator";
+import { IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
 
 const toNumber = ({ value }: { value: unknown }) => {
   if (typeof value === "number") {
@@ -20,12 +20,14 @@ const toNumber = ({ value }: { value: unknown }) => {
   return Number.isNaN(parsed) ? value : parsed;
 };
 
+const trimString = ({ value }: { value: unknown }) =>
+  typeof value === "string" ? value.trim() : value;
+
 export class OpenRequestDetailQueryDto {
-  @Transform(toNumber)
+  @Transform(trimString)
   @IsOptional()
-  @IsNumber({ allowInfinity: false, allowNaN: false, maxDecimalPlaces: 0 })
-  @Min(1)
-  carrierRouteId?: number;
+  @IsString()
+  carrierRouteId?: string;
 
   @Transform(toNumber)
   @IsOptional()

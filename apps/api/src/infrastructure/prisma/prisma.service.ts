@@ -3,6 +3,8 @@ import { ConfigService } from "@nestjs/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
+
+//prismaservice tek bir prisma client örneği oluşturur ve uygulama genelinde paylaşır.
 @Injectable()
 export class PrismaService implements OnModuleDestroy {
   private prismaClient: PrismaClient | null = null;
@@ -11,6 +13,9 @@ export class PrismaService implements OnModuleDestroy {
 
   get client(): PrismaClient {
     if (!this.prismaClient) {
+
+      //.env içinden database bağlantı URL'sini alırız. Eğer configService üzerinden
+      //alınamazsa, doğrudan process.env'den almaya çalışırız.
       const databaseUrl =
         this.configService.get<string>("DATABASE_URL") ?? process.env.DATABASE_URL;
 

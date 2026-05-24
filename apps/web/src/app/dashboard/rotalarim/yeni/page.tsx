@@ -28,6 +28,7 @@ function formatSelectedLocation(value: SelectedLocation | null): string {
   return value?.konumMetni?.trim() || value?.sehir || "Secilmedi";
 }
 
+// Rota formu iki konum alanini ve planlanan tarihi ortak panelde toplar.
 function RouteFormPanel({
   title,
   description,
@@ -59,6 +60,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+// Nakliyeci yeni calisma hattini bu sayfadan tanimlar.
 export default function CreateCarrierRoutePage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
@@ -71,6 +73,7 @@ export default function CreateCarrierRoutePage() {
   const [locationValidationActive, setLocationValidationActive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Planlanan tarih gibi duz inputlar form state icinde tutulur.
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
@@ -81,6 +84,7 @@ export default function CreateCarrierRoutePage() {
     }));
   };
 
+  // Secilen baslangic/varis konumlari backend rota create input'una cevrilir.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -114,6 +118,7 @@ export default function CreateCarrierRoutePage() {
       const response = await createCarrierRoute(payload, accessToken);
       router.replace(`/dashboard/rotalarim/${response.id}`);
     } catch (error) {
+      // Auth veya rol hatasinda rota formunda kalinmaz.
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
         window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
@@ -137,6 +142,7 @@ export default function CreateCarrierRoutePage() {
     }
   };
 
+  // Carrier guard hazir olmadan rota formu render edilmez.
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">

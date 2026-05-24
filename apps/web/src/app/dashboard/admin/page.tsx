@@ -16,6 +16,7 @@ type AdminOverviewState = {
   adminUsers: number;
 };
 
+// Admin ana ekrani kullanici sayilari ve ilk yonetim kisayollarini gosterir.
 export default function AdminDashboardPage() {
   const { accessToken, auth, status } = useDashboardAccess("admin");
   const [overview, setOverview] = useState<AdminOverviewState | null>(null);
@@ -23,6 +24,7 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Admin guard hazir olmadan kullanici verisi cekilmez.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -34,6 +36,7 @@ export default function AdminDashboardPage() {
 
     const loadOverview = async () => {
       try {
+        // Simdilik ozet sayilar users endpoint'inden turetiliyor.
         setIsLoading(true);
         setErrorMessage(null);
         const users = await getUsers(accessToken);
@@ -52,6 +55,7 @@ export default function AdminDashboardPage() {
           return;
         }
 
+        // Yetki veya token hatasinda admin ekraninda kalmak yerine guvenli yonlendirme yapilir.
         if (error instanceof ApiClientError && error.status === 401) {
           clearStoredAuth();
           window.location.replace("/login");

@@ -45,6 +45,7 @@ describe("Auth hardening", () => {
   describe("refresh", () => {
     const activeUser: AuthUserRecord = {
       id: 99,
+      publicId: "550e8400-e29b-41d4-a716-446655440099",
       ad: "Aykut",
       soyad: "Test",
       mail: "aykut@example.com",
@@ -57,6 +58,7 @@ describe("Auth hardening", () => {
     let service: AuthService;
     let usersServiceMock: {
       findActiveById: jest.Mock;
+      findActiveByPublicId: jest.Mock;
     };
     let jwtServiceMock: {
       verifyAsync: jest.Mock;
@@ -69,6 +71,7 @@ describe("Auth hardening", () => {
     beforeEach(async () => {
       usersServiceMock = {
         findActiveById: jest.fn(),
+        findActiveByPublicId: jest.fn(),
       };
       jwtServiceMock = {
         verifyAsync: jest.fn(),
@@ -118,10 +121,10 @@ describe("Auth hardening", () => {
 
     it("issues a fresh token pair for an active user", async () => {
       jwtServiceMock.verifyAsync.mockResolvedValue({
-        sub: activeUser.id,
+        sub: activeUser.publicId,
         type: "refresh",
       });
-      usersServiceMock.findActiveById.mockResolvedValue(activeUser);
+      usersServiceMock.findActiveByPublicId.mockResolvedValue(activeUser);
       jwtServiceMock.signAsync
         .mockResolvedValueOnce("next-access-token")
         .mockResolvedValueOnce("next-refresh-token");
@@ -148,10 +151,10 @@ describe("Auth hardening", () => {
 
     it("rejects refresh attempts for inactive users", async () => {
       jwtServiceMock.verifyAsync.mockResolvedValue({
-        sub: activeUser.id,
+        sub: activeUser.publicId,
         type: "refresh",
       });
-      usersServiceMock.findActiveById.mockResolvedValue(null);
+      usersServiceMock.findActiveByPublicId.mockResolvedValue(null);
 
       await expect(service.refresh("inactive-refresh-token")).rejects.toThrow(
         new UnauthorizedException("Invalid refresh token.")

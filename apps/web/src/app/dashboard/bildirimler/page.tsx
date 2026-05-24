@@ -76,6 +76,8 @@ function getTypeLabel(value: string): string {
       return "Pazarlik";
     case "IS_BASLADI":
       return "Is";
+    case "TESLIM_ONAYI_BEKLIYOR":
+      return "Onay";
     case "IS_TAMAMLANDI":
       return "Teslim";
     case "RATING_ALDIN":
@@ -97,6 +99,7 @@ function resolveNotificationFilter(value: string): Exclude<NotificationFilter, "
     case "MESAJ_GELDI":
       return "messages";
     case "IS_BASLADI":
+    case "TESLIM_ONAYI_BEKLIYOR":
     case "IS_TAMAMLANDI":
       return "operations";
     case "RATING_ALDIN":
@@ -171,6 +174,13 @@ function resolveNotificationVisualModel(tip: string): NotificationVisualModel {
         boxClassName: "border-blue-100 bg-blue-50",
         iconClassName: "text-blue-700",
       };
+    case "TESLIM_ONAYI_BEKLIYOR":
+      return {
+        label: "Onay",
+        icon: "pi pi-clock",
+        boxClassName: "border-amber-100 bg-amber-50",
+        iconClassName: "text-amber-700",
+      };
     case "IS_TAMAMLANDI":
       return {
         label: "Teslim",
@@ -202,6 +212,7 @@ function resolveNotificationVisualModel(tip: string): NotificationVisualModel {
   }
 }
 
+// Bildirim tipi/okunma durumuna gore aktif filtreye uyup uymadigini kontrol eder.
 function matchesNotificationFilter(
   notification: NotificationListItem,
   filter: NotificationFilter
@@ -213,6 +224,7 @@ function matchesNotificationFilter(
   return resolveNotificationFilter(notification.tip) === filter;
 }
 
+// Bildirim aramasi baslik, mesaj, tip ve hedef URL metinleri uzerinden yapilir.
 function matchesNotificationSearch(
   notification: NotificationListItem,
   query: string
@@ -233,6 +245,7 @@ function matchesNotificationSearch(
   return searchableText.includes(query);
 }
 
+// Bildirimler okunmamis olanlar ve en yeni hareketler one gelecek sekilde siralanir.
 function sortCarrierNotifications(
   left: NotificationListItem,
   right: NotificationListItem
@@ -247,6 +260,7 @@ function sortCarrierNotifications(
   );
 }
 
+// Tek bildirim karti; okundu isareti ve hedef route acma aksiyonlarini tasir.
 function CarrierNotificationCard({
   notification,
   isActing = false,
@@ -345,6 +359,7 @@ function CarrierNotificationCard({
   );
 }
 
+// Hesap bildirimlerini listeler, okundu durumlarini ve toplu okundu aksiyonunu yonetir.
 export default function NotificationsPage() {
   const router = useRouter();
   const {
@@ -360,7 +375,7 @@ export default function NotificationsPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [actingId, setActingId] = useState<number | null>(null);
+  const [actingId, setActingId] = useState<string | null>(null);
   const [actingAction, setActingAction] =
     useState<ActingNotificationAction>(null);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
@@ -369,6 +384,7 @@ export default function NotificationsPage() {
     useState<NotificationFilter>("all");
 
   useEffect(() => {
+    // Account guard hazir olmadan bildirim endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -380,6 +396,7 @@ export default function NotificationsPage() {
 
     const loadNotifications = async () => {
       try {
+        // Bildirim listesi okundukca topbar sayaclari event ile tazelenir.
         setIsLoading(true);
         setErrorMessage(null);
 
@@ -429,6 +446,7 @@ export default function NotificationsPage() {
     };
   }, [accessToken, router, status]);
 
+  // Ortak auth hata yakalama helper'i tekli/toplu aksiyonlarda tekrar kullanilir.
   const handleAuthError = (error: unknown): boolean => {
     if (error instanceof ApiClientError && error.status === 401) {
       clearStoredAuth();
@@ -445,7 +463,7 @@ export default function NotificationsPage() {
   };
 
   const applyUpdatedNotification = (
-    notificationId: number,
+    notificationId: string,
     updatedNotification: NotificationListItem
   ) => {
     setNotifications((currentNotifications) => {
@@ -468,7 +486,8 @@ export default function NotificationsPage() {
     emitNotificationsChanged();
   };
 
-  const handleMarkAsRead = async (notificationId: number) => {
+  // Tek bildirimi okundu yapar ve local listeyi backend cevabiyla gunceller.
+  const handleMarkAsRead = async (notificationId: string) => {
     if (!accessToken || actingId !== null) {
       return;
     }
@@ -498,6 +517,7 @@ export default function NotificationsPage() {
     }
   };
 
+  // Bildirim tiklaninca gerekiyorsa once okundu isaretlenir, sonra hedef route'a gidilir.
   const handleOpenNotification = async (notification: NotificationListItem) => {
     if (!accessToken) {
       return;
@@ -541,6 +561,7 @@ export default function NotificationsPage() {
     router.push(notification.hedefUrl);
   };
 
+  // Tum okunmamis bildirimler backend'de okundu yapilir ve local listeye yansitilir.
   const handleMarkAllAsRead = async () => {
     if (!accessToken || isMarkingAll || unreadCount === 0) {
       return;

@@ -3,28 +3,34 @@ import { Injectable } from "@nestjs/common";
 import type { DashboardIntroRole } from "../../../common/types/dashboard-intro-role.type";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
+
+//hesap silme işlemi sırasında kişinin aktif işlemi olup olmadığının kontrolü için 
+//durum türleri ve adları db verilerine göre tanımlanır. Böylece silme işlemi sırasında 
+//bu durumlara sahip kayıtlar varsa silme işlemi engellenir.
 const COMPLETED_SHIPMENT_STATUS = {
   durumTuru: "NAKLIYE",
   durumAdi: "TAMAMLANDI",
 } as const;
-
 const OPEN_OFFER_STATUS = {
   durumTuru: "TEKLIF",
   durumAdi: "OLUSTURULDU",
 } as const;
-
 const ACCEPTED_OFFER_STATUS = {
   durumTuru: "TEKLIF",
   durumAdi: "KABUL_EDILDI",
 } as const;
-
 const AGREED_REQUEST_STATUS = {
   durumTuru: "ISTEK",
   durumAdi: "ANLASILDI",
 } as const;
 
+
+//Bu türler, kullanıcı veritabanından çekilen ham verilerin uygulama içinde kullanılacak
+//formatlara dönüştürülmesi için kullanılır. Böylece veritabanı sorgularında hangi alanların
+//çekileceği ve bu alanların nasıl işleneceği tek bir yerde tanımlanır.
 const authUserSelect = {
   id: true,
+  publicId: true,
   ad: true,
   soyad: true,
   mail: true,
@@ -45,8 +51,13 @@ const authUserSelect = {
   },
 } satisfies Prisma.KullaniciSelect;
 
+
+
+//bu select ifadesi, kullanıcı profil bilgilerini çekerken kullanılacak 
+//olan alanları ve ilişkileri tanımlar.
 const userProfileSelect = {
   id: true,
+  publicId: true,
   ad: true,
   soyad: true,
   mail: true,
@@ -67,6 +78,8 @@ const userProfileSelect = {
   },
 } satisfies Prisma.KullaniciSelect;
 
+
+//kullanıcı hesabını silebilir mi ? kontrolü . 
 const accountDeletionSnapshotSelect = {
   id: true,
   nakliyeler: {
@@ -261,14 +274,20 @@ const accountDeletionSnapshotSelect = {
   },
 } satisfies Prisma.KullaniciSelect;
 
+
+
+//Bu türler, kullanıcı veritabanından çekilen ham verilerin uygulama içinde kullanılacak
+//formatlara dönüştürülmesi için kullanılır. Böylece veritabanı sorgularında hangi alanların
+//çekileceği ve bu alanların nasıl işleneceği tek bir yerde tanımlanır.
 type StoredAuthUserQuery = Prisma.KullaniciGetPayload<{ select: typeof authUserSelect }>;
 type StoredProfileUserQuery = Prisma.KullaniciGetPayload<{ select: typeof userProfileSelect }>;
-type StoredAccountDeletionSnapshotQuery = Prisma.KullaniciGetPayload<{
-  select: typeof accountDeletionSnapshotSelect;
-}>;
+type StoredAccountDeletionSnapshotQuery = Prisma.KullaniciGetPayload<{select: typeof accountDeletionSnapshotSelect;}>;
 
+
+//repo nun service tarafından kullanılacak türleri.
 export type StoredUserRecord = {
   id: number;
+  publicId: string;
   ad: string;
   soyad: string;
   mail: string;
@@ -281,8 +300,11 @@ export type StoredUserRecord = {
   roleNames: string[];
 };
 
+//profil tipi sifrehash olmadan kullanılıyor . omit ile sifrehash alanını çıkarıyoruz.
 export type StoredUserProfileRecord = Omit<StoredUserRecord, "sifreHash">;
 
+//kullanıcı oluşturma işlemi için gerekli olan input türü. roleId alanı, 
+//kullanıcının hangi role sahip olacağını belirtir.
 export type CreateStoredUserInput = {
   ad: string;
   soyad: string;
@@ -293,6 +315,9 @@ export type CreateStoredUserInput = {
   roleId: number;
 };
 
+//hesap silme sonucu başarılı ise ok: true, 
+//başarısız ise ok: false 
+//ve reason alanında başarısızlık nedeni belirtilir.
 export type DeleteStoredUserAccountBlockReason =
   | "NOT_FOUND"
   | "ACTIVE_CARRIER_SHIPMENT"
@@ -310,18 +335,26 @@ export type DeleteStoredUserAccountResult =
       reason: DeleteStoredUserAccountBlockReason;
     };
 
+
+  
+
 @Injectable()
 export class UsersRepository {
+  //repo doğrudan prisma servisini kullanarak veritabanı işlemlerini gerçekleştirir.
+  //yani bu dosya veritabanına this.prisma.client.kullanici.findFirst({...}) gibi sorgular gönderir.
   constructor(private readonly prisma: PrismaService) {}
 
+  //login sırasında kullanıcıyı mail veya kullanıcı adı ile bulmak için kullanılır.
   async findActiveByIdentifier(identifier: string): Promise<StoredUserRecord | null> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
+        //soft delete olduğundan silme tarihi null olan kayıtlar aktif kabul edilir.
         silmeTarihi: null,
         OR: [
           {
             mail: {
               equals: identifier,
+              //prisma.queryMode.insensitive sayesinde büyük küçük harf duyarlılığını kaldırarak arama yaparız.
               mode: Prisma.QueryMode.insensitive,
             },
           },
@@ -339,6 +372,8 @@ export class UsersRepository {
     return user ? this.mapStoredUser(user) : null;
   }
 
+  //kayıt olurken existbymail ve existbyusername mail veya kullanıcı adının 
+  //daha önce alınıp alınmadığını kontrol etmek için kullanılır.
   async existsByMail(mail: string): Promise<boolean> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -348,13 +383,13 @@ export class UsersRepository {
         },
       },
       select: {
+        //sadece id seçiliyor diğer alanlara gerek yok . 
         id: true,
       },
     });
 
     return Boolean(user);
   }
-
   async existsByUsername(kullaniciAdi: string): Promise<boolean> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -371,12 +406,19 @@ export class UsersRepository {
     return Boolean(user);
   }
 
+
+
+//kullanıcı oluşturur ve transaction başlatılır . 
   async createWithRole(input: CreateStoredUserInput): Promise<StoredUserRecord> {
     return this.prisma.client.$transaction((tx) =>
       this.createWithRoleInTransaction(tx, input)
     );
   }
 
+  //transaction içinde kullanıcı oluşturma işlemi gerçekleştirilir. 
+  //önce kullanıcı kaydı oluşturulur, 
+  //sonra bu kullanıcıya role atanır ve 
+  //son olarak oluşturulan kullanıcı bilgileri çekilerek döndürülür.
   async createWithRoleInTransaction(
     tx: Prisma.TransactionClient,
     input: CreateStoredUserInput
@@ -412,6 +454,9 @@ export class UsersRepository {
     return this.mapStoredUser(user);
   }
 
+
+  //auth/jwt tarasında kullanıcı doğrulaması için kullanılır . 
+  //şifre hash'i içeren kullanıcı kaydını döndürür.
   async findActiveById(id: number): Promise<StoredUserRecord | null> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -424,6 +469,20 @@ export class UsersRepository {
     return user ? this.mapStoredUser(user) : null;
   }
 
+  async findActiveByPublicId(publicId: string): Promise<StoredUserRecord | null> {
+    const user = await this.prisma.client.kullanici.findFirst({
+      where: {
+        publicId,
+        silmeTarihi: null,
+      },
+      select: authUserSelect,
+    });
+
+    return user ? this.mapStoredUser(user) : null;
+  }
+
+  //profile erkanı için kullanıcı bilgilerini çeker .
+  //şifre hash'i içermeyen kullanıcı kaydını döndürür.
   async findProfileById(id: number): Promise<StoredUserProfileRecord | null> {
     const user = await this.prisma.client.kullanici.findFirst({
       where: {
@@ -436,6 +495,9 @@ export class UsersRepository {
     return user ? this.mapStoredProfile(user) : null;
   }
 
+  //dashboard intro kapatma işlemi için kullanılır .
+  //role göre çalışır ve ilgili timestamp alanını günceller.
+  //Eğer intro daha önce kapatılmışsa sadece güncel profili döndürür.
   async dismissDashboardIntroById(
     userId: number,
     role: DashboardIntroRole
@@ -476,10 +538,14 @@ export class UsersRepository {
     return this.mapStoredProfile(updatedUser);
   }
 
+
+
+  //profil fotoğrafının storage key'ini güncellemek için kullanılır.
   async updateProfileImageStorageKeyById(
     userId: number,
     storageKey: string | null
   ): Promise<StoredUserProfileRecord | null> {
+    //hem id hem silmeTarihi:null şartından dolayı updateMany 
     const updatedUser = await this.prisma.client.kullanici.updateMany({
       where: {
         id: userId,
@@ -497,6 +563,8 @@ export class UsersRepository {
     return this.findProfileById(userId);
   }
 
+
+  //tüm aktif kullanıcı profillerini çekmek için kullanılır.
   async findAllActiveProfiles(): Promise<StoredUserProfileRecord[]> {
     const users = await this.prisma.client.kullanici.findMany({
       where: {
@@ -504,6 +572,7 @@ export class UsersRepository {
       },
       select: userProfileSelect,
       orderBy: {
+        //id ye göre sıralama
         id: "asc",
       },
     });
@@ -511,6 +580,8 @@ export class UsersRepository {
     return users.map((user) => this.mapStoredProfile(user));
   }
 
+  //hesap silme metodu . transaction içinde çalışır ve önce 
+  //silme işlemi için engel olup olmadığını kontrol eder.
   async deleteAccountById(userId: number): Promise<DeleteStoredUserAccountResult> {
     return this.prisma.client.$transaction(async (tx) => {
       const deletionSnapshot = await tx.kullanici.findFirst({
@@ -577,6 +648,10 @@ export class UsersRepository {
         },
         data: {
           silmeTarihi: deletedAt,
+
+          //veri anonimleştirme işlemi. mail ve kullanıcı adı gibi alanlar
+          //benzersiz olduğu için silme işleminden sonra aynı mail veya kullanıcı 
+          //adıyla kayıt oluşturulabilmesi için anonimleştirme yapılır.
           mail: `${anonymizedSuffix}@deleted.local`,
           kullaniciAdi: anonymizedSuffix,
           telefonNumarasi: null,
@@ -596,6 +671,9 @@ export class UsersRepository {
     });
   }
 
+
+  //deleteAccountById metodunda kullanıcı silme işlemi sırasında hangi engel 
+  //nedeniyle silme işleminin gerçekleştirilemediğini belirlemek için kullanılır.
   private resolveDeleteBlockReason(
     snapshot: StoredAccountDeletionSnapshotQuery
   ): DeleteStoredUserAccountBlockReason | null {
@@ -628,9 +706,21 @@ export class UsersRepository {
     return isOpenOffer ? "OPEN_CARRIER_OFFER" : "STALE_ACCEPTED_OFFER";
   }
 
+
+  //prismadan gelen ham kullanıcı verisini uygulama içinde kullanılacak formata dönüştürür.
+  /*
+        roller: [
+          { rol: { rolAd: "MUSTERI" } }
+        ]
+
+
+        roleNames: ["MUSTERI"]
+  */
+ 
   private mapStoredUser(user: StoredAuthUserQuery): StoredUserRecord {
     return {
       id: user.id,
+      publicId: user.publicId,
       ad: user.ad,
       soyad: user.soyad,
       mail: user.mail,
@@ -643,10 +733,10 @@ export class UsersRepository {
       roleNames: user.roller.map((role) => role.rol.rolAd),
     };
   }
-
   private mapStoredProfile(user: StoredProfileUserQuery): StoredUserProfileRecord {
     return {
       id: user.id,
+      publicId: user.publicId,
       ad: user.ad,
       soyad: user.soyad,
       mail: user.mail,

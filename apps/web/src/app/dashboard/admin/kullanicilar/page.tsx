@@ -22,6 +22,7 @@ function roleLabel(role: string): string {
   }
 }
 
+// Admin kullanici listesi; rolleri ve hesap tiplerini tek tabloda gosterir.
 export default function AdminUsersPage() {
   const { accessToken, status } = useDashboardAccess("admin");
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -29,6 +30,7 @@ export default function AdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Admin yetkisi dogrulanmadan liste endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -40,6 +42,7 @@ export default function AdminUsersPage() {
 
     const loadUsers = async () => {
       try {
+        // Tum kullanici profilleri admin token'i ile backend'den alinir.
         setIsLoading(true);
         setErrorMessage(null);
         const response = await getUsers(accessToken);
@@ -54,6 +57,7 @@ export default function AdminUsersPage() {
           return;
         }
 
+        // Token/rol problemi varsa admin sayfasinda kalmak yerine uygun cikis yapilir.
         if (error instanceof ApiClientError && error.status === 401) {
           clearStoredAuth();
           window.location.replace("/login");

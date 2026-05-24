@@ -44,6 +44,7 @@ function hasRouteCoordinates(route: CarrierRouteDetail): boolean {
   ].every((value) => Number.isFinite(value));
 }
 
+// Rota metrikleri ve koordinat durumuna gore detay sayfasinda status modeli olusturur.
 function resolveRouteStatus(route: CarrierRouteDetail): {
   label: string;
   tone: "blue" | "emerald" | "amber";
@@ -131,19 +132,21 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
+// Tek rota kaydinin koordinat, metrik ve silme aksiyonlarini gosterir.
 export default function CarrierRouteDetailPage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
   const confirm = useConfirm();
   const showToast = useToast();
   const params = useParams<{ id: string }>();
-  const routeId = Number(params.id);
+  const routeId = params.id;
   const [route, setRoute] = useState<CarrierRouteDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    // Route id ve token dogrulanmadan detay endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -151,7 +154,7 @@ export default function CarrierRouteDetailPage() {
       return;
     }
 
-    if (!Number.isInteger(routeId) || routeId <= 0) {
+    if (!routeId.trim()) {
       setErrorMessage("Gecersiz rota numarasi.");
       setIsLoading(false);
       return;
@@ -161,6 +164,7 @@ export default function CarrierRouteDetailPage() {
 
     const loadRoute = async () => {
       try {
+        // Detay endpoint'i konum provider/place id ve koordinatlari da dondurur.
         setIsLoading(true);
         setErrorMessage(null);
         const response = await getCarrierRouteDetail(routeId, accessToken);
@@ -212,6 +216,7 @@ export default function CarrierRouteDetailPage() {
     };
   }, [accessToken, routeId, router, status]);
 
+  // Kullanici onay verirse rota silinir ve liste ekranina donulur.
   const handleDelete = async () => {
     if (!accessToken || !route || isDeleting) {
       return;
@@ -241,6 +246,7 @@ export default function CarrierRouteDetailPage() {
       });
       router.replace("/dashboard/rotalarim");
     } catch (error) {
+      // Auth/rol hatasinda kullanici stale detay ekraninda tutulmaz.
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
         showToast({
@@ -293,6 +299,7 @@ export default function CarrierRouteDetailPage() {
     }
   };
 
+  // Carrier guard sonuclanana kadar detay shell'i bekletilir.
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
@@ -330,7 +337,7 @@ export default function CarrierRouteDetailPage() {
                 <div className="min-w-0 space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                      Rota #{route.id}
+                      Rota detayi
                     </span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                       {formatPlannedDate(route.planlananTarih)}

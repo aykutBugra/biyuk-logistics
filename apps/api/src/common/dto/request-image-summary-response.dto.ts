@@ -1,5 +1,5 @@
 export class RequestImageSummaryResponseDto {
-  id!: number;
+  id!: string;
   thumbnailUrl!: string;
   width!: number;
   height!: number;

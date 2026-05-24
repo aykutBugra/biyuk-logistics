@@ -1,7 +1,7 @@
 import { apiFetch } from "./api-client";
 
 export type UserProfile = {
-  id: number;
+  id: string;
   ad: string;
   soyad: string;
   mail: string;
@@ -15,6 +15,7 @@ export type UserProfile = {
   isAdmin: boolean;
 };
 
+// Admin ekraninda kullanici listesini cekmek icin kullanilir.
 export function getUsers(accessToken: string) {
   return apiFetch<UserProfile[]>("/users", {
     method: "GET",

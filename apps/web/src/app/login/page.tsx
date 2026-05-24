@@ -19,6 +19,7 @@ const loginHighlights = [
   "Bildirim ve operasyon takibini ayni hesapta birlestir",
 ];
 
+// Login sayfasi kullaniciyi backend auth akisiyle oturuma alir ve dashboard'a yonlendirir.
 export default function Page() {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -31,6 +32,7 @@ export default function Page() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    // Zaten oturum varsa login formunu gostermeden dogrudan dashboard'a gecilir.
     const searchParams = new URLSearchParams(window.location.search);
 
     setSuccessMessage(
@@ -47,6 +49,7 @@ export default function Page() {
     setIsCheckingAuth(false);
   }, [router]);
 
+  // Form alanlari degistikce onceki hata mesaji temizlenir.
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
@@ -57,6 +60,7 @@ export default function Page() {
     }));
   };
 
+  // Email/sifre backend'e gonderilir; gelen token localStorage'a yazilir.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 

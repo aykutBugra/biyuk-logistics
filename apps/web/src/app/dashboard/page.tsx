@@ -31,6 +31,7 @@ function getServerAuthSnapshot(): StoredAuth | null | undefined {
   return undefined;
 }
 
+// Dashboard ana girisi; kullanicinin rolune gore musteri, nakliyeci veya admin alanina yon verir.
 export default function DashboardLandingPage() {
   const router = useRouter();
   const auth = useSyncExternalStore(
@@ -61,6 +62,7 @@ export default function DashboardLandingPage() {
   });
 
   useEffect(() => {
+    // Auth ve rol bilgisi hazir olunca kullanicinin girebilecegi dashboard yuzeyi kontrol edilir.
     if (auth === undefined) return;
 
     if (!auth) {
@@ -78,6 +80,7 @@ export default function DashboardLandingPage() {
     }
   }, [auth, hasBusinessAccess, isAdmin, router]);
 
+  // Ilk kullanim paneli kapatilinca backend profil flag'i guncellenir ve ilgili workspace acilir.
   const handleDismissIntro = async (targetHref?: string) => {
     if (!auth?.accessToken || !pendingIntroRole || isDismissingIntro) return;
 

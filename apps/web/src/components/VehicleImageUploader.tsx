@@ -2,6 +2,7 @@
 
 import type { ChangeEvent } from "react";
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   deleteVehicleImage,
@@ -133,9 +134,13 @@ export default function VehicleImageUploader({
 
       <div className="mt-4 overflow-hidden rounded-[1.2rem] border border-slate-200 bg-slate-50">
         {vehicle.vehicleImageUrl ? (
-          <img
+          <Image
             src={vehicle.vehicleImageUrl}
             alt={`${vehicle.marka} ${vehicle.model} fotografi`}
+            width={640}
+            height={360}
+            sizes="(min-width: 1280px) 360px, 100vw"
+            unoptimized
             className="h-44 w-full object-contain"
           />
         ) : (

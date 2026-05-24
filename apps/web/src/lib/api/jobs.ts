@@ -2,8 +2,8 @@ import { apiFetch } from "./api-client";
 import type { RatingContext } from "./ratings";
 
 export type JobListItem = {
-  id: number;
-  requestId: number;
+  id: string;
+  requestId: string;
   participantSide: "customer" | "carrier";
   baslangicSehri: string;
   varisSehri: string;
@@ -12,20 +12,22 @@ export type JobListItem = {
   durum: string;
   olusturmaTarihi: string;
   baslangicTarihi: string | null;
+  teslimBildirimTarihi: string | null;
   teslimTarihi: string | null;
-  counterpartyId: number;
+  counterpartyId: string;
   counterpartyName: string;
   counterpartyUsername: string;
 };
 
 export type JobDetail = {
-  id: number;
-  requestId: number;
+  id: string;
+  requestId: string;
   participantSide: "customer" | "carrier";
   durum: string;
   anlasilanFiyat: number;
   olusturmaTarihi: string;
   baslangicTarihi: string | null;
+  teslimBildirimTarihi: string | null;
   teslimTarihi: string | null;
   baslangicSehri: string;
   varisSehri: string;
@@ -42,29 +44,32 @@ export type JobDetail = {
   tasimaTarihi: string | null;
   yukDetay: string;
   carrier: {
-    id: number;
+    id: string;
     name: string;
     username: string;
   };
   customer: {
-    id: number;
+    id: string;
     name: string;
     username: string;
   };
   vehicle: {
-    id: number;
+    id: string;
     plaka: string;
     marka: string;
     model: string;
     isArchived: boolean;
   };
   canStart: boolean;
+  canMarkDelivered: boolean;
+  canConfirmDelivery: boolean;
   canComplete: boolean;
   ratingContext: RatingContext;
 };
 
 type JobAudience = "customer" | "carrier";
 
+// Cift role sahip kullanicida ayni job listesini hangi taraftan actigimizi query ile belirtir.
 function withAudience(path: string, audience?: JobAudience): string {
   if (!audience) {
     return path;
@@ -73,6 +78,7 @@ function withAudience(path: string, audience?: JobAudience): string {
   return `${path}?as=${audience}`;
 }
 
+// Nakliyelerim ekraninda musteri/nakliyeci rolune gore ilgili isleri listeler.
 export function getMyJobs(accessToken: string, audience?: JobAudience) {
   return apiFetch<JobListItem[]>(withAudience("/jobs/my", audience), {
     method: "GET",
@@ -80,8 +86,9 @@ export function getMyJobs(accessToken: string, audience?: JobAudience) {
   });
 }
 
+// Detay ekraninda is akisi, taraf bilgileri ve puanlama context'i birlikte gelir.
 export function getJobDetail(
-  jobId: number,
+  jobId: string,
   accessToken: string,
   audience?: JobAudience
 ) {
@@ -91,15 +98,30 @@ export function getJobDetail(
   });
 }
 
-export function startJob(jobId: number, accessToken: string) {
+// Nakliyeci isi yola cikti olarak baslatir; backend durum gecisini kontrol eder.
+export function startJob(jobId: string, accessToken: string) {
   return apiFetch<JobDetail>(`/jobs/${jobId}/start`, {
     method: "POST",
     accessToken,
   });
 }
 
-export function completeJob(jobId: number, accessToken: string) {
+export function completeJob(jobId: string, accessToken: string) {
   return apiFetch<JobDetail>(`/jobs/${jobId}/complete`, {
+    method: "POST",
+    accessToken,
+  });
+}
+
+export function markJobDelivered(jobId: string, accessToken: string) {
+  return apiFetch<JobDetail>(`/jobs/${jobId}/delivered`, {
+    method: "POST",
+    accessToken,
+  });
+}
+
+export function confirmJobDelivery(jobId: string, accessToken: string) {
+  return apiFetch<JobDetail>(`/jobs/${jobId}/confirm-delivery`, {
     method: "POST",
     accessToken,
   });

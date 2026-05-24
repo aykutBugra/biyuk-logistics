@@ -57,6 +57,7 @@ function renderStars(score: number | null) {
   });
 }
 
+// Profil sayfasi hesap bilgisi, profil fotografi, roller ve hesap silme aksiyonlarini toplar.
 export default function ProfilePage() {
   const router = useRouter();
 
@@ -81,6 +82,7 @@ export default function ProfilePage() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
+    // Profil acilinca business rol varsa puan ozeti cekilir.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -101,6 +103,7 @@ export default function ProfilePage() {
 
     const loadSummary = async () => {
       try {
+        // Rating ozeti profil kartlarindaki ortalama ve toplam sayilari besler.
         setIsLoading(true);
         setErrorMessage(null);
 
@@ -149,11 +152,13 @@ export default function ProfilePage() {
     };
   }, [accessToken, hasBusinessAccess, status]);
 
+  // Silme paneli acildiginda hata state'i temizlenir.
   const handleOpenDeletePanel = () => {
     setDeleteErrorMessage(null);
     setIsDeletePanelOpen(true);
   };
 
+  // Hesap silme akisi iptal edilirse panel kapanir.
   const handleCancelDelete = () => {
     if (isDeletingAccount) {
       return;
@@ -163,6 +168,7 @@ export default function ProfilePage() {
     setIsDeletePanelOpen(false);
   };
 
+  // Hesap silme basarili olursa auth temizlenip login'e bilgi query'siyle donulur.
   const handleDeleteAccount = async () => {
     if (!accessToken || isDeletingAccount) {
       return;
@@ -178,6 +184,7 @@ export default function ProfilePage() {
 
       window.location.replace("/login?accountDeleted=1");
     } catch (error) {
+      // Silme sirasinda token gecersizse kullanici tekrar login'e yonlendirilir.
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
 
@@ -478,7 +485,7 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              <div className="p-5 md:p-6">
+              <div className="p-5 md:p-6 ">
                 <div className="space-y-2 text-sm leading-6 text-slate-700">
                   <p>Bu islem geri alinamaz.</p>
                   <p>Hesabina bagli arac, rota ve istek kayitlari kaldirilabilir.</p>

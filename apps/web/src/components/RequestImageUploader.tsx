@@ -39,8 +39,10 @@ export default function RequestImageUploader({ disabled = false, onChange }: Pro
   const revokeListRef = useRef<string[]>([]);
 
   useEffect(() => {
+    const revokeList = revokeListRef.current;
+
     return () => {
-      revokeListRef.current.forEach((url) => URL.revokeObjectURL(url));
+      revokeList.forEach((url) => URL.revokeObjectURL(url));
     };
   }, []);
 

@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
+// Sistem erisilebilirlik tercihi degisirse hook kullanan animasyonlar yeniden hesaplanir.
 function subscribeToReducedMotion(callback: () => void) {
   if (typeof window === "undefined") {
     return () => undefined;
@@ -21,6 +22,7 @@ function subscribeToReducedMotion(callback: () => void) {
   };
 }
 
+// Browser yokken false snapshot doner; client'ta media query okunur.
 function getReducedMotionSnapshot() {
   if (typeof window === "undefined") {
     return false;
@@ -29,6 +31,7 @@ function getReducedMotionSnapshot() {
   return window.matchMedia(REDUCED_MOTION_QUERY).matches;
 }
 
+// React'in external store API'siyle prefers-reduced-motion degeri guvenli izlenir.
 export function useReducedMotion() {
   return useSyncExternalStore(
     subscribeToReducedMotion,

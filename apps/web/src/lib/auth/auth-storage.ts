@@ -3,6 +3,7 @@
 const AUTH_STORAGE_KEY = "nakliye.auth";
 const DASHBOARD_WORKSPACE_STORAGE_KEY = "nakliye-dashboard-workspace";
 const AUTH_CHANGE_EVENT = "nakliye-auth-change";
+// localStorage her okumada parse edilmesin diye son ham deger ve parse sonucu cache'lenir.
 let cachedAuthRawValue: string | null | undefined;
 let cachedStoredAuth: StoredAuth | null = null;
 
@@ -23,7 +24,7 @@ export type StoredDashboardWorkspaceMode = "customer" | "carrier";
 export type StoredDashboardIntroRole = StoredDashboardWorkspaceMode;
 
 export type StoredAuthUser = {
-  id: number;
+  id: string;
   ad: string;
   soyad: string;
   mail: string;
@@ -50,6 +51,7 @@ function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
 
+// localStorage disaridan bozulursa uygulama gecersiz auth objesini kullanmaz.
 function isStoredAuth(value: unknown): value is StoredAuth {
   if (!value || typeof value !== "object") {
     return false;
@@ -64,6 +66,7 @@ function isStoredAuth(value: unknown): value is StoredAuth {
   );
 }
 
+// Ayni sekmede auth degisince hook'larin yeniden hesaplanmasi icin custom event yayinlanir.
 function emitAuthChange() {
   if (!isBrowser()) {
     return;
@@ -72,6 +75,7 @@ function emitAuthChange() {
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
+// Auth bilgisini localStorage'dan okur; browser disinda her zaman null dondurur.
 export function getStoredAuth(): StoredAuth | null {
   if (!isBrowser()) {
     return null;
@@ -101,6 +105,7 @@ export function getStoredAuth(): StoredAuth | null {
   }
 }
 
+// Login/refresh sonrasi token ve kullanici bilgisini saklar.
 export function setStoredAuth(auth: StoredAuth) {
   if (!isBrowser()) {
     return;
@@ -113,6 +118,7 @@ export function setStoredAuth(auth: StoredAuth) {
   emitAuthChange();
 }
 
+// Profil guncellenince tokenlari bozmadan sadece kullanici snapshot'i yenilenir.
 export function mergeStoredAuthUser(user: StoredAuthUser) {
   const auth = getStoredAuth();
 
@@ -126,6 +132,7 @@ export function mergeStoredAuthUser(user: StoredAuthUser) {
   });
 }
 
+// Cikis veya refresh hatasinda auth ve dashboard tercihleri birlikte temizlenir.
 export function clearStoredAuth() {
   if (!isBrowser()) {
     return;
@@ -138,6 +145,7 @@ export function clearStoredAuth() {
   emitAuthChange();
 }
 
+// Dashboard tarafinda API isteklerine verilecek access token'i kisa yoldan dondurur.
 export function getAccessToken(): string | null {
   return getStoredAuth()?.accessToken ?? null;
 }
@@ -146,6 +154,7 @@ export function isAuthenticated(): boolean {
   return getAccessToken() !== null;
 }
 
+// Rol kontrolu UI guard'larinda merkezi olarak kullanilir.
 export function storedAuthHasRole(
   auth: StoredAuth | null,
   roleName: StoredAuthRoleName
@@ -153,6 +162,7 @@ export function storedAuthHasRole(
   return auth?.user?.roles.includes(roleName) ?? false;
 }
 
+// Cift role sahip kullanicinin son actigi dashboard tarafini localStorage'dan okur.
 export function getStoredDashboardWorkspaceMode(): StoredDashboardWorkspaceMode | null {
   if (!isBrowser()) {
     return null;
@@ -167,6 +177,7 @@ export function getStoredDashboardWorkspaceMode(): StoredDashboardWorkspaceMode 
   return null;
 }
 
+// Musteri/nakliyeci sekmesi degistiginde tercih saklanir ve layout'a haber verilir.
 export function setStoredDashboardWorkspaceMode(
   mode: StoredDashboardWorkspaceMode
 ) {
@@ -178,6 +189,7 @@ export function setStoredDashboardWorkspaceMode(
   emitAuthChange();
 }
 
+// Rol veya hesap degisikliklerinde eski workspace tercihi temizlenir.
 export function clearStoredDashboardWorkspaceMode() {
   if (!isBrowser()) {
     return;
@@ -187,12 +199,14 @@ export function clearStoredDashboardWorkspaceMode() {
   emitAuthChange();
 }
 
+// Workspace moduna gore dashboard icindeki varsayilan hedef sayfa belirlenir.
 export function getDashboardHrefForWorkspaceMode(
   mode: StoredDashboardWorkspaceMode
 ): string {
   return mode === "carrier" ? "/dashboard/acik_istekler" : "/dashboard/isteklerim";
 }
 
+// Tek rol veya cift rol durumuna gore dashboard'un hangi tarafinin acilacagini cozer.
 export function resolveStoredDashboardWorkspaceMode(
   auth: StoredAuth | null
 ): StoredDashboardWorkspaceMode | null {
@@ -202,6 +216,7 @@ export function resolveStoredDashboardWorkspaceMode(
   if (hasCustomerRole && hasCarrierRole) {
     const preferredMode = getStoredDashboardWorkspaceMode();
 
+    // Kullanici daha once secim yaptiysa o tercih onceliklidir.
     if (preferredMode) {
       return preferredMode;
     }
@@ -220,6 +235,7 @@ export function resolveStoredDashboardWorkspaceMode(
   return null;
 }
 
+// Ilk giriste hangi rol icin tanitim modalinin gosterilecegini hesaplar.
 export function getPendingDashboardIntroRole(
   auth: StoredAuth | null,
   workspaceMode: StoredDashboardWorkspaceMode | null = resolveStoredDashboardWorkspaceMode(
@@ -249,6 +265,7 @@ export function getPendingDashboardIntroRole(
   return null;
 }
 
+// Musteri ve nakliyeci rollerini ayni hesapta tasiyan kullaniciyi ayirt eder.
 export function hasDualBusinessRoles(auth: StoredAuth | null): boolean {
   return (
     storedAuthHasRole(auth, STORED_ROLE_NAMES.MUSTERI) &&
@@ -260,6 +277,7 @@ export function getDashboardHref(auth: StoredAuth | null): string {
   return auth ? "/dashboard" : "/";
 }
 
+// Auth degisimleri hem ayni sekmedeki custom event'ten hem diger sekmelerdeki storage event'ten izlenir.
 export function subscribeToAuthChanges(callback: AuthChangeCallback): () => void {
   if (!isBrowser()) {
     return () => {};

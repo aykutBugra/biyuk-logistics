@@ -1,6 +1,6 @@
 export class MyIncomingOfferListItemResponseDto {
-  id!: number;
-  requestId!: number;
+  id!: string;
+  requestId!: string;
   baslangicSehri!: string;
   varisSehri!: string;
   baslangicKonumMetni!: string | null;
@@ -10,11 +10,11 @@ export class MyIncomingOfferListItemResponseDto {
   hacimM3!: number | null;
   yukTipi!: string;
   tasimaTarihi!: string | null;
-  carrierId!: number;
+  carrierId!: string;
   carrierName!: string;
   carrierUsername!: string;
   carrierProfileImageUrl?: string;
-  aracId!: number | null;
+  aracId!: string | null;
   aracPlaka!: string | null;
   fiyat!: number;
   not!: string | null;

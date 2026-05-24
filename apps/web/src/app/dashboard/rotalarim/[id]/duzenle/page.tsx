@@ -30,6 +30,7 @@ function formatSelectedLocation(value: SelectedLocation | null): string {
   return value?.konumMetni?.trim() || value?.sehir || "Secilmedi";
 }
 
+// Duzenleme formu mevcut rota konumlarini ve tarih bilgisini ayni yuzeyde toplar.
 function RouteFormPanel({
   title,
   description,
@@ -61,11 +62,12 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+// Nakliyeci kendi rota kaydini bu sayfadan gunceller.
 export default function EditCarrierRoutePage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
   const params = useParams<{ id: string }>();
-  const routeId = Number(params.id);
+  const routeId = params.id;
   const [form, setForm] = useState<UpdateCarrierRouteForm>(initialForm);
   const [baslangicKonum, setBaslangicKonum] = useState<SelectedLocation | null>(
     null
@@ -78,6 +80,7 @@ export default function EditCarrierRoutePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // Mevcut rota detaylari cekilip selected location state'lerine geri kurulur.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -85,7 +88,7 @@ export default function EditCarrierRoutePage() {
       return;
     }
 
-    if (!Number.isInteger(routeId) || routeId <= 0) {
+    if (!routeId.trim()) {
       setErrorMessage("Gecersiz rota numarasi.");
       setIsLoading(false);
       return;
@@ -172,6 +175,7 @@ export default function EditCarrierRoutePage() {
     };
   }, [accessToken, routeId, router, status]);
 
+  // Tarih inputu degistikce submit hatasi temizlenir.
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
@@ -182,14 +186,14 @@ export default function EditCarrierRoutePage() {
     }));
   };
 
+  // Guncel konum secimleri ve tarih backend update endpoint'ine gonderilir.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (
       isSubmitting ||
       !accessToken ||
-      !Number.isInteger(routeId) ||
-      routeId <= 0
+      !routeId.trim()
     ) {
       return;
     }
@@ -220,6 +224,7 @@ export default function EditCarrierRoutePage() {
       const response = await updateCarrierRoute(routeId, payload, accessToken);
       router.replace(`/dashboard/rotalarim/${response.id}`);
     } catch (error) {
+      // Yetki veya bulunamama durumunda kullanici uygun sayfaya geri alinir.
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
         window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
@@ -249,6 +254,7 @@ export default function EditCarrierRoutePage() {
     }
   };
 
+  // Guard hazir degilken duzenleme formu yerine loading gosterilir.
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">

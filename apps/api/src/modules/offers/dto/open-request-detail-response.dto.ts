@@ -13,5 +13,5 @@ export class OpenRequestDetailResponseDto extends OpenRequestListItemResponseDto
   hasActiveVehicle!: boolean;
   hasExistingOffer!: boolean;
   images?: RequestImageResponseDto[];
-  primaryImageId?: number | null;
+  primaryImageId?: string | null;
 }

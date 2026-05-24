@@ -16,6 +16,7 @@ type DashboardFormMotionOptions = {
   routeTransitionId: string;
 };
 
+// Form sayfalari yuklendiginde form yuzeyi ve bolumleri tek seferlik reveal animasyonuyla acilir.
 export function useDashboardFormMotion(
   contentRef: RefObject<HTMLElement | null>,
   { enabled = false, routeTransitionId }: DashboardFormMotionOptions
@@ -24,12 +25,14 @@ export function useDashboardFormMotion(
   const hasAnimatedRef = useRef(false);
 
   useEffect(() => {
+    // Route degisince ayni component yeni sayfa gibi tekrar animasyon oynatabilir.
     hasAnimatedRef.current = false;
   }, [routeTransitionId]);
 
   useEffect(() => {
     const contentElement = contentRef.current;
 
+    // Reduced motion veya pasif durumda DOM'a animasyon state'i yazilmaz.
     if (!enabled || reducedMotion || !contentElement) {
       return;
     }
@@ -45,6 +48,7 @@ export function useDashboardFormMotion(
         "[data-dashboard-form-surface]"
       );
 
+      // Form async render ediliyorsa MutationObserver gelene kadar beklenir.
       if (!formSurface) {
         return false;
       }
@@ -89,6 +93,7 @@ export function useDashboardFormMotion(
         },
       });
 
+      // Once ana form karti, sonra ic section'lar kademeli gorunur.
       timeline.to(formSurface, {
         autoAlpha: 1,
         y: 0,

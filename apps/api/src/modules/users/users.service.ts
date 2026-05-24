@@ -25,8 +25,10 @@ import {
   UsersRepository,
 } from "./repositories/users.repository";
 
+//authuserrecord, kimlik doğrulaması yapılmış kullanıcı bilgilerini temsil eder.
 export type AuthUserRecord = {
   id: number;
+  publicId: string;
   ad: string;
   soyad: string;
   mail: string;
@@ -40,16 +42,23 @@ export type AuthUserRecord = {
   roles: RoleName[];
 };
 
+//createuserwithroleinput, yeni bir kullanıcı oluşturmak için gereken bilgileri temsil eder.
+//omit kullanarak CreateStoredUserInput türünden roleId alanını çıkarıyoruz ve yerine roleName ekliyoruz.
 export type CreateUserWithRoleInput = Omit<CreateStoredUserInput, "roleId"> & {
   roleName: RoleName;
 };
 
+//CreateUserWithResolvedRoleIdInput türünün CreateStoredUserInput ile aynı olduğunu belirtir.
 export type CreateUserWithResolvedRoleIdInput = CreateStoredUserInput;
 
+//UsersRepository'nin findAllActiveProfiles yönteminin artık ad filtresi alabileceğini 
+//TypeScript'e bildirir. Bu, getAllActiveProfiles yönteminin gelecekte ad filtresi eklenerek genişletilmesine sağlar.
 type UsersRepositoryWithProfileList = UsersRepository & {
   findAllActiveProfiles(): Promise<StoredUserProfileRecord[]>;
 };
 
+
+//USER_IMAGE_ALLOWED_MIME_TYPES, kullanıcıların profil fotoğrafı olarak yükleyebilecekleri dosya türlerini belirtir. 
 const USER_IMAGE_ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -66,6 +75,9 @@ const MAX_USER_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 @Injectable()
 export class UsersService {
+  //constructor, UsersService'nin ihtiyaç duyduğu bağımlılıkları alır. UsersRepository, veritabanı işlemleri için; 
+  //RolesService, kullanıcı rolleriyle ilgili işlemler için; MediaStorageService ve 
+  //ImageProcessingService ise profil fotoğraflarıyla ilgili işlemler için kullanılır.
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly rolesService: RolesService,
@@ -73,21 +85,30 @@ export class UsersService {
     @Optional() private readonly imageProcessingService?: ImageProcessingService
   ) {}
 
+  //mail veya kul. adına göre aktif kullanıcı bulunur
   async findActiveByIdentifier(identifier: string): Promise<AuthUserRecord | null> {
     const user = await this.usersRepository.findActiveByIdentifier(identifier);
     return user ? this.mapStoredUser(user) : null;
   }
 
+  //id ye göre aktif kullanıcı bulunur
   async findActiveById(id: number): Promise<AuthUserRecord | null> {
     const user = await this.usersRepository.findActiveById(id);
     return user ? this.mapStoredUser(user) : null;
   }
 
+  async findActiveByPublicId(publicId: string): Promise<AuthUserRecord | null> {
+    const user = await this.usersRepository.findActiveByPublicId(publicId);
+    return user ? this.mapStoredUser(user) : null;
+  }
+
+  //id ye göre aktif kullanıcı profili bulunur
   async findProfileById(id: number): Promise<UserProfileResponseDto | null> {
     const user = await this.usersRepository.findProfileById(id);
     return user ? this.mapStoredProfile(user) : null;
   }
 
+  //dashboard intro dismiss edilir
   async dismissDashboardIntro(
     userId: number,
     role: DashboardIntroRole
@@ -96,43 +117,25 @@ export class UsersService {
     return user ? this.mapStoredProfile(user) : null;
   }
 
-  //getAllActiveProfiles, tüm aktif kullanıcı profillerini döndüren bir
-  // yöntemdir. Bu yöntem, UsersRepository'nin findAllActiveProfiles yöntemini
-  //  çağırarak veritabanından tüm aktif kullanıcıları alır ve ardından her
-  //  kullanıcıyı UserProfileResponseDto formatına dönüştürmek için
-  //  mapStoredProfile yöntemini kullanır.
-  
+  //tüm aktif kullanıcı profilleri bulunur ve 
+  //UserProfileResponseDto formatında döndürülür.
   async getAllActiveProfiles(): Promise<UserProfileResponseDto[]> {
     const usersRepository = this.usersRepository as UsersRepositoryWithProfileList;
     const users: StoredUserProfileRecord[] = await usersRepository.findAllActiveProfiles();
     return users.map((user: StoredUserProfileRecord) => this.mapStoredProfile(user));
   }
 
-  //async getAllActiveProfiles(ad?: string): Promise<UserProfileResponseDto[]> {
-  //const usersRepository = this.usersRepository as UsersRepositoryWithProfileList;
-  //const users: StoredUserProfileRecord[] = await usersRepository.findAllActiveProfiles(ad);
-  //return users.map((user: StoredUserProfileRecord) => this.mapStoredProfile(user));
-//}
 
-
-
-
-
-
-
-
-
-
-
-
+  //mail veya kul. adına göre aktif kullanıcı bulunup bulunmadığı kontrol edilir
   async existsByMail(mail: string): Promise<boolean> {
     return this.usersRepository.existsByMail(mail);
   }
-
   async existsByUsername(kullaniciAdi: string): Promise<boolean> {
     return this.usersRepository.existsByUsername(kullaniciAdi);
   }
 
+  //yeni kullanıcı kaydı oluşturma metotlarodor . 
+  //AuthService kayıt anında bunları kullanır.
   async createUserWithRole(input: CreateUserWithRoleInput): Promise<AuthUserRecord> {
     const roleId = await this.rolesService.requireRoleId(input.roleName);
     return this.createUserWithResolvedRoleId({
@@ -145,14 +148,16 @@ export class UsersService {
       roleId,
     });
   }
-
+  //createUserWithResolvedRoleId, roleId'si zaten çözülmüş bir kullanıcı oluşturmak için kullanılır.
   async createUserWithResolvedRoleId(
     input: CreateUserWithResolvedRoleIdInput
   ): Promise<AuthUserRecord> {
     const user = await this.usersRepository.createWithRole(input);
     return this.mapStoredUser(user);
   }
-
+  //İnTransaction versiyonu, bir transaction içinde kullanıcı oluşturmak için kullanılır. 
+  //Bu, kullanıcı oluşturma işlemiyle birlikte başka araç ekleme gibi işlemlerin de atomik 
+  //olarak yapılmasını sağlar.
   async createUserWithResolvedRoleIdInTransaction(
     tx: Prisma.TransactionClient,
     input: CreateUserWithResolvedRoleIdInput
@@ -161,11 +166,17 @@ export class UsersService {
     return this.mapStoredUser(user);
   }
 
+
+  //kendi hesabını silme işlemi. Aktif bir sevkiyat varsa silme işlemi engellenir.
   async deleteOwnAccount(userId: number): Promise<void> {
     const result = await this.usersRepository.deleteAccountById(userId);
     this.assertDeleteSucceeded(result);
   }
 
+
+
+  //profil fotoğrafı güncelleme işlemi. Dosya doğrulaması yapılır, 
+  //eski fotoğraf silinir ve yeni fotoğraf kaydedilir.
   async updateOwnProfileImage(
     userId: number,
     file: Express.Multer.File | undefined
@@ -183,20 +194,15 @@ export class UsersService {
     const currentUser = await this.usersRepository.findProfileById(userId);
 
     if (!currentUser) {
-      throw new UnauthorizedException("Current user could not be resolved.");
+      throw new UnauthorizedException("Silmek istediginiz profil bulunamadi.");
     }
 
     const processedImage = await this.imageProcessingService.processProfileImage(
       file.buffer
     );
 
-
-
     const storageKey = `profile-images/${userId}/${randomUUID()}.webp`;
 
-
-
-    
     await this.mediaStorageService.saveFile({
       storageKey,
       buffer: processedImage.buffer,
@@ -210,7 +216,7 @@ export class UsersService {
       );
 
       if (!updatedUser) {
-        throw new UnauthorizedException("Current user could not be resolved.");
+        throw new UnauthorizedException("Silmek istediginiz profil bulunamadi.");
       }
 
       if (currentUser.profilFotografiStorageKey) {
@@ -226,6 +232,11 @@ export class UsersService {
     }
   }
 
+
+
+
+  //profil fotoğrafı silme işlemi. Fotoğraf depolama servisi kullanılarak eski fotoğraf 
+  //silinir ve kullanıcı kaydında ilgili alan güncellenir.
   async deleteOwnProfileImage(userId: number): Promise<UserProfileResponseDto> {
     if (!this.mediaStorageService) {
       throw new BadRequestException("Gorsel yukleme servisi hazir degil.");
@@ -234,7 +245,7 @@ export class UsersService {
     const currentUser = await this.usersRepository.findProfileById(userId);
 
     if (!currentUser) {
-      throw new UnauthorizedException("Current user could not be resolved.");
+      throw new UnauthorizedException("Silmek istediginiz profil bulunamadi.");
     }
 
     if (!currentUser.profilFotografiStorageKey) {
@@ -248,7 +259,7 @@ export class UsersService {
     );
 
     if (!updatedUser) {
-      throw new UnauthorizedException("Current user could not be resolved.");
+      throw new UnauthorizedException("Silmek istediginiz profil bulunamadi.");
     }
 
     await this.mediaStorageService.deleteFile(previousStorageKey);
@@ -256,9 +267,11 @@ export class UsersService {
     return this.mapStoredProfile(updatedUser);
   }
 
+
+  //toUserProfile kullanıcıyı frontende gönderilecek profile çevirir
   toUserProfile(user: Omit<AuthUserRecord, "sifreHash">): UserProfileResponseDto {
     return {
-      id: user.id,
+      id: user.publicId,
       ad: user.ad,
       soyad: user.soyad,
       mail: user.mail,
@@ -277,9 +290,11 @@ export class UsersService {
     };
   }
 
+  //mapStoredUser, veritabanından gelen kullanıcı kaydını AuthUserRecord formatına dönüştürür.
   private mapStoredUser(user: StoredUserRecord): AuthUserRecord {
     return {
       id: user.id,
+      publicId: user.publicId,
       ad: user.ad,
       soyad: user.soyad,
       mail: user.mail,
@@ -294,9 +309,11 @@ export class UsersService {
     };
   }
 
+  //mapStoredProfile, veritabanından gelen kullanıcı profil kaydını UserProfileResponseDto formatına dönüştürür.
   private mapStoredProfile(user: StoredUserProfileRecord): UserProfileResponseDto {
     return this.toUserProfile({
       id: user.id,
+      publicId: user.publicId,
       ad: user.ad,
       soyad: user.soyad,
       mail: user.mail,
@@ -310,37 +327,41 @@ export class UsersService {
     });
   }
 
+  //assertDeleteSucceeded, kullanıcı hesabı silme işleminin sonucunu kontrol eder. 
+  //Silme işlemi başarısız olduysa, başarısızlık nedenine göre uygun bir istisna fırlatır.
   private assertDeleteSucceeded(result: DeleteStoredUserAccountResult): void {
     if (result.ok) {
       return;
     }
-
     switch (result.reason) {
       case "NOT_FOUND":
-        throw new UnauthorizedException("Current user could not be resolved.");
+        throw new UnauthorizedException("Silmek istedigin hesap bulunamadi.");
       case "ACTIVE_CARRIER_SHIPMENT":
         throw new ConflictException(
-          "Account cannot be deleted while you have an active shipment."
+          "Hesap, aktif bir sevkiyat varken silinemez."
         );
       case "ACTIVE_CUSTOMER_SHIPMENT":
         throw new ConflictException(
-          "Account cannot be deleted while you have a transport request with an active shipment."
+          "Hesap, aktif bir müşteri sevkiyatı varken silinemez."
         );
       case "OPEN_CARRIER_OFFER":
         throw new ConflictException(
-          "Account cannot be deleted while you have an active offer."
+          "Hesap, aktif bir teklif varken silinemez."
         );
       case "STALE_ACCEPTED_OFFER":
         throw new ConflictException(
-          "Account cannot be deleted because an accepted offer is not fully closed."
+          "Hesap, kabul edilen bir teklif tamamen kapatılmadığı için silinemez."
         );
       case "STALE_AGREED_REQUEST":
         throw new ConflictException(
-          "Account cannot be deleted because an agreed transport request is not fully closed."
+          "Hesap, anlaşmalı bir ulaştırma talebi tamamen kapatılmadığı için silinemez."
         );
     }
   }
 
+
+  //assertValidUserImageFile, kullanıcıların profil fotoğrafı olarak yükledikleri dosyanın 
+  //geçerli olup olmadığını kontrol eder.
   private assertValidUserImageFile(file: Express.Multer.File): void {
     if (!file.buffer || file.buffer.length === 0) {
       throw new BadRequestException("Dosya icerigi okunamadi.");
@@ -357,6 +378,8 @@ export class UsersService {
     }
   }
 
+  //toPublicMediaUrl, profil fotoğrafı gibi medya dosyalarının depolama anahtarını alır ve 
+  //bunu genel erişime açık bir URL'ye dönüştürür.
   private toPublicMediaUrl(storageKey: string | null | undefined): string | undefined {
     if (!storageKey || !this.mediaStorageService) {
       return undefined;

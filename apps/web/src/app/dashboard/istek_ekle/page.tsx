@@ -174,10 +174,15 @@ export default function CreateTransportRequestPage() {
   const router = useRouter();
   const { accessToken, status } = useCustomerPageAccess();
   const [form, setForm] = useState<CreateTransportRequestForm>(initialForm);
-  const [baslangicKonum, setBaslangicKonum] = useState<SelectedLocation | null>(
-    null
-  );
-  const [varisKonum, setVarisKonum] = useState<SelectedLocation | null>(null);
+
+  
+  const [baslangicKonum, setBaslangicKonum] =
+   useState<SelectedLocation | null>(
+    null);
+  const [varisKonum, setVarisKonum] = 
+  useState<SelectedLocation | null>(null);
+
+
   const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
   const [locationValidationActive, setLocationValidationActive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -245,17 +250,15 @@ export default function CreateTransportRequestPage() {
       if (selectedImages.length > 0) {
         const formData = new FormData();
         const primaryIndex = selectedImages.findIndex((image) => image.isPrimary);
-
         selectedImages.forEach((image) => {
           formData.append("images", image.file);
         });
-
         if (primaryIndex >= 0) {
           formData.append("primaryIndex", String(primaryIndex));
         }
 
+        
         let uploadFailed = false;
-
         try {
           await uploadTransportRequestImages(response.id, formData, accessToken);
         } catch (uploadError) {
@@ -483,14 +486,14 @@ export default function CreateTransportRequestPage() {
           <div className="space-y-6">
             <VolumeEstimateAssistant
               accessToken={accessToken ?? ""}
-              disabled={isSubmitting}
-              yukTipi={form.yukTipi}
-              onApplyEstimate={(value) =>
+              action={(value) =>
                 setForm((currentForm) => ({
                   ...currentForm,
                   hacimM3: value,
                 }))
               }
+              disabled={isSubmitting}
+              yukTipi={form.yukTipi}
             />
 
             <RequestImageUploader disabled={isSubmitting} onChange={setSelectedImages} />

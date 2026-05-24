@@ -3,29 +3,51 @@
 import { apiFetch } from "./api-client";
 
 export type OfferThreadMessage = {
-  id: number;
+  id: string;
   type: "TEXT" | "COUNTER_OFFER" | "SYSTEM_EVENT";
   text: string | null;
   teklifFiyati: number | null;
   systemEventCode: string | null;
   createdAt: string;
-  senderUserId: number | null;
+  senderUserId: string | null;
   senderName: string | null;
   senderUsername: string | null;
   senderProfileImageUrl?: string;
   isMine: boolean;
+  attachments: OfferThreadMessageAttachment[];
+};
+
+export type OfferThreadMessageAttachment = {
+  id: string;
+  url: string;
+  thumbnailUrl: string;
+  mimeType: string;
+  sizeBytes: number;
+  width: number;
+  height: number;
+  originalFileName: string;
+  createdAt: string;
+};
+
+export type OfferThreadShipment = {
+  id: string;
+  durum: string;
+  olusturmaTarihi: string;
+  baslangicTarihi: string | null;
+  teslimBildirimTarihi: string | null;
+  teslimTarihi: string | null;
 };
 
 export type OfferThreadSummary = {
-  id: number;
-  offerId: number;
-  requestId: number;
+  id: string;
+  offerId: string;
+  requestId: string;
   participantSide: "customer" | "carrier";
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
   varisKonumMetni: string | null;
-  karsiTarafId: number;
+  karsiTarafId: string;
   karsiTarafAdSoyad: string;
   karsiTarafKullaniciAdi: string;
   karsiTarafProfileImageUrl?: string;
@@ -40,15 +62,15 @@ export type OfferThreadSummary = {
 };
 
 export type OfferThreadDetail = {
-  id: number;
-  offerId: number;
-  requestId: number;
+  id: string;
+  offerId: string;
+  requestId: string;
   participantSide: "customer" | "carrier";
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
   varisKonumMetni: string | null;
-  karsiTarafId: number;
+  karsiTarafId: string;
   karsiTarafAdSoyad: string;
   karsiTarafKullaniciAdi: string;
   karsiTarafProfileImageUrl?: string;
@@ -62,12 +84,15 @@ export type OfferThreadDetail = {
   canSendCounterOffer: boolean;
   canAcceptOffer: boolean;
   canRejectOffer: boolean;
+  canMarkDelivered: boolean;
+  canConfirmDelivery: boolean;
   lastPriceActorSide: "customer" | "carrier";
+  shipment: OfferThreadShipment | null;
   messages: OfferThreadMessage[];
 };
 
 export type MarkOfferThreadReadResponse = {
-  lastReadMessageId: number | null;
+  lastReadMessageId: string | null;
   unreadCount: number;
 };
 
@@ -86,7 +111,7 @@ export function getMyOfferThreads(
 
 // Tek bir offer konuşmasının tüm stream'ini çeker. Ekran websocket yerine bu endpoint'i
 // tekrar çağırarak güncel veriyi alır.
-export function getOfferThread(offerId: number, accessToken: string) {
+export function getOfferThread(offerId: string, accessToken: string) {
   return apiFetch<OfferThreadDetail>(`/offer-threads/offers/${offerId}`, {
     method: "GET",
     accessToken,
@@ -95,7 +120,7 @@ export function getOfferThread(offerId: number, accessToken: string) {
 
 // Serbest metin mesajı gönderir; başarılı olunca UI thread'i yeniden fetch eder.
 export function createOfferThreadMessage(
-  offerId: number,
+  offerId: string,
   input: { mesaj: string },
   accessToken: string
 ) {
@@ -106,10 +131,25 @@ export function createOfferThreadMessage(
   });
 }
 
+export function createOfferThreadImageMessage(
+  offerId: string,
+  formData: FormData,
+  accessToken: string
+) {
+  return apiFetch<OfferThreadMessage>(
+    `/offer-threads/offers/${offerId}/image-messages`,
+    {
+      method: "POST",
+      accessToken,
+      body: formData,
+    }
+  );
+}
+
 // Yeni fiyat önerisini message stream'e COUNTER_OFFER olarak yazar ve backend'de
 // teklifin güncel fiyat özetini de değiştirir.
 export function createOfferThreadCounterOffer(
-  offerId: number,
+  offerId: string,
   input: { fiyat: number; mesaj?: string },
   accessToken: string
 ) {
@@ -124,7 +164,7 @@ export function createOfferThreadCounterOffer(
 }
 
 // Thread açıldığında son mesajı okundu saymak için participant last-read pointer'ını ilerletir.
-export function markOfferThreadAsRead(offerId: number, accessToken: string) {
+export function markOfferThreadAsRead(offerId: string, accessToken: string) {
   return apiFetch<MarkOfferThreadReadResponse>(
     `/offer-threads/offers/${offerId}/read`,
     {

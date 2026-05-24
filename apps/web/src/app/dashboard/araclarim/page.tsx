@@ -101,7 +101,7 @@ export default function MyVehiclesPage() {
   const [vehicles, setVehicles] = useState<VehicleListItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [deletingVehicleId, setDeletingVehicleId] = useState<number | null>(null);
+  const [deletingVehicleId, setDeletingVehicleId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
@@ -122,7 +122,7 @@ export default function MyVehiclesPage() {
         if (!isMounted) {
           return;
         }
-
+          
         setVehicles(response);
       } catch (error) {
         if (!isMounted) {
@@ -161,7 +161,7 @@ export default function MyVehiclesPage() {
     };
   }, [accessToken, router, status]);
 
-  const handleDelete = async (vehicleId: number) => {
+  const handleDelete = async (vehicleId: string) => {
     if (!accessToken || deletingVehicleId !== null) {
       return;
     }
@@ -256,7 +256,7 @@ export default function MyVehiclesPage() {
 
   const vehicleCards: VehicleCardModel[] = vehicles
     .slice()
-    .sort((left, right) => right.id - left.id)
+    .sort((left, right) => right.id.localeCompare(left.id))
     .map((vehicle) => {
       const statusModel = resolveVehicleStatus(vehicle);
       const usageRatio = calculateVehicleUsageRatio(vehicle);
@@ -285,7 +285,7 @@ export default function MyVehiclesPage() {
       return {
         id: vehicle.id,
         plaka: vehicle.plaka,
-        aracEtiketi: `Arac #${vehicle.id}`,
+        aracEtiketi: "Arac",
         baslik: `${vehicle.marka} ${vehicle.model}`,
         durumEtiketi: statusModel.label,
         durumTonu: statusModel.tone,

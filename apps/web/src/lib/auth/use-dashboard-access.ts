@@ -35,6 +35,7 @@ function getServerAuthSnapshot(): StoredAuth | null | undefined {
   return undefined;
 }
 
+// Ortak dashboard guard'i; sayfaya gore business/admin hesabini kontrol eder.
 export function useDashboardAccess(
   surface: DashboardAccessSurface = "shared-business"
 ): DashboardAccess {
@@ -60,6 +61,7 @@ export function useDashboardAccess(
         : hasBusinessAccess;
 
   useEffect(() => {
+    // Hydration oncesi auth henuz bilinmiyorsa yonlendirme yapma.
     if (auth === undefined) {
       return;
     }
@@ -70,6 +72,7 @@ export function useDashboardAccess(
     }
 
     if (!hasSurfaceAccess) {
+      // Yanlis alana giren kullanici rolune uygun dashboard yuzeyine gonderilir.
       if (surface === "admin" && hasBusinessAccess) {
         router.replace("/dashboard");
         return;

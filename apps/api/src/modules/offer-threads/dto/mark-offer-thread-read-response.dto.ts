@@ -1,4 +1,4 @@
 export class MarkOfferThreadReadResponseDto {
-  lastReadMessageId!: number | null;
+  lastReadMessageId!: string | null;
   unreadCount!: number;
 }

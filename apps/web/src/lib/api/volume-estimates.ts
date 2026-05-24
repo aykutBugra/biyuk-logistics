@@ -12,6 +12,21 @@ export type VolumeEstimateItem = {
     | "diger";
   shapeType: "box" | "flat" | "cylinder" | "irregular" | "bundle" | "unknown";
   sizeClass: "small" | "medium" | "large" | "huge";
+  volumeProfile:
+    | "box_crate"
+    | "pallet_load"
+    | "desk_table"
+    | "chair"
+    | "sofa"
+    | "shelf_bookcase"
+    | "cabinet_wardrobe"
+    | "bed_mattress"
+    | "appliance"
+    | "long_material"
+    | "bag_sack"
+    | "room_load"
+    | "household_load"
+    | "mixed_unknown";
   estimatedCount: number;
   stackable: boolean;
   confidence: "low" | "medium" | "high";
@@ -40,6 +55,7 @@ export type EstimateVolumeFromImagesInput = {
   yukTipi?: string;
 };
 
+// Kullanici yuk fotograflarini gonderince backend AI + sekil bazli hacim tahmini uretir.
 export function estimateVolumeFromImages({
   accessToken,
   description,
@@ -48,6 +64,7 @@ export function estimateVolumeFromImages({
 }: EstimateVolumeFromImagesInput) {
   const formData = new FormData();
 
+  // Birden fazla fotograf ayni "images" alanina eklenir; backend array olarak okur.
   for (const image of images) {
     formData.append("images", image, image.name);
   }

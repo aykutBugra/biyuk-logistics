@@ -1,7 +1,14 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   type ReadonlyURLSearchParams,
   usePathname,
@@ -64,13 +71,9 @@ function formatPlannedDate(value: string): string {
   }).format(new Date(`${value}T00:00:00`));
 }
 
-function parsePositiveInteger(value: string | null): number | null {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+function parsePublicId(value: string | null): string | null {
+  const trimmed = value?.trim() ?? "";
+  return trimmed ? trimmed : null;
 }
 
 function parsePositiveNumber(value: string | null): number | null {
@@ -85,7 +88,7 @@ function parsePositiveNumber(value: string | null): number | null {
 function buildCarrierRouteSelectionPath(
   pathname: string,
   searchParams: ReadonlyURLSearchParams | null,
-  carrierRouteId: number | null,
+  carrierRouteId: string | null,
   maxSapmaKm: number | null
 ): string {
   const nextSearchParams = new URLSearchParams(searchParams?.toString() ?? "");
@@ -107,9 +110,10 @@ function buildCarrierRouteSelectionPath(
   return nextQuery ? `${pathname}?${nextQuery}` : pathname;
 }
 
+// Liste kartindan detay sayfasina giderken aktif rota/sapma context'i query ile tasinir.
 function buildRequestDetailHref(
-  requestId: number,
-  carrierRouteId: number | null,
+  requestId: string,
+  carrierRouteId: string | null,
   maxSapmaKm: number | null
 ): string {
   if (carrierRouteId === null) {
@@ -127,9 +131,10 @@ function buildRequestDetailHref(
   return `/dashboard/acik_istekler/${requestId}?${searchParams.toString()}`;
 }
 
+// UI filtre state'i backend open requests endpoint'inin bekledigi query input'una cevrilir.
 function toApiFilters(
   values: CarrierDiscoveryFilterForm,
-  carrierRouteId: number | null,
+  carrierRouteId: string | null,
   maxSapmaKm: number | null
 ): OpenOfferRequestFilters {
   return {
@@ -153,6 +158,7 @@ function toApiFilters(
   };
 }
 
+// Harita marker'i icin baslangic/varis koordinatlari sayisal olarak mevcut mu kontrol eder.
 function hasRenderableRequestCoordinates(request: OpenOfferRequestListItem): boolean {
   return (
     Number.isFinite(request.baslangicEnlem) &&
@@ -162,6 +168,7 @@ function hasRenderableRequestCoordinates(request: OpenOfferRequestListItem): boo
   );
 }
 
+// Rota uyumu uygun olan istekler liste siralamasinda oncelik alir.
 function getRouteCompatPriority(
   compatibility: OpenOfferRequestRouteCompatibility | null
 ): number {
@@ -181,6 +188,7 @@ function getRouteCompatPriority(
   }
 }
 
+// Acik istek listesi once teklif verilmemis, sonra rota uyumu daha iyi olan kayitlari one alir.
 function sortRequests(
   requests: OpenOfferRequestListItem[],
   sortMode: DiscoverySortMode,
@@ -232,19 +240,20 @@ function OpenTransportRequestsPageFallback() {
   return <DashboardPageSkeleton />;
 }
 
+// Nakliyeci acik musteri isteklerini filtreler, haritada gosterir ve detay/teklif akisini baslatir.
 function OpenTransportRequestsPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { accessToken, status } = useCarrierPageAccess();
-  const selectedCarrierRouteId = parsePositiveInteger(
+  const selectedCarrierRouteId = parsePublicId(
     searchParams?.get("carrierRouteId") ?? null
   );
   const selectedMaxSapmaKm =
     selectedCarrierRouteId !== null
       ? parsePositiveNumber(searchParams?.get("maxSapmaKm") ?? null)
       : null;
-  const requestCardRefs = useRef(new Map<number, HTMLDivElement | null>());
+  const requestCardRefs = useRef(new Map<string, HTMLDivElement | null>());
   const [filters, setFilters] = useState<CarrierDiscoveryFilterForm>(initialFilters);
   const [appliedFilters, setAppliedFilters] =
     useState<CarrierDiscoveryFilterForm>(initialFilters);
@@ -252,17 +261,21 @@ function OpenTransportRequestsPageContent() {
   const [routes, setRoutes] = useState<CarrierRouteListItem[]>([]);
   const [selectedCarrierRouteDetail, setSelectedCarrierRouteDetail] =
     useState<CarrierRouteDetail | null>(null);
-  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [routeErrorMessage, setRouteErrorMessage] = useState<string | null>(null);
   const [isRequestsLoading, setIsRequestsLoading] = useState(true);
   const [isRoutesLoading, setIsRoutesLoading] = useState(true);
+
+  // Ekran genisligine gore harita paneli acik gelir; kullanici kapatabilir veya acabilir.
   const [isMapVisible, setIsMapVisible] = useState(false);
   const [hasMountedMap, setHasMountedMap] = useState(false);
+  const [mapResizeSignal, setMapResizeSignal] = useState(0);
   const [hasLoadedRequestsOnce, setHasLoadedRequestsOnce] = useState(false);
   const [sortMode, setSortMode] = useState<DiscoverySortMode>("recommended");
 
   useEffect(() => {
+    // Ilk acilista ekran genisligine gore harita paneli otomatik acilir.
     if (typeof window === "undefined") {
       return;
     }
@@ -273,6 +286,7 @@ function OpenTransportRequestsPageContent() {
   }, []);
 
   useEffect(() => {
+    // Rota id varsa ama sapma yoksa URL varsayilan sapma degeriyle tamamlanir.
     if (!searchParams) {
       return;
     }
@@ -305,6 +319,7 @@ function OpenTransportRequestsPageContent() {
   ]);
 
   useEffect(() => {
+    // Nakliyeci guard hazir olmadan rota secenekleri cekilmez.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsRoutesLoading(true);
@@ -363,6 +378,7 @@ function OpenTransportRequestsPageContent() {
   }, [accessToken, router, status]);
 
   useEffect(() => {
+    // Secili rota degisince rota detayi da yenilenir; rota silinmis ise query temizlenir.
     if (status !== "ready" || !accessToken || selectedCarrierRouteId === null) {
       setSelectedCarrierRouteDetail(null);
       return;
@@ -423,6 +439,7 @@ function OpenTransportRequestsPageContent() {
   ]);
 
   useEffect(() => {
+    // Filtre query'si veya rota context'i degistikce acik istekler backend'den yeniden yuklenir.
     const hasPendingRouteContext =
       selectedCarrierRouteId !== null && selectedMaxSapmaKm === null;
 
@@ -537,6 +554,7 @@ function OpenTransportRequestsPageContent() {
   }, [hasRouteContext, requests, sortMode]);
 
   useEffect(() => {
+    // Filtre sonrasi secili istek listede kalmiyorsa secim temizlenir.
     if (selectedRequestId === null) {
       return;
     }
@@ -551,6 +569,7 @@ function OpenTransportRequestsPageContent() {
   }, [refinedRequests, selectedRequestId]);
 
   useEffect(() => {
+    // Harita acildiginda hic secim yoksa ilk gorunur istek otomatik secilir.
     if (!isMapVisible || selectedRequestId !== null || refinedRequests.length === 0) {
       return;
     }
@@ -558,6 +577,7 @@ function OpenTransportRequestsPageContent() {
     setSelectedRequestId(refinedRequests[0].id);
   }, [isMapVisible, refinedRequests, selectedRequestId]);
 
+  // Form alanlarindan gelen filtre degerleri local filtre state'ine yazilir.
   const handleFilterChange = (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -568,6 +588,7 @@ function OpenTransportRequestsPageContent() {
     }));
   };
 
+  // Sehir select alanlari bos degeri undefined gibi davranacak sekilde tutulur.
   const handleCityFilterChange = (
     field: "baslangicSehir" | "varisSehir",
     value: string
@@ -578,12 +599,14 @@ function OpenTransportRequestsPageContent() {
     }));
   };
 
+  // Filtreleri uygula butonu sadece appliedFilters state'ini degistirir.
   const handleApplyFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSelectedRequestId(null);
     setAppliedFilters(filters);
   };
 
+  // Tum filtreleri temizler, secili rota varsa varsayilan sapma degeriyle korur.
   const handleResetFilters = () => {
     setFilters(initialFilters);
     setAppliedFilters(initialFilters);
@@ -598,8 +621,9 @@ function OpenTransportRequestsPageContent() {
     );
   };
 
+  // Rota secilince hem rota id hem de sapma limiti query'de korunur.
   const handleCarrierRouteChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const nextCarrierRouteId = parsePositiveInteger(event.target.value);
+    const nextCarrierRouteId = parsePublicId(event.target.value);
     setSelectedRequestId(null);
 
     router.replace(
@@ -612,6 +636,7 @@ function OpenTransportRequestsPageContent() {
     );
   };
 
+  // Sapma limiti degisince secili rota varsa yeni query ile liste yenilenir.
   const handleMaxSapmaKmChange = (value: number) => {
     if (selectedCarrierRouteId === null) {
       return;
@@ -628,11 +653,13 @@ function OpenTransportRequestsPageContent() {
     );
   };
 
-  const handleRequestCardClick = (requestId: number) => {
+  // Kart tiklamasi sadece listede secili state'i degistirir, detay linki ayri calisir.
+  const handleRequestCardClick = (requestId: string) => {
     setSelectedRequestId(requestId);
   };
 
-  const handleRequestMarkerSelect = (requestId: number) => {
+  // Harita marker'i secilince liste karti da ayni istek uzerine odaklanir.
+  const handleRequestMarkerSelect = useCallback((requestId: string) => {
     setSelectedRequestId(requestId);
 
     const requestCardElement = requestCardRefs.current.get(requestId);
@@ -640,8 +667,13 @@ function OpenTransportRequestsPageContent() {
       behavior: "smooth",
       block: "center",
     });
-  };
+  }, []);
 
+  const handleMapExpandComplete = useCallback(() => {
+    setMapResizeSignal((currentSignal) => currentSignal + 1);
+  }, []);
+
+  // Mobilde harita ve liste gorunumleri ayni state uzerinden acilip kapanir.
   const handleMapToggle = () => {
     setIsMapVisible((currentValue) => {
       const nextValue = !currentValue;
@@ -820,7 +852,10 @@ function OpenTransportRequestsPageContent() {
 
           <div data-dashboard-primary className="space-y-3">
             {hasMountedMap ? (
-              <MotionCollapse isOpen={isMapVisible}>
+              <MotionCollapse
+                isOpen={isMapVisible}
+                onExpandComplete={handleMapExpandComplete}
+              >
                 <OpenRequestsMapPanel
                   requests={refinedRequests}
                   selectedCarrierRoute={selectedCarrierRouteDetail}
@@ -828,6 +863,7 @@ function OpenTransportRequestsPageContent() {
                   selectedRequestId={selectedRequestId}
                   onRequestSelect={handleRequestMarkerSelect}
                   isVisible={isMapVisible}
+                  resizeSignal={mapResizeSignal}
                 />
               </MotionCollapse>
             ) : null}
@@ -896,6 +932,7 @@ function OpenTransportRequestsPageContent() {
   );
 }
 
+// Suspense fallback ile searchParams kullanan client icerigi sarilir.
 export default function OpenTransportRequestsPage() {
   return (
     <Suspense fallback={<OpenTransportRequestsPageFallback />}>

@@ -22,6 +22,7 @@ function getServerAuthSnapshot(): StoredAuth | null | undefined {
   return undefined;
 }
 
+// Sadece musteri sayfalarinda kullanilir; yetki yoksa login veya ana sayfaya yollar.
 export function useCustomerPageAccess(): CustomerPageAccess {
   const router = useRouter();
   const auth = useSyncExternalStore(
@@ -31,6 +32,7 @@ export function useCustomerPageAccess(): CustomerPageAccess {
   );
 
   useEffect(() => {
+    // Auth snapshot henuz hazir degilken kullaniciyi yanlislikla disari atmayiz.
     if (auth === undefined) {
       return;
     }
@@ -45,6 +47,7 @@ export function useCustomerPageAccess(): CustomerPageAccess {
       return;
     }
 
+    // Bu guard'in gectigi sayfalarda aktif dashboard modu musteri olarak saklanir.
     setStoredDashboardWorkspaceMode("customer");
   }, [auth, router]);
 

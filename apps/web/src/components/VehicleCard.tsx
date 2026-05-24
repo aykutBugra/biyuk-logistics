@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useOperationalCardMotion } from "@/lib/motion/useOperationalCardMotion";
 
@@ -17,7 +18,7 @@ type VehicleSummaryItem = {
 };
 
 export type VehicleCardModel = {
-  id: number;
+  id: string;
   plaka: string;
   aracEtiketi: string;
   baslik: string;
@@ -131,9 +132,13 @@ export default function VehicleCard({
               <div className="relative flex h-full min-h-[220px] flex-col justify-between gap-4">
                 {vehicle.imageUrl ? (
                   <div className="overflow-hidden rounded-[1.2rem] border border-white/80 bg-white/80 shadow-sm">
-                    <img
+                    <Image
                       src={vehicle.imageUrl}
                       alt={`${vehicle.baslik} fotografi`}
+                      width={360}
+                      height={180}
+                      sizes="(min-width: 1280px) 220px, 100vw"
+                      unoptimized
                       className="h-28 w-full object-contain"
                     />
                   </div>

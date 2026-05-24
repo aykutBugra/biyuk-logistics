@@ -41,7 +41,9 @@ export default function CustomerOffersPreviewPanel({
   offers,
 }: CustomerOffersPreviewPanelProps) {
   const pendingOffers = offers.filter((offer) => normalizeStatus(offer.durum) === "OLUSTURULDU");
-  const previewOffer = [...pendingOffers].sort((left, right) => right.id - left.id)[0] ?? null;
+  const previewOffer =
+    [...pendingOffers].sort((left, right) => right.id.localeCompare(left.id))[0] ??
+    null;
   const formattedDate = previewOffer ? formatDate(previewOffer.tasimaTarihi) : null;
 
   return (

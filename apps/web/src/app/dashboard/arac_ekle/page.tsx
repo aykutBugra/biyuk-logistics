@@ -22,6 +22,7 @@ function formatFormValue(value: string, suffix = ""): string {
   return trimmedValue ? `${trimmedValue}${suffix}` : "Belirtilmedi";
 }
 
+// Girilen olcu alanlari tam degilse ozet kartinda eksik bilgi olarak gosterilir.
 function formatFormDimensions(values: VehicleFormState): string {
   if (!values.uzunlukCm || !values.genislikCm || !values.yukseklikCm) {
     return "Belirtilmedi";
@@ -39,6 +40,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+// Nakliyeci yeni arac kaydini bu sayfadan olusturur.
 export default function CreateVehiclePage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
@@ -46,6 +48,7 @@ export default function CreateVehiclePage() {
   const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Formdaki her alan VehicleFormState icinde string olarak tutulur.
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -58,6 +61,7 @@ export default function CreateVehiclePage() {
     }));
   };
 
+  // Submit sirasinda string form state sayisal create input'a cevrilip backend'e gonderilir.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -72,6 +76,7 @@ export default function CreateVehiclePage() {
       const response = await createVehicle(toCreateVehicleInput(form), accessToken);
       router.replace(`/dashboard/araclarim/${response.id}`);
     } catch (error) {
+      // Token veya rol hatasi formda kalmasin diye kullanici uygun sayfaya yonlendirilir.
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
         window.alert("Oturum gecersiz. Lutfen yeniden giris yapin.");
@@ -95,6 +100,7 @@ export default function CreateVehiclePage() {
     }
   };
 
+  // Carrier guard hazir olana kadar form yerine sade loading yuzeyi gosterilir.
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">

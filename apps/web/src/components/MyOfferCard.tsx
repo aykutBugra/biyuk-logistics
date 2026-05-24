@@ -12,8 +12,8 @@ export type MyOfferCardChip = {
 };
 
 export type MyOfferCardModel = {
-  id: number;
-  requestId: number;
+  id: string;
+  requestId: string;
   durum: string;
   rotaBaslik: string;
   rotaMeta: string | null;
@@ -113,10 +113,10 @@ export default function MyOfferCard({ offer }: MyOfferCardProps) {
             label={getOfferStatusLabel(offer.durum)}
           />
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-            Teklif #{offer.id}
+            Teklif
           </span>
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-            Istek #{offer.requestId}
+            Istek
           </span>
           {offer.aracPlaka ? (
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">

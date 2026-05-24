@@ -8,6 +8,7 @@ import { OfferThreadsRepository } from "../src/modules/offer-threads/repositorie
 describe("OfferThreadsService role context", () => {
   const dualRoleUser = {
     id: 10,
+    publicId: "550e8400-e29b-41d4-a716-446655440010",
     mail: "dual@example.com",
     kullaniciAdi: "dual",
     roles: [ROLE_NAMES.MUSTERI, ROLE_NAMES.NAKLIYECI],
@@ -24,18 +25,25 @@ describe("OfferThreadsService role context", () => {
       findMyThreadSummaries: jest.fn().mockResolvedValue([
         {
           id: 1,
+          publicId: "550e8400-e29b-41d4-a716-446655440001",
           offerId: 101,
+          offerPublicId: "550e8400-e29b-41d4-a716-446655440101",
           requestId: 501,
+          requestPublicId: "550e8400-e29b-41d4-a716-446655440501",
           baslangicSehri: "Istanbul",
           varisSehri: "Ankara",
           baslangicKonumMetni: "Kadikoy",
           varisKonumMetni: "Cankaya",
           customerId: dualRoleUser.id,
+          customerPublicId: dualRoleUser.publicId,
           customerName: "Dual User",
           customerUsername: "dual",
+          customerProfileImageStorageKey: null,
           carrierId: 22,
+          carrierPublicId: "550e8400-e29b-41d4-a716-446655440022",
           carrierName: "Carrier User",
           carrierUsername: "carrier",
+          carrierProfileImageStorageKey: null,
           fiyat: 12000,
           durum: "OLUSTURULDU",
           closedAt: null,
@@ -45,18 +53,25 @@ describe("OfferThreadsService role context", () => {
         },
         {
           id: 2,
+          publicId: "550e8400-e29b-41d4-a716-446655440002",
           offerId: 102,
+          offerPublicId: "550e8400-e29b-41d4-a716-446655440102",
           requestId: 502,
+          requestPublicId: "550e8400-e29b-41d4-a716-446655440502",
           baslangicSehri: "Izmir",
           varisSehri: "Bursa",
           baslangicKonumMetni: "Bornova",
           varisKonumMetni: "Nilufer",
           customerId: 33,
+          customerPublicId: "550e8400-e29b-41d4-a716-446655440033",
           customerName: "Customer User",
           customerUsername: "customer",
+          customerProfileImageStorageKey: null,
           carrierId: dualRoleUser.id,
+          carrierPublicId: dualRoleUser.publicId,
           carrierName: "Dual User",
           carrierUsername: "dual",
+          carrierProfileImageStorageKey: null,
           fiyat: 13000,
           durum: "OLUSTURULDU",
           closedAt: null,
@@ -95,7 +110,7 @@ describe("OfferThreadsService role context", () => {
     expect(response).toHaveLength(1);
     expect(response[0]).toEqual(
       expect.objectContaining({
-        offerId: 101,
+        offerId: "550e8400-e29b-41d4-a716-446655440101",
         participantSide: "customer",
       })
     );

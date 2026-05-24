@@ -24,10 +24,12 @@ const KM_BASI_MALIYET = 20;
 const HACIM_KG_ESDEGERI = 250;
 const KG_BASI_MALIYET = 1;
 
+// Teklif onerisi daha okunur olsun diye fiyat 50 TL katina yuvarlanir.
 function yuvarlaFiyat(tutar: number): number {
   return Math.round(tutar / 50) * 50;
 }
 
+// Tek tasimada sadece yuk hacmi degil, aracin kiralanan tam hacmi de hesaba katilir.
 function getHesaplananHacimM3(
   hacimM3: number,
   tekTasimaIstiyor?: boolean | null,  //tek taşıma istiyor mu kontrol eder
@@ -46,6 +48,7 @@ function getHesaplananHacimM3(
 
 
 
+// Mesafe, agirlik ve hacimden basit bir maliyet tahmini uretir; veri eksikse null dondurur.
 export function TeklifFiyatÖnerisiHesaplama(
   input: OnerilenTeklifGirdileri  //dışardan veri alıyoruz inpu adında
 ): OnerilenTeklifÇiktilari | null { //fonk dönüş tipi

@@ -7,7 +7,7 @@ import type { OpenOfferRequestImage } from "@/lib/api/offers";
 
 type RequestImageGalleryProps = {
   images: OpenOfferRequestImage[];
-  primaryImageId?: number | null;
+  primaryImageId?: string | null;
 };
 
 export default function RequestImageGallery({
@@ -22,7 +22,7 @@ export default function RequestImageGallery({
       null
     );
   }, [images, primaryImageId]);
-  const [selectedImageId, setSelectedImageId] = useState<number | null>(initialImageId);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(initialImageId);
 
   useEffect(() => {
     setSelectedImageId(initialImageId);

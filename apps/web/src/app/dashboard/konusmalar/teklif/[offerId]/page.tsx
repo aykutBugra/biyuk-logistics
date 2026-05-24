@@ -1,7 +1,8 @@
 "use client";
 
-import type { FormEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
@@ -11,12 +12,14 @@ import StatusBadge from "@/components/StatusBadge";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   createOfferThreadCounterOffer,
+  createOfferThreadImageMessage,
   createOfferThreadMessage,
   getOfferThread,
   markOfferThreadAsRead,
   type OfferThreadDetail,
   type OfferThreadMessage,
 } from "@/lib/api/offer-threads";
+import { confirmJobDelivery, markJobDelivered } from "@/lib/api/jobs";
 import { acceptOffer, rejectOffer } from "@/lib/api/offers";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useDashboardAccess } from "@/lib/auth/use-dashboard-access";
@@ -55,6 +58,21 @@ function getOfferStatusLabel(status: string): string {
       return "Reddedildi";
     case "IPTAL_EDILDI":
       return "Iptal edildi";
+    default:
+      return status;
+  }
+}
+
+function getShipmentStatusLabel(status: string): string {
+  switch (normalizeStatus(status)) {
+    case "OLUSTURULDU":
+      return "Hazir";
+    case "BASLATILDI":
+      return "Yolda";
+    case "TESLIM_BEKLIYOR":
+      return "Musteri onayi bekliyor";
+    case "TAMAMLANDI":
+      return "Teslim edildi";
     default:
       return status;
   }
@@ -102,6 +120,18 @@ function getSystemEventStyle(code: string | null): EventStyle {
         icon: "pi pi-lock",
         pill: "bg-amber-100 text-amber-700",
       };
+    case "DELIVERY_PENDING_CONFIRMATION":
+      return {
+        row: "border-amber-200 bg-amber-50/80 text-amber-700",
+        icon: "pi pi-clock",
+        pill: "bg-amber-100 text-amber-700",
+      };
+    case "DELIVERY_CONFIRMED":
+      return {
+        row: "border-emerald-200 bg-emerald-50/80 text-emerald-700",
+        icon: "pi pi-check-circle",
+        pill: "bg-emerald-100 text-emerald-700",
+      };
     case "OFFER_CREATED":
       return {
         row: "border-blue-200 bg-blue-50/80 text-blue-700",
@@ -127,6 +157,10 @@ function getSystemEventLabel(code: string | null): string {
       return "Teklif reddedildi";
     case "THREAD_CLOSED_REQUEST_UNAVAILABLE":
       return "Konusma kapatildi";
+    case "DELIVERY_PENDING_CONFIRMATION":
+      return "Teslim edildi, musteri onayi bekleniyor";
+    case "DELIVERY_CONFIRMED":
+      return "Teslimat onaylandi";
     default:
       return "Sistem olayi";
   }
@@ -141,6 +175,12 @@ function getSystemEventDetail(
   }
   if (code === "THREAD_CLOSED_REQUEST_UNAVAILABLE") {
     return "Bu istek baska bir teklifle anlasilda.";
+  }
+  if (code === "DELIVERY_PENDING_CONFIRMATION") {
+    return "Musteri onayi bekleniyor.";
+  }
+  if (code === "DELIVERY_CONFIRMED") {
+    return "Konusma teslimat onayi ile kapatildi.";
   }
   return null;
 }
@@ -230,6 +270,34 @@ function ChatMessageBubble({ message }: { message: OfferThreadMessage }) {
             </p>
           ) : null}
 
+          {message.attachments.length > 0 ? (
+            <div
+              className={`mt-2 grid gap-2 ${
+                message.attachments.length === 1 ? "grid-cols-1" : "grid-cols-2"
+              }`}
+            >
+              {message.attachments.map((attachment) => (
+                <a
+                  key={attachment.id}
+                  href={attachment.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block overflow-hidden rounded-xl border border-white/70 bg-white"
+                >
+                  <Image
+                    src={attachment.thumbnailUrl}
+                    alt={attachment.originalFileName || "Mesaj fotografi"}
+                    width={320}
+                    height={240}
+                    sizes="(min-width: 768px) 240px, 50vw"
+                    unoptimized
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          ) : null}
+
           <p className="mt-1.5 text-[10px] text-slate-400">
             {formatDate(message.createdAt)}
           </p>
@@ -282,6 +350,7 @@ function NegotiationActionsPanel({
   isSendingMessage,
   isSendingCounterOffer,
   messageDraft,
+  messageImages,
   counterOfferAmount,
   counterOfferNote,
   isAwaitingCounterparty,
@@ -289,6 +358,8 @@ function NegotiationActionsPanel({
   activeAction,
   onDecision,
   onMessageDraftChange,
+  onMessageImagesChange,
+  onRemoveMessageImage,
   onCounterAmountChange,
   onCounterNoteChange,
   onSendMessage,
@@ -300,6 +371,7 @@ function NegotiationActionsPanel({
   isSendingMessage: boolean;
   isSendingCounterOffer: boolean;
   messageDraft: string;
+  messageImages: File[];
   counterOfferAmount: string;
   counterOfferNote: string;
   isAwaitingCounterparty: boolean;
@@ -307,6 +379,8 @@ function NegotiationActionsPanel({
   activeAction: ActiveAction;
   onDecision: (action: "accept" | "reject") => void;
   onMessageDraftChange: (value: string) => void;
+  onMessageImagesChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onRemoveMessageImage: (index: number) => void;
   onCounterAmountChange: (value: string) => void;
   onCounterNoteChange: (value: string) => void;
   onSendMessage: (event: FormEvent<HTMLFormElement>) => void;
@@ -441,9 +515,44 @@ function NegotiationActionsPanel({
                 className="app-input block w-full resize-none text-sm"
                 placeholder="Mesajini yaz..."
               />
+              <label className="app-pressable inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                <i className="pi pi-image text-xs" />
+                Fotograf ekle
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  onChange={onMessageImagesChange}
+                  className="sr-only"
+                />
+              </label>
+              {messageImages.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {messageImages.map((file, index) => (
+                    <div
+                      key={`${file.name}-${file.lastModified}-${index}`}
+                      className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2"
+                    >
+                      <span className="truncate text-xs font-medium text-slate-600">
+                        {file.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onRemoveMessageImage(index)}
+                        className="text-xs font-semibold text-rose-600"
+                      >
+                        Sil
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <button
                 type="submit"
-                disabled={isSendingMessage || !messageDraft.trim()}
+                disabled={
+                  isSendingMessage ||
+                  (!messageDraft.trim() && messageImages.length === 0)
+                }
                 className="app-button-primary app-pressable w-full justify-center py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSendingMessage ? "Gonderiliyor..." : "Gonder"}
@@ -467,16 +576,21 @@ function NegotiationSidePanel({
   backHref,
   latestMessageAt,
   isActingOffer,
+  isActingDelivery,
   isSendingMessage,
   isSendingCounterOffer,
   messageDraft,
+  messageImages,
   counterOfferAmount,
   counterOfferNote,
   isAwaitingCounterparty,
   isReadOnly,
   activeAction,
   onDecision,
+  onDeliveryAction,
   onMessageDraftChange,
+  onMessageImagesChange,
+  onRemoveMessageImage,
   onCounterAmountChange,
   onCounterNoteChange,
   onSendMessage,
@@ -487,16 +601,21 @@ function NegotiationSidePanel({
   backHref: string;
   latestMessageAt: string | null;
   isActingOffer: boolean;
+  isActingDelivery: boolean;
   isSendingMessage: boolean;
   isSendingCounterOffer: boolean;
   messageDraft: string;
+  messageImages: File[];
   counterOfferAmount: string;
   counterOfferNote: string;
   isAwaitingCounterparty: boolean;
   isReadOnly: boolean;
   activeAction: ActiveAction;
   onDecision: (action: "accept" | "reject") => void;
+  onDeliveryAction: (action: "markDelivered" | "confirmDelivery") => void;
   onMessageDraftChange: (value: string) => void;
+  onMessageImagesChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onRemoveMessageImage: (index: number) => void;
   onCounterAmountChange: (value: string) => void;
   onCounterNoteChange: (value: string) => void;
   onSendMessage: (event: FormEvent<HTMLFormElement>) => void;
@@ -578,6 +697,39 @@ function NegotiationSidePanel({
         </dl>
 
         {/* Action section */}
+        {thread.shipment ? (
+          <div className="space-y-2 border-t border-slate-100 pt-3">
+            <div className="rounded-xl border border-blue-200 bg-blue-50/70 px-3 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-700">
+                Nakliye durumu
+              </p>
+              <p className="mt-1 text-sm font-bold text-blue-950">
+                {getShipmentStatusLabel(thread.shipment.durum)}
+              </p>
+            </div>
+            {thread.canMarkDelivered ? (
+              <button
+                type="button"
+                onClick={() => onDeliveryAction("markDelivered")}
+                disabled={isActingDelivery}
+                className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isActingDelivery ? "Isleniyor..." : "Teslimati bildir"}
+              </button>
+            ) : null}
+            {thread.canConfirmDelivery ? (
+              <button
+                type="button"
+                onClick={() => onDeliveryAction("confirmDelivery")}
+                disabled={isActingDelivery}
+                className="app-button-primary w-full justify-center py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isActingDelivery ? "Onaylaniyor..." : "Teslimati onayla"}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="border-t border-slate-100 pt-3">
           <NegotiationActionsPanel
             thread={thread}
@@ -585,6 +737,7 @@ function NegotiationSidePanel({
             isSendingMessage={isSendingMessage}
             isSendingCounterOffer={isSendingCounterOffer}
             messageDraft={messageDraft}
+            messageImages={messageImages}
             counterOfferAmount={counterOfferAmount}
             counterOfferNote={counterOfferNote}
             isAwaitingCounterparty={isAwaitingCounterparty}
@@ -592,6 +745,8 @@ function NegotiationSidePanel({
             activeAction={activeAction}
             onDecision={onDecision}
             onMessageDraftChange={onMessageDraftChange}
+            onMessageImagesChange={onMessageImagesChange}
+            onRemoveMessageImage={onRemoveMessageImage}
             onCounterAmountChange={onCounterAmountChange}
             onCounterNoteChange={onCounterNoteChange}
             onSendMessage={onSendMessage}
@@ -619,7 +774,7 @@ function NegotiationSidePanel({
 export default function OfferThreadDetailPage() {
   const router = useRouter();
   const params = useParams<{ offerId: string }>();
-  const offerId = Number(params.offerId);
+  const offerId = params.offerId;
   const confirm = useConfirm();
   const showToast = useToast();
   const { accessToken, isCarrierWorkspace, status } =
@@ -629,11 +784,13 @@ export default function OfferThreadDetailPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [messageDraft, setMessageDraft] = useState("");
+  const [messageImages, setMessageImages] = useState<File[]>([]);
   const [counterOfferAmount, setCounterOfferAmount] = useState("");
   const [counterOfferNote, setCounterOfferNote] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [isSendingCounterOffer, setIsSendingCounterOffer] = useState(false);
   const [isActingOffer, setIsActingOffer] = useState(false);
+  const [isActingDelivery, setIsActingDelivery] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [activeAction, setActiveAction] = useState<ActiveAction>(null);
 
@@ -645,7 +802,7 @@ export default function OfferThreadDetailPage() {
       return;
     }
 
-    if (!Number.isInteger(offerId) || offerId <= 0) {
+    if (!offerId.trim()) {
       setErrorMessage("Gecersiz teklif numarasi.");
       setIsLoading(false);
       return;
@@ -791,19 +948,96 @@ export default function OfferThreadDetailPage() {
     }
   };
 
+  const handleDeliveryAction = async (action: "markDelivered" | "confirmDelivery") => {
+    if (!accessToken || !thread?.shipment || isActingDelivery) {
+      return;
+    }
+
+    const confirmed = await confirm({
+      title:
+        action === "markDelivered"
+          ? "Teslimati bildir"
+          : "Teslimati onayla",
+      message:
+        action === "markDelivered"
+          ? "Teslimati musteri onayina gondermek istedigine emin misin?"
+          : "Bu teslimati tamamlanmis olarak onaylamak istedigine emin misin?",
+      confirmLabel:
+        action === "markDelivered" ? "Teslimati bildir" : "Teslimati onayla",
+      cancelLabel: "Vazgec",
+      defaultFocus: "accept",
+      dismissableMask: true,
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setIsActingDelivery(true);
+      if (action === "markDelivered") {
+        await markJobDelivered(thread.shipment.id, accessToken);
+        showToast({
+          severity: "success",
+          summary: "Teslimat bildirildi",
+          detail: "Musteri onayi bekleniyor.",
+        });
+      } else {
+        await confirmJobDelivery(thread.shipment.id, accessToken);
+        showToast({
+          severity: "success",
+          summary: "Teslimat onaylandi",
+          detail: "Nakliye tamamlandi.",
+        });
+      }
+      setReloadKey((currentKey) => currentKey + 1);
+    } catch (error) {
+      showToast({
+        severity: "error",
+        summary: "Teslimat guncellenemedi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Teslimat durumu guncellenirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
+      setReloadKey((currentKey) => currentKey + 1);
+    } finally {
+      setIsActingDelivery(false);
+    }
+  };
+
   const handleSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!accessToken || !thread || isSendingMessage || !messageDraft.trim())
+    if (
+      !accessToken ||
+      !thread ||
+      isSendingMessage ||
+      (!messageDraft.trim() && messageImages.length === 0)
+    )
       return;
 
     try {
       setIsSendingMessage(true);
-      await createOfferThreadMessage(
-        thread.offerId,
-        { mesaj: messageDraft.trim() },
-        accessToken
-      );
+      if (messageImages.length > 0) {
+        const formData = new FormData();
+        if (messageDraft.trim()) {
+          formData.append("mesaj", messageDraft.trim());
+        }
+        messageImages.forEach((file) => {
+          formData.append("images", file);
+        });
+        await createOfferThreadImageMessage(thread.offerId, formData, accessToken);
+      } else {
+        await createOfferThreadMessage(
+          thread.offerId,
+          { mesaj: messageDraft.trim() },
+          accessToken
+        );
+      }
       setMessageDraft("");
+      setMessageImages([]);
       setActiveAction(null);
       setReloadKey((k) => k + 1);
     } catch (error) {
@@ -820,6 +1054,33 @@ export default function OfferThreadDetailPage() {
     } finally {
       setIsSendingMessage(false);
     }
+  };
+
+  const handleMessageImagesChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+
+    if (files.length === 0) {
+      return;
+    }
+
+    setMessageImages((current) => {
+      const nextFiles = [...current, ...files].slice(0, 4);
+      if (current.length + files.length > 4) {
+        showToast({
+          severity: "warn",
+          summary: "Fotograf siniri",
+          detail: "Bir mesajda en fazla 4 fotograf gonderebilirsin.",
+          life: 3200,
+          closable: true,
+        });
+      }
+      return nextFiles;
+    });
+  };
+
+  const handleRemoveMessageImage = (index: number) => {
+    setMessageImages((current) => current.filter((_, itemIndex) => itemIndex !== index));
   };
 
   const handleSendCounterOffer = async (
@@ -891,7 +1152,7 @@ export default function OfferThreadDetailPage() {
       !thread.isClosed &&
       !thread.canAcceptOffer &&
       !thread.canRejectOffer &&
-      (canShowComposer || canShowCounterOffer)
+      canShowCounterOffer
   );
 
   return (
@@ -926,9 +1187,11 @@ export default function OfferThreadDetailPage() {
               backHref={getBackHref(thread)}
               latestMessageAt={latestMessageAt}
               isActingOffer={isActingOffer}
+              isActingDelivery={isActingDelivery}
               isSendingMessage={isSendingMessage}
               isSendingCounterOffer={isSendingCounterOffer}
               messageDraft={messageDraft}
+              messageImages={messageImages}
               counterOfferAmount={counterOfferAmount}
               counterOfferNote={counterOfferNote}
               isAwaitingCounterparty={isAwaitingCounterparty}
@@ -937,7 +1200,12 @@ export default function OfferThreadDetailPage() {
               onDecision={(action) => {
                 void handleOfferDecision(action);
               }}
+              onDeliveryAction={(action) => {
+                void handleDeliveryAction(action);
+              }}
               onMessageDraftChange={setMessageDraft}
+              onMessageImagesChange={handleMessageImagesChange}
+              onRemoveMessageImage={handleRemoveMessageImage}
               onCounterAmountChange={setCounterOfferAmount}
               onCounterNoteChange={setCounterOfferNote}
               onSendMessage={handleSendMessage}

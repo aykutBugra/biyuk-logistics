@@ -1,4 +1,4 @@
-import { Transform } from "class-transformer";
+import { Transform } from "class-transformer";  //gelen veriyi dönüştürür
 import {
   IsEmail,
   IsIn,
@@ -12,16 +12,21 @@ import {
   Min,
   MinLength,
   ValidateIf,
-} from "class-validator";
+} from "class-validator";//gelen veriyi  doğrular
+
+//rol ve araç sabitleri import edilir
 import {
   BUSINESS_ROLE_VALUES,
   ROLE_NAMES,
 } from "../../../common/constants/role-names";
 import { VEHICLE_BODY_TYPES } from "../../vehicles/vehicle.constants";
 
+//trimString, trimOptionalString ve toNumber yardımcı fonksiyonları, DTO'nun string ve 
+//number alanlarını uygun şekilde dönüştürmek için kullanılır.
 const trimString = ({ value }: { value: unknown }) =>
   typeof value === "string" ? value.trim() : value;
 
+//trimOptionalString, boş veya sadece boşluklardan oluşan stringleri undefined yapar
 const trimOptionalString = ({ value }: { value: unknown }) => {
   if (typeof value !== "string") {
     return value;
@@ -31,6 +36,7 @@ const trimOptionalString = ({ value }: { value: unknown }) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+//toNumber ise sayısal stringleri number türüne dönüştürür.
 const toNumber = ({ value }: { value: unknown }) => {
   if (typeof value === "number") {
     return value;
@@ -50,19 +56,25 @@ const toNumber = ({ value }: { value: unknown }) => {
   return Number.isNaN(parsed) ? value : parsed;
 };
 
+//kayıt anında kabul edilen rol değerlerini tanımlar. KULLANICI rolü her zaman kabul edilir,
 export const REGISTER_ROLE_VALUES = [
   "KULLANICI",
   ...BUSINESS_ROLE_VALUES,
 ] as const;
 
+//register sadece register_role_value içindekilerden biri olabilir 
 export type RegisterRoleName = (typeof REGISTER_ROLE_VALUES)[number];
 
+//araç yılı üst sınır . 
 const currentMaxVehicleYear = new Date().getFullYear() + 1;
 
+//kayıt olan kişi nakliyeci ise araç bilgileri de zorunlu olur. 
+//isCarrierRegister fonksiyonu bu durumu kontrol eder.
 function isCarrierRegister(dto: RegisterDto): boolean {
   return dto.role === ROLE_NAMES.NAKLIYECI;
 }
 
+//register anında kayıt olan kişiden alınacak bilgilerin formatı ve doğrulama kuralları tanımlanır.
 export class RegisterDto {
   @Transform(trimString)
   @IsString()
@@ -99,6 +111,8 @@ export class RegisterDto {
   @MaxLength(255)
   password!: string;
 
+  //kayıt anında rol belirtilmezse KULLANICI rolü atanır. Eğer rol belirtilirse sadece 
+  //REGISTER_ROLE_VALUES içindeki değerler kabul edilir.
   @Transform(({ value }: { value: unknown }) => {
     if (typeof value !== "string") {
       return value;

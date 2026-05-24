@@ -2,6 +2,7 @@ import Link from "next/link";
 import HomeCustomerActions from "@/components/HomeCustomerActions";
 import PublicRevealGroup from "@/components/PublicRevealGroup";
 
+// Public ana sayfa; giris yapmadan once platformun temel akislarini ve CTA'lari gosterir.
 export default function Home() {
   const workflowSteps = [
     {

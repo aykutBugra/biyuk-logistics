@@ -28,6 +28,7 @@ export type SelectedLocation = CanonicalLocation & {
   sessionToken?: string;
 };
 
+// Kullanici konum yazarken autocomplete onerilerini backend uzerinden alir.
 export function autocompleteLocations(
   query: string,
   accessToken: string,
@@ -36,6 +37,7 @@ export function autocompleteLocations(
   const searchParams = new URLSearchParams();
   searchParams.set("q", query);
 
+  // Session token varsa Google tarafindaki autocomplete/detail istekleri ayni oturumda gruplanir.
   if (sessionToken) {
     searchParams.set("sessionToken", sessionToken);
   }
@@ -49,6 +51,7 @@ export function autocompleteLocations(
   );
 }
 
+// Secilen placeId detaylandirilir ve sehir/ilce/koordinat iceren canonical konuma cevrilir.
 export function getLocationPlaceDetails(
   placeId: string,
   accessToken: string,
@@ -56,6 +59,7 @@ export function getLocationPlaceDetails(
 ) {
   const searchParams = new URLSearchParams();
 
+  // Detail isteginde de ayni session token kullanilarak arama akisi korunur.
   if (sessionToken) {
     searchParams.set("sessionToken", sessionToken);
   }

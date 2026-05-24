@@ -5,18 +5,26 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseIntPipe,
   Post,
   Query,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
+import { FilesInterceptor } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import {
+  type PublicEntityId,
+  PublicEntityIdPipe,
+} from "../../common/public-ids/public-entity-id";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { CreateCounterOfferDto } from "./dto/create-counter-offer.dto";
+import { CreateOfferThreadImageMessageDto } from "./dto/create-offer-thread-image-message.dto";
 import { CreateOfferThreadMessageDto } from "./dto/create-offer-thread-message.dto";
 import { MarkOfferThreadReadResponseDto } from "./dto/mark-offer-thread-read-response.dto";
 import { OfferThreadContextQueryDto } from "./dto/offer-thread-context-query.dto";
@@ -24,6 +32,9 @@ import { OfferThreadDetailResponseDto } from "./dto/offer-thread-detail-response
 import { OfferThreadMessageResponseDto } from "./dto/offer-thread-message-response.dto";
 import { OfferThreadSummaryResponseDto } from "./dto/offer-thread-summary-response.dto";
 import { OfferThreadsService } from "./offer-threads.service";
+
+const MAX_THREAD_IMAGE_COUNT = 4;
+const MAX_THREAD_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 @Controller("offer-threads")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -46,7 +57,7 @@ export class OfferThreadsController {
   @Get("offers/:offerId")
   getByOfferId(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Param("offerId", ParseIntPipe) offerId: number
+    @Param("offerId", PublicEntityIdPipe) offerId: PublicEntityId
   ): Promise<OfferThreadDetailResponseDto> {
     return this.offerThreadsService.getByOfferId(currentUser, offerId);
   }
@@ -57,7 +68,7 @@ export class OfferThreadsController {
   @HttpCode(HttpStatus.CREATED)
   createTextMessage(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Param("offerId", ParseIntPipe) offerId: number,
+    @Param("offerId", PublicEntityIdPipe) offerId: PublicEntityId,
     @Body() input: CreateOfferThreadMessageDto
   ): Promise<OfferThreadMessageResponseDto> {
     return this.offerThreadsService.createTextMessage(currentUser, offerId, input);
@@ -65,11 +76,36 @@ export class OfferThreadsController {
 
   // Yeni bir fiyat önerisini counter offer mesajı olarak akışa yazar ve aynı anda
   // offer'ın güncel fiyat özetini de değiştirir.
+  @Post("offers/:offerId/image-messages")
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(
+    FilesInterceptor("images", MAX_THREAD_IMAGE_COUNT, {
+      storage: memoryStorage(),
+      limits: {
+        files: MAX_THREAD_IMAGE_COUNT,
+        fileSize: MAX_THREAD_IMAGE_FILE_SIZE_BYTES,
+      },
+    })
+  )
+  createImageMessage(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param("offerId", PublicEntityIdPipe) offerId: PublicEntityId,
+    @Body() input: CreateOfferThreadImageMessageDto,
+    @UploadedFiles() files: Express.Multer.File[] | undefined
+  ): Promise<OfferThreadMessageResponseDto> {
+    return this.offerThreadsService.createImageMessage(
+      currentUser,
+      offerId,
+      input,
+      files
+    );
+  }
+
   @Post("offers/:offerId/counter-offers")
   @HttpCode(HttpStatus.CREATED)
   createCounterOffer(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Param("offerId", ParseIntPipe) offerId: number,
+    @Param("offerId", PublicEntityIdPipe) offerId: PublicEntityId,
     @Body() input: CreateCounterOfferDto
   ): Promise<OfferThreadMessageResponseDto> {
     return this.offerThreadsService.createCounterOffer(currentUser, offerId, input);
@@ -81,7 +117,7 @@ export class OfferThreadsController {
   @HttpCode(HttpStatus.OK)
   markRead(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Param("offerId", ParseIntPipe) offerId: number
+    @Param("offerId", PublicEntityIdPipe) offerId: PublicEntityId
   ): Promise<MarkOfferThreadReadResponseDto> {
     return this.offerThreadsService.markRead(currentUser, offerId);
   }

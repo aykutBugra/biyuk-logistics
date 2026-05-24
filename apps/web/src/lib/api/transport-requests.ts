@@ -16,7 +16,7 @@ export type CreateTransportRequestInput = {
 export type UpdateTransportRequestInput = CreateTransportRequestInput;
 
 export type TransportRequestImageSummary = {
-  id: number;
+  id: string;
   thumbnailUrl: string;
   width: number;
   height: number;
@@ -28,7 +28,7 @@ export type TransportRequestImage = TransportRequestImageSummary & {
 };
 
 export type TransportRequestListItem = {
-  id: number;
+  id: string;
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
@@ -61,23 +61,26 @@ export type TransportRequestDetail = TransportRequestListItem & {
   varisEnlem: number;
   varisBoylam: number;
   images?: TransportRequestImage[];
-  primaryImageId?: number | null;
+  primaryImageId?: string | null;
   nakliye: {
-    id: number;
-    carrierId: number;
+    id: string;
+    carrierId: string;
     carrierName: string;
     carrierUsername: string;
-    aracId: number;
+    aracId: string;
     aracPlaka: string;
     anlasilanFiyat: number;
     durum: string;
     olusturmaTarihi: string;
     baslangicTarihi: string | null;
+    teslimBildirimTarihi: string | null;
     teslimTarihi: string | null;
+    canConfirmDelivery: boolean;
     ratingContext: RatingContext;
   } | null;
 };
 
+// Musteri yeni tasima istegi olustururken iki konum ve yuk bilgileri backend'e gider.
 export function createTransportRequest(
   input: CreateTransportRequestInput,
   accessToken: string
@@ -89,6 +92,7 @@ export function createTransportRequest(
   });
 }
 
+// Musterinin kendi actigi tasima taleplerini liste ekraninda kullanir.
 export function getMyTransportRequests(accessToken: string) {
   return apiFetch<TransportRequestListItem[]>("/transport-requests/my", {
     method: "GET",
@@ -96,15 +100,17 @@ export function getMyTransportRequests(accessToken: string) {
   });
 }
 
-export function getTransportRequestDetail(id: number, accessToken: string) {
+// Talep detayinda konum, gorseller, kabul edilmis nakliye ve puanlama bilgisi beraber gelir.
+export function getTransportRequestDetail(id: string, accessToken: string) {
   return apiFetch<TransportRequestDetail>(`/transport-requests/${id}`, {
     method: "GET",
     accessToken,
   });
 }
 
+// Talep henuz mutable durumdaysa backend guncellemeyi kabul eder.
 export function updateTransportRequest(
-  id: number,
+  id: string,
   input: UpdateTransportRequestInput,
   accessToken: string
 ) {
@@ -115,15 +121,17 @@ export function updateTransportRequest(
   });
 }
 
-export function deleteTransportRequest(id: number, accessToken: string) {
+// Musteri kendi acik talebini silebilir; sahiplik ve durum kontrolu backend'dedir.
+export function deleteTransportRequest(id: string, accessToken: string) {
   return apiFetch<void>(`/transport-requests/${id}`, {
     method: "DELETE",
     accessToken,
   });
 }
 
+// Talep fotograflari dosya oldugu icin FormData ile yuklenir.
 export function uploadTransportRequestImages(
-  requestId: number,
+  requestId: string,
   formData: FormData,
   accessToken: string
 ) {
@@ -134,9 +142,10 @@ export function uploadTransportRequestImages(
   });
 }
 
+// Tek fotograf silindikten sonra backend guncel detay objesini dondurur.
 export function deleteTransportRequestImage(
-  requestId: number,
-  imageId: number,
+  requestId: string,
+  imageId: string,
   accessToken: string
 ) {
   return apiFetch<TransportRequestDetail>(
@@ -148,9 +157,10 @@ export function deleteTransportRequestImage(
   );
 }
 
+// Galeride hangi fotograf ana gorsel olacaksa backend'de primary olarak isaretlenir.
 export function setPrimaryTransportRequestImage(
-  requestId: number,
-  imageId: number,
+  requestId: string,
+  imageId: string,
   accessToken: string
 ) {
   return apiFetch<TransportRequestDetail>(

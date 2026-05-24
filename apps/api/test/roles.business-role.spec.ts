@@ -82,7 +82,7 @@ describe("RolesService.addBusinessRoleToUser", () => {
     await expect(
       service.addBusinessRoleToUser(10, ROLE_NAMES.NAKLIYECI)
     ).rejects.toThrow(
-      new ConflictException("Carrier role must be added through profile onboarding.")
+      new ConflictException("Nakliyeci rolu profil olusturma islemi sirasinda verilir.")
     );
 
     expect(usersRepositoryMock.findActiveById).not.toHaveBeenCalled();
@@ -104,7 +104,7 @@ describe("RolesService.addBusinessRoleToUser", () => {
     await expect(
       service.addBusinessRoleToUser(10, ROLE_NAMES.MUSTERI)
     ).rejects.toThrow(
-      new ConflictException("Current user already has this business role.")
+      new ConflictException("Mevcut kullanici zaten bu is rolune sahip.")
     );
     expect(rolesRepositoryMock.createRoleAssignment).not.toHaveBeenCalled();
   });

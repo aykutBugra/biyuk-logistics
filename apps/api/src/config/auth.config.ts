@@ -1,5 +1,7 @@
 import { registerAs } from "@nestjs/config";
 
+
+// JwtTtlValue, JWT'nin geçerlilik süresini belirtmek için kullanılan bir türdür. 
 export type JwtTtlValue = number | `${number}${"ms" | "s" | "m" | "h" | "d"}`;
 
 const DEFAULT_ACCESS_TTL = "15m" satisfies JwtTtlValue;

@@ -14,6 +14,7 @@ import type {
   VolumeAnalysisShapeType,
   VolumeAnalysisSizeClass,
   VolumeAnalysisSpaceProfile,
+  VolumeAnalysisVolumeProfile,
 } from "./volume-estimation.types";
 import {
   VOLUME_ANALYSIS_CONFIDENCES,
@@ -22,6 +23,7 @@ import {
   VOLUME_ANALYSIS_SHAPE_TYPES,
   VOLUME_ANALYSIS_SIZE_CLASSES,
   VOLUME_ANALYSIS_SPACE_PROFILES,
+  VOLUME_ANALYSIS_VOLUME_PROFILES,
 } from "./volume-estimation.types";
 
 type NormalizedVolumeEstimationImage = {
@@ -60,6 +62,8 @@ export class OpenAiVolumeEstimationService {
   async analyzeShipment(
     input: EstimateVolumeInput
   ): Promise<VolumeAnalysisResult> {
+    //OpenAI servisinden sadece yapilandirilmis analiz JSON'u istenir.
+    //Gercek m3 degerini AI degil, sonraki shape-based calculator hesaplar.
     const apiKey = this.configService.get<string>("ai.openAiApiKey")?.trim() ?? "";
 
     if (apiKey.length === 0) {
@@ -89,7 +93,11 @@ export class OpenAiVolumeEstimationService {
             "Ayni esyanin farkli acilarini iki kez sayma.",
             "Gorselde hic izi olmayan yeni esya uydurma.",
             "Label kesin degilse genel tasima tanimi kullan.",
-            "Urunun tasima davranisina odaklan: compact, tall, wide, bulky, long, mixed.",
+            "Her kalemi once volumeProfile ile tasima arketipine yerlestir.",
+            "sizeClass'i gorsel yukseklige gore degil, aracta kaplayacagi tahmini tasima hacmine gore sec.",
+            "Oda veya ev gibi karisik gorsellerde tek tek kucuk dekorlari saymak yerine room_load veya household_load kullan.",
+            "Kasa, koli, meyve kasasi gibi tekrar eden yuklerde box_crate ve estimatedCount kullan.",
+            "spaceProfile icin urunun tasima davranisina odaklan: compact, tall, wide, bulky, long, mixed.",
             "Belirsizlik, eksik aci, gorunmeyen yuzey veya adet suphelerini warnings alaninda Turkce belirt.",
             "notes alanlarini kisa Turkce yaz; not gerekmiyorsa bos string kullan.",
           ].join(" "),
@@ -134,6 +142,7 @@ export class OpenAiVolumeEstimationService {
                         "loadType",
                         "shapeType",
                         "sizeClass",
+                        "volumeProfile",
                         "estimatedCount",
                         "stackable",
                         "confidence",
@@ -160,6 +169,10 @@ export class OpenAiVolumeEstimationService {
                         sizeClass: {
                           type: "string",
                           enum: [...VOLUME_ANALYSIS_SIZE_CLASSES],
+                        },
+                        volumeProfile: {
+                          type: "string",
+                          enum: [...VOLUME_ANALYSIS_VOLUME_PROFILES],
                         },
                         estimatedCount: {
                           type: "integer",
@@ -270,6 +283,8 @@ export class OpenAiVolumeEstimationService {
   }
 
   private buildPrompt(input: EstimateVolumeInput): string {
+    //Prompt, kullanici aciklamasi ve yukTipi bilgisini sadece destek sinyali olarak verir;
+    //gorselde olmayan esya uydurulmamasini ozellikle zorlar.
     const mappedCargoType = input.yukTipi
       ? REQUEST_TO_ANALYSIS_LOAD_TYPE[input.yukTipi]
       : undefined;
@@ -292,7 +307,9 @@ export class OpenAiVolumeEstimationService {
       `Gorseller: ${imageList}.`,
       "Ayni esyanin farkli acilari olabilir; cift sayim yapma.",
       "Yalnizca schema alanlarini doldur.",
-      "Her item icin label, loadType, shapeType, sizeClass, estimatedCount, stackable, confidence, fragile, disassemblable, spaceProfile, placementRisk ve notes ver.",
+      "Her item icin label, loadType, shapeType, sizeClass, volumeProfile, estimatedCount, stackable, confidence, fragile, disassemblable, spaceProfile, placementRisk ve notes ver.",
+      "volumeProfile secenekleri: box_crate, pallet_load, desk_table, chair, sofa, shelf_bookcase, cabinet_wardrobe, bed_mattress, appliance, long_material, bag_sack, room_load, household_load, mixed_unknown.",
+      "Masa ve kitaplik gibi dar/duz urunleri sadece uzun veya genis gorundugu icin large/huge yapma; aracta kaplayacagi efektif hacmi dusun.",
       "Gercek fiziksel olcu uydurma ve m3 uretme.",
       "overallConfidence genel analizin guvenini gostersin.",
       "warnings alanina Turkce belirsizlik uyarilari yaz.",
@@ -334,6 +351,7 @@ export class OpenAiVolumeEstimationService {
   }
 
   private parseBoolean(value: unknown): boolean {
+    //AI cevabi schema'li olsa da runtime'da tip kontrolu tekrar yapilir.
     if (typeof value !== "boolean") {
       throw new ServiceUnavailableException(
         "AI hacim tahmini gecerli bir alan tipi dondurmedi."
@@ -381,6 +399,7 @@ export class OpenAiVolumeEstimationService {
   }
 
   private parseItems(value: unknown): VolumeAnalysisItem[] {
+    //items alani yoksa veya array degilse hesaplayiciya gecmek guvenli degildir.
     if (!Array.isArray(value)) {
       throw new ServiceUnavailableException(
         "AI hacim tahmini urun listesi dondurmedi."
@@ -391,6 +410,7 @@ export class OpenAiVolumeEstimationService {
   }
 
   private parseItem(value: unknown, index: number): VolumeAnalysisItem {
+    //Her item tek tek normalize edilir; hatali alan varsa genel ServiceUnavailableException doner.
     if (typeof value !== "object" || value === null) {
       throw new ServiceUnavailableException(
         `AI hacim tahmini ${index + 1}. urun icin gecerli bir nesne dondurmedi.`
@@ -404,6 +424,7 @@ export class OpenAiVolumeEstimationService {
       loadType: this.parseLoadType(candidate.loadType),
       shapeType: this.parseShapeType(candidate.shapeType),
       sizeClass: this.parseSizeClass(candidate.sizeClass),
+      volumeProfile: this.parseVolumeProfile(candidate.volumeProfile),
       estimatedCount: this.parseEstimatedCount(candidate.estimatedCount),
       stackable: this.parseBoolean(candidate.stackable),
       confidence: this.parseConfidence(candidate.confidence),
@@ -564,7 +585,41 @@ export class OpenAiVolumeEstimationService {
     );
   }
 
+  private parseVolumeProfile(value: unknown): VolumeAnalysisVolumeProfile {
+    if (typeof value !== "string") {
+      throw new ServiceUnavailableException(
+        "AI hacim tahmini gecerli bir volumeProfile dondurmedi."
+      );
+    }
+
+    const normalizedValue = value.trim().toLowerCase();
+
+    if (
+      normalizedValue === "box_crate" ||
+      normalizedValue === "pallet_load" ||
+      normalizedValue === "desk_table" ||
+      normalizedValue === "chair" ||
+      normalizedValue === "sofa" ||
+      normalizedValue === "shelf_bookcase" ||
+      normalizedValue === "cabinet_wardrobe" ||
+      normalizedValue === "bed_mattress" ||
+      normalizedValue === "appliance" ||
+      normalizedValue === "long_material" ||
+      normalizedValue === "bag_sack" ||
+      normalizedValue === "room_load" ||
+      normalizedValue === "household_load" ||
+      normalizedValue === "mixed_unknown"
+    ) {
+      return normalizedValue;
+    }
+
+    throw new ServiceUnavailableException(
+      "AI hacim tahmini gecerli bir volumeProfile dondurmedi."
+    );
+  }
+
   private parseStringArray(value: unknown, maxItems: number): string[] {
+    //warnings alani bozuk gelse bile tahmin tamamen iptal edilmez; gecerli stringler ayiklanir.
     if (!Array.isArray(value)) {
       return [];
     }

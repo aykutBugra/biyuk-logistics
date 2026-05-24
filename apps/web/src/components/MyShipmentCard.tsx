@@ -13,8 +13,8 @@ type ShipmentTimelineStep = {
 };
 
 export type MyShipmentCardModel = {
-  id: number;
-  requestId: number;
+  id: string;
+  requestId: string;
   durum: string;
   rotaBaslik: string;
   rotaMeta: string | null;
@@ -52,6 +52,8 @@ function getShipmentStatusLabel(status: string): string {
       return "Aktif";
     case "BASLATILDI":
       return "Yolda";
+    case "TESLIM_BEKLIYOR":
+      return "Musteri onayi bekliyor";
     case "TAMAMLANDI":
       return "Tamamlandi";
     default:
@@ -83,7 +85,7 @@ function getCardClasses(status: string, isDelayed: boolean): string {
     return "border-emerald-200 shadow-[0_16px_36px_rgba(16,185,129,0.08)]";
   }
 
-  if (normalizedStatus === "BASLATILDI") {
+  if (normalizedStatus === "BASLATILDI" || normalizedStatus === "TESLIM_BEKLIYOR") {
     return "border-blue-200 shadow-[0_16px_36px_rgba(37,99,235,0.08)]";
   }
 
@@ -133,10 +135,10 @@ export default function MyShipmentCard({ shipment }: MyShipmentCardProps) {
             label={getShipmentStatusLabel(shipment.durum)}
           />
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-            Nakliye #{shipment.id}
+            Nakliye
           </span>
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-            Istek #{shipment.requestId}
+            Istek
           </span>
         </div>
 

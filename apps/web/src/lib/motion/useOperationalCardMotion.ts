@@ -13,6 +13,7 @@ type OperationalCardMotionOptions = {
   disabled?: boolean;
 };
 
+// Hover animasyonu sadece mouse/trackpad gibi hassas pointer cihazlarda calisir.
 function canAnimateHover() {
   return (
     typeof window !== "undefined" &&
@@ -20,6 +21,7 @@ function canAnimateHover() {
   );
 }
 
+// Kartlarda ortak hover/press mikro animasyonunu componentlere ref + event olarak verir.
 export function useOperationalCardMotion<T extends HTMLElement>({
   disabled = false,
 }: OperationalCardMotionOptions = {}) {
@@ -27,6 +29,7 @@ export function useOperationalCardMotion<T extends HTMLElement>({
   const elementRef = useRef<T | null>(null);
   const isHoveredRef = useRef(false);
 
+  // Ayni element uzerindeki eski tween iptal edilerek titreme/ust uste animasyon engellenir.
   const animateTo = (y: number) => {
     if (disabled || reducedMotion || !elementRef.current) {
       return;

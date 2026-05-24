@@ -3,6 +3,7 @@ import type { UserProfile } from "./users";
 
 export type DashboardIntroRole = "customer" | "carrier";
 
+// Kullanici kendi hesabini kapatmak istediginde auth endpoint'ine gider.
 export function deleteMyAccount(accessToken: string) {
   return apiFetch<void>("/auth/me", {
     method: "DELETE",
@@ -10,6 +11,7 @@ export function deleteMyAccount(accessToken: string) {
   });
 }
 
+// Dashboard tanitim karti bir kez kapatilinca backend profilde ilgili rol icin saklanir.
 export function dismissMyDashboardIntro(
   accessToken: string,
   role: DashboardIntroRole
@@ -21,6 +23,7 @@ export function dismissMyDashboardIntro(
   });
 }
 
+// Profil fotografi dosya oldugu icin JSON yerine FormData ile gonderilir.
 export function uploadMyProfileImage(formData: FormData, accessToken: string) {
   return apiFetch<UserProfile>("/auth/me/profile-image", {
     method: "POST",
@@ -29,6 +32,7 @@ export function uploadMyProfileImage(formData: FormData, accessToken: string) {
   });
 }
 
+// Profil fotografini kaldirinca backend guncel UserProfile cevabini geri dondurur.
 export function deleteMyProfileImage(accessToken: string) {
   return apiFetch<UserProfile>("/auth/me/profile-image", {
     method: "DELETE",

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
@@ -32,6 +33,7 @@ const STATUS_TONE_CLASSES = {
   rose: "border-rose-100 bg-rose-50 text-rose-700",
 } satisfies Record<VehicleStatusTone, string>;
 
+// Detay ekranindaki kapasite bar'i icin rezerve / toplam oranini hesaplar.
 function calculateVehicleUsageRatio(vehicle: VehicleDetail): number {
   const weightBase =
     vehicle.capacitySummary.toplamAgirlikKg > 0
@@ -48,6 +50,7 @@ function calculateVehicleUsageRatio(vehicle: VehicleDetail): number {
   return Math.max(weightBase, volumeBase, 0) * 100;
 }
 
+// Backend capacitySummary degerlerini kullanarak arac durum pill modelini olusturur.
 function resolveVehicleStatus(vehicle: VehicleDetail): {
   label: string;
   tone: VehicleStatusTone;
@@ -140,19 +143,21 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
+// Tek aracin detayini, kapasite durumunu ve silme aksiyonunu gosterir.
 export default function VehicleDetailPage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
   const confirm = useConfirm();
   const showToast = useToast();
   const params = useParams<{ id: string }>();
-  const vehicleId = Number(params.id);
+  const vehicleId = params.id;
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    // Route parametresi ve token hazir olmadan detay endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -160,7 +165,7 @@ export default function VehicleDetailPage() {
       return;
     }
 
-    if (!Number.isInteger(vehicleId) || vehicleId <= 0) {
+    if (!vehicleId.trim()) {
       setErrorMessage("Gecersiz arac numarasi.");
       setIsLoading(false);
       return;
@@ -170,6 +175,7 @@ export default function VehicleDetailPage() {
 
     const loadVehicle = async () => {
       try {
+        // Detay response'u liste item ile ayni yapidadir, sadece tek arac icin cekilir.
         setIsLoading(true);
         setErrorMessage(null);
         const response = await getVehicleDetail(vehicleId, accessToken);
@@ -221,6 +227,7 @@ export default function VehicleDetailPage() {
     };
   }, [accessToken, router, status, vehicleId]);
 
+  // Kullanici onay verirse arac backend'de silinir ve listeye geri donulur.
   const handleDelete = async () => {
     if (!accessToken || !vehicle || isDeleting) {
       return;
@@ -250,6 +257,7 @@ export default function VehicleDetailPage() {
       });
       router.replace("/dashboard/araclarim");
     } catch (error) {
+      // Auth/role hatasinda stale ekranda kalmak yerine guvenli cikis yapilir.
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
         showToast({
@@ -338,9 +346,6 @@ export default function VehicleDetailPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
                       {vehicle.plaka}
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      Arac #{vehicle.id}
                     </span>
                     <StatusPill label={vehicleStatus.label} tone={vehicleStatus.tone} />
                   </div>
@@ -447,9 +452,13 @@ export default function VehicleDetailPage() {
               <h2 className="text-base font-black text-slate-950">Arac fotografi</h2>
               <div className="mt-4 overflow-hidden rounded-[1.2rem] border border-slate-200 bg-slate-50">
                 {vehicle.vehicleImageUrl ? (
-                  <img
+                  <Image
                     src={vehicle.vehicleImageUrl}
                     alt={`${vehicle.marka} ${vehicle.model} fotografi`}
+                    width={640}
+                    height={360}
+                    sizes="(min-width: 1280px) 320px, 100vw"
+                    unoptimized
                     className="h-48 w-full object-contain"
                   />
                 ) : (

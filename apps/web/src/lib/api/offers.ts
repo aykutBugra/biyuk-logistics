@@ -1,7 +1,7 @@
 import { apiFetch } from "./api-client";
 
 export type OpenOfferRequestImageSummary = {
-  id: number;
+  id: string;
   thumbnailUrl: string;
   width: number;
   height: number;
@@ -13,7 +13,7 @@ export type OpenOfferRequestImage = OpenOfferRequestImageSummary & {
 };
 
 export type OpenOfferRequestFilters = {
-  carrierRouteId?: number;
+  carrierRouteId?: string;
   maxSapmaKm?: number;
   baslangicSehir?: string;
   varisSehir?: string;
@@ -27,14 +27,14 @@ export type OpenOfferRequestFilters = {
 };
 
 export type OpenOfferRequestRouteCompatibility = {
-  carrierRouteId: number;
+  carrierRouteId: string;
   extraMesafeMetre: number;
   extraSureSaniye: number;
   uygunlukEtiketi: "UYGUN" | "SINIRDA" | "UYGUN_DEGIL";
 };
 
 export type OpenOfferRequestListItem = {
-  id: number;
+  id: string;
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
@@ -71,21 +71,21 @@ export type OpenOfferRequestDetail = OpenOfferRequestListItem & {
   hasActiveVehicle: boolean;
   hasExistingOffer: boolean;
   images?: OpenOfferRequestImage[];
-  primaryImageId?: number | null;
+  primaryImageId?: string | null;
 };
 
 export type CreateOfferInput = {
-  aracId: number;
+  aracId: string;
   fiyat: number;
   not?: string;
 };
 
 export type OfferItem = {
-  id: number;
-  requestId: number;
+  id: string;
+  requestId: string;
   baslangicSehri: string;
   varisSehri: string;
-  aracId: number | null;
+  aracId: string | null;
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
@@ -93,13 +93,13 @@ export type OfferItem = {
 };
 
 export type IncomingOfferItem = {
-  id: number;
-  requestId: number;
-  carrierId: number;
+  id: string;
+  requestId: string;
+  carrierId: string;
   carrierName: string;
   carrierUsername: string;
   carrierProfileImageUrl?: string;
-  aracId: number | null;
+  aracId: string | null;
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
@@ -107,8 +107,8 @@ export type IncomingOfferItem = {
 };
 
 export type MyIncomingOfferItem = {
-  id: number;
-  requestId: number;
+  id: string;
+  requestId: string;
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
@@ -118,23 +118,25 @@ export type MyIncomingOfferItem = {
   hacimM3: number | null;
   yukTipi: string;
   tasimaTarihi: string | null;
-  carrierId: number;
+  carrierId: string;
   carrierName: string;
   carrierUsername: string;
   carrierProfileImageUrl?: string;
-  aracId: number | null;
+  aracId: string | null;
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
   durum: string;
 };
 
+// Acik istekler ekranindaki filtreleri bos degerleri atlayarak query string'e cevirir.
 function buildSearchParams(filters: OpenOfferRequestFilters = {}): string {
   const searchParams = new URLSearchParams();
 
-  if (typeof filters.carrierRouteId === "number") {
-    searchParams.set("carrierRouteId", String(filters.carrierRouteId));
+  if (filters.carrierRouteId) {
+    searchParams.set("carrierRouteId", filters.carrierRouteId);
 
+    // Sapma filtresi sadece secili rota varken anlamli oldugu icin onunla beraber gonderilir.
     if (typeof filters.maxSapmaKm === "number") {
       searchParams.set("maxSapmaKm", String(filters.maxSapmaKm));
     }
@@ -179,6 +181,7 @@ function buildSearchParams(filters: OpenOfferRequestFilters = {}): string {
   return searchParams.toString();
 }
 
+// Nakliyeci tarafinda teklif verilebilecek acik musteri isteklerini listeler.
 export function getOpenOfferRequests(
   accessToken: string,
   filters: OpenOfferRequestFilters = {}
@@ -194,26 +197,28 @@ export function getOpenOfferRequests(
   });
 }
 
+// Detay ekraninda istek bilgisi, gorseller ve rota uyumu ayni response icinde gelir.
 export function getOpenOfferRequestDetail(
-  requestId: number,
+  requestId: string,
   accessToken: string,
   routeContext:
-    | number
+    | string
     | Pick<OpenOfferRequestFilters, "carrierRouteId" | "maxSapmaKm">
     | undefined = {}
 ) {
   const searchParams = new URLSearchParams();
+  // Eski kullanim sayisal route id, yeni kullanim route id + sapma bilgisi kabul eder.
   const normalizedRouteContext =
-    typeof routeContext === "number"
+    typeof routeContext === "string"
       ? {
           carrierRouteId: routeContext,
         }
       : (routeContext ?? {});
 
-  if (typeof normalizedRouteContext.carrierRouteId === "number") {
+  if (normalizedRouteContext.carrierRouteId) {
     searchParams.set(
       "carrierRouteId",
-      String(normalizedRouteContext.carrierRouteId)
+      normalizedRouteContext.carrierRouteId
     );
 
     if (typeof normalizedRouteContext.maxSapmaKm === "number") {
@@ -231,8 +236,9 @@ export function getOpenOfferRequestDetail(
   });
 }
 
+// Nakliyeci secili musteri istegine arac, fiyat ve not ile teklif verir.
 export function createOffer(
-  requestId: number,
+  requestId: string,
   input: CreateOfferInput,
   accessToken: string
 ) {
@@ -243,6 +249,7 @@ export function createOffer(
   });
 }
 
+// Nakliyecinin verdigi tum teklifleri Tekliflerim ekraninda kullanmak icin ceker.
 export function getMyOffers(accessToken: string) {
   return apiFetch<OfferItem[]>("/offers/my", {
     method: "GET",
@@ -250,6 +257,7 @@ export function getMyOffers(accessToken: string) {
   });
 }
 
+// Musteri tarafinda hesaba gelen teklifleri toplu listeler.
 export function getMyIncomingOffers(accessToken: string) {
   return apiFetch<MyIncomingOfferItem[]>("/offers/incoming/my", {
     method: "GET",
@@ -257,21 +265,24 @@ export function getMyIncomingOffers(accessToken: string) {
   });
 }
 
-export function getIncomingOffersForRequest(requestId: number, accessToken: string) {
+// Tek bir tasima isteginin teklifleri detay sayfasinda karsilastirilir.
+export function getIncomingOffersForRequest(requestId: string, accessToken: string) {
   return apiFetch<IncomingOfferItem[]>(`/offers/requests/${requestId}/incoming`, {
     method: "GET",
     accessToken,
   });
 }
 
-export function acceptOffer(offerId: number, accessToken: string) {
+// Musteri teklifi kabul ettiginde backend bunu job/nakliye akisini baslatacak sekilde isler.
+export function acceptOffer(offerId: string, accessToken: string) {
   return apiFetch<void>(`/offers/${offerId}/accept`, {
     method: "POST",
     accessToken,
   });
 }
 
-export function rejectOffer(offerId: number, accessToken: string) {
+// Musteri istemedigi teklifi reddeder; teklif gecmiste durumu ile kalir.
+export function rejectOffer(offerId: string, accessToken: string) {
   return apiFetch<void>(`/offers/${offerId}/reject`, {
     method: "POST",
     accessToken,

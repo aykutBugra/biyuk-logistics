@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { NotificationsPublisher } from "../notifications/notifications.publisher";
 import { CreateRatingDto } from "./dto/create-rating.dto";
@@ -23,6 +24,7 @@ const COMPLETED_JOB_STATUS = {
   durumAdi: "TAMAMLANDI",
 } as const;
 
+//Puanlama sistemi su an 1-5 sayisal puan tanimini kullanir.
 const RATING_TYPE = "SAYISAL_1_5";
 
 @Injectable()
@@ -34,9 +36,11 @@ export class RatingsService {
 
   async createForJob(
     currentUser: AuthenticatedUser,
-    jobId: number,
+    jobId: PublicEntityId,
     createRatingDto: CreateRatingDto
   ): Promise<SubmittedRatingResponseDto> {
+    //Puanlama icin once kullanicinin bu nakliyede musteri veya nakliyeci olarak
+    //taraf olup olmadigi kontrol edilir.
     const job = await this.ratingsRepository.findRateableJobByIdAndParticipant(
       jobId,
       currentUser.id
@@ -69,6 +73,7 @@ export class RatingsService {
       throw new ConflictException("You have already rated this completed shipment.");
     }
 
+    //Puanlama tipi seed/config olarak DB'de bulunmali; yoksa sistem hatasi kabul edilir.
     const ratingTypeId = await this.requireRatingTypeId();
 
     try {
@@ -83,8 +88,8 @@ export class RatingsService {
 
       await this.notificationsPublisher.publishRatingReceived({
         ratedUserId,
-        ratingId: rating.id,
-        jobId: job.id,
+        ratingId: rating.publicId,
+        jobId: job.publicId,
         puanDegeri: rating.puanDegeri,
         actorUserId: currentUser.id,
       });
@@ -103,6 +108,7 @@ export class RatingsService {
   }
 
   async getMyGiven(currentUser: AuthenticatedUser): Promise<RatingListItemResponseDto[]> {
+    //Kullanicinin verdigi puanlarda counterparty puanlanan kisidir.
     const ratings = await this.ratingsRepository.findManyGivenByUserId(currentUser.id);
     return ratings.map((rating) => this.toGivenListItemResponse(rating));
   }
@@ -110,6 +116,7 @@ export class RatingsService {
   async getMyReceived(
     currentUser: AuthenticatedUser
   ): Promise<RatingListItemResponseDto[]> {
+    //Kullanicinin aldigi puanlarda counterparty puani veren kisidir.
     const ratings = await this.ratingsRepository.findManyReceivedByUserId(currentUser.id);
     return ratings.map((rating) => this.toReceivedListItemResponse(rating));
   }
@@ -117,10 +124,12 @@ export class RatingsService {
   async getMySummary(
     currentUser: AuthenticatedUser
   ): Promise<MyRatingSummaryResponseDto> {
+    //Ozet, kullanicinin nakliyeci olarak ve musteri olarak aldigi puanlari ayri bucketlarda toplar.
     return this.ratingsRepository.getReceivedSummaryByUserId(currentUser.id);
   }
 
   private async requireRatingTypeId(): Promise<number> {
+    //Puan tanimi bulunamazsa yeni rating olusturmak guvenli degildir.
     const ratingTypeId = await this.ratingsRepository.findRatingTypeIdByType(RATING_TYPE);
 
     if (ratingTypeId !== null) {
@@ -133,6 +142,7 @@ export class RatingsService {
   }
 
   private isCompletedJob(job: StoredRateableJobRecord): boolean {
+    //Sadece tamamlanmis nakliyelerde karsi taraf puanlamasi acilir.
     return (
       job.durumTuru.trim().toUpperCase() === COMPLETED_JOB_STATUS.durumTuru &&
       job.durumAdi.trim().toUpperCase() === COMPLETED_JOB_STATUS.durumAdi
@@ -143,6 +153,7 @@ export class RatingsService {
     job: StoredRateableJobRecord,
     currentUserId: number
   ): number | null {
+    //Musteri puan veriyorsa nakliyeci, nakliyeci puan veriyorsa musteri puanlanan kisidir.
     if (currentUserId === job.customerId) {
       return job.carrierId;
     }
@@ -157,16 +168,17 @@ export class RatingsService {
   private toGivenListItemResponse(
     rating: StoredRatingListRecord
   ): RatingListItemResponseDto {
+    //Verilen puan listesinde karsi taraf puanlanan kullanicidir.
     return {
-      id: rating.id,
-      jobId: rating.jobId,
-      requestId: rating.requestId,
+      id: rating.publicId,
+      jobId: rating.jobPublicId,
+      requestId: rating.requestPublicId,
       puanDegeri: rating.puanDegeri,
       yorum: rating.yorum,
       tarih: rating.tarih,
       baslangicSehri: rating.baslangicSehri,
       varisSehri: rating.varisSehri,
-      counterpartyId: rating.puanlananId,
+      counterpartyId: rating.puanlananPublicId,
       counterpartyName: rating.puanlananName,
       counterpartyUsername: rating.puanlananUsername,
       rolBaglami: rating.rolBaglami,
@@ -176,16 +188,17 @@ export class RatingsService {
   private toReceivedListItemResponse(
     rating: StoredRatingListRecord
   ): RatingListItemResponseDto {
+    //Alinan puan listesinde karsi taraf puani veren kullanicidir.
     return {
-      id: rating.id,
-      jobId: rating.jobId,
-      requestId: rating.requestId,
+      id: rating.publicId,
+      jobId: rating.jobPublicId,
+      requestId: rating.requestPublicId,
       puanDegeri: rating.puanDegeri,
       yorum: rating.yorum,
       tarih: rating.tarih,
       baslangicSehri: rating.baslangicSehri,
       varisSehri: rating.varisSehri,
-      counterpartyId: rating.puanlayanId,
+      counterpartyId: rating.puanlayanPublicId,
       counterpartyName: rating.puanlayanName,
       counterpartyUsername: rating.puanlayanUsername,
       rolBaglami: rating.rolBaglami,

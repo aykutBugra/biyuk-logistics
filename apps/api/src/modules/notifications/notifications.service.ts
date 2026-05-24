@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { MarkAllNotificationsAsReadResponseDto } from "./dto/mark-all-notifications-as-read-response.dto";
 import { MarkNotificationAsReadResponseDto } from "./dto/mark-notification-as-read-response.dto";
@@ -15,6 +16,7 @@ export class NotificationsService {
     private readonly notificationsRepository: NotificationsRepository
   ) {}
 
+  //Kullanicinin bildirim listesini repository'den alir ve frontend response formatina cevirir.
   async getMine(
     currentUser: AuthenticatedUser
   ): Promise<NotificationListItemResponseDto[]> {
@@ -30,6 +32,7 @@ export class NotificationsService {
   async getUnreadCount(
     currentUser: AuthenticatedUser
   ): Promise<UnreadNotificationCountResponseDto> {
+    //Okunmamis sayisi ayrica doner; bu bilgi liste cekmeden badge gostermek icin kullanilir.
     const unreadCount = await this.notificationsRepository.countUnreadByUserId(
       currentUser.id
     );
@@ -41,8 +44,9 @@ export class NotificationsService {
 
   async markAsRead(
     currentUser: AuthenticatedUser,
-    notificationId: number
+    notificationId: PublicEntityId
   ): Promise<MarkNotificationAsReadResponseDto> {
+    //Bildirim sadece sahibi tarafindan okundu isaretlenebilir.
     const notification = await this.notificationsRepository.markAsReadByIdAndUserId(
       notificationId,
       currentUser.id
@@ -58,6 +62,7 @@ export class NotificationsService {
   async markAllAsRead(
     currentUser: AuthenticatedUser
   ): Promise<MarkAllNotificationsAsReadResponseDto> {
+    //Toplu okuma isleminde kac bildirimin guncellendigi response'ta doner.
     const updatedCount = await this.notificationsRepository.markAllAsReadByUserId(
       currentUser.id
     );
@@ -70,8 +75,9 @@ export class NotificationsService {
   private toNotificationListItemResponse(
     notification: StoredNotificationRecord
   ): NotificationListItemResponseDto {
+    //DB'deki okunmaTarihi alanindan frontend'in direkt kullanacagi isRead bilgisi uretilir.
     return {
-      id: notification.id,
+      id: notification.publicId,
       tip: notification.tip,
       baslik: notification.baslik,
       mesaj: notification.mesaj,

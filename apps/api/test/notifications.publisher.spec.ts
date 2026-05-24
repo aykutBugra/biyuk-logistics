@@ -30,9 +30,9 @@ describe("NotificationsPublisher", () => {
     await publisher.publishThreadMessage({
       recipientUserId: 10,
       actorUserId: 10,
-      messageId: 55,
-      offerId: 77,
-      requestId: 501,
+      messageId: "550e8400-e29b-41d4-a716-446655440055",
+      offerId: "550e8400-e29b-41d4-a716-446655440077",
+      requestId: "550e8400-e29b-41d4-a716-446655440501",
     });
 
     expect(notificationsRepositoryMock.createIfAbsent).not.toHaveBeenCalled();
@@ -42,9 +42,9 @@ describe("NotificationsPublisher", () => {
     await publisher.publishThreadMessage({
       recipientUserId: 22,
       actorUserId: 10,
-      messageId: 56,
-      offerId: 77,
-      requestId: 501,
+      messageId: "550e8400-e29b-41d4-a716-446655440056",
+      offerId: "550e8400-e29b-41d4-a716-446655440077",
+      requestId: "550e8400-e29b-41d4-a716-446655440501",
     });
 
     expect(notificationsRepositoryMock.createIfAbsent).toHaveBeenCalledTimes(1);

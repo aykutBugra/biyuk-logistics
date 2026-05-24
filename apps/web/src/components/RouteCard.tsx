@@ -12,7 +12,7 @@ type RouteCardChip = {
 };
 
 export type RouteCardModel = {
-  id: number;
+  id: string;
   rotaBaslik: string;
   rotaDetay: string | null;
   durumEtiketi: string;
@@ -56,7 +56,7 @@ export default function RouteCard({ route }: RouteCardProps) {
       <div className="p-4 md:p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-            Rota #{route.id}
+            Rota
           </span>
           <span
             className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${

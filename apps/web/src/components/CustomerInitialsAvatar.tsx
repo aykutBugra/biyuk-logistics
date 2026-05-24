@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 type CustomerInitialsAvatarProps = {
   name?: string | null;
   fallback?: string;
@@ -25,6 +27,16 @@ const IMAGE_SIZE_STYLES: Record<
   sm: "h-10 w-10",
   md: "h-12 w-12",
   lg: "h-16 w-16",
+};
+
+const IMAGE_SIZE_PIXELS: Record<
+  NonNullable<CustomerInitialsAvatarProps["size"]>,
+  number
+> = {
+  xs: 24,
+  sm: 40,
+  md: 48,
+  lg: 64,
 };
 
 const TONE_STYLES: Record<
@@ -60,9 +72,13 @@ export default function CustomerInitialsAvatar({
 }: CustomerInitialsAvatarProps) {
   if (imageUrl) {
     return (
-      <img
+      <Image
         src={imageUrl}
         alt=""
+        width={IMAGE_SIZE_PIXELS[size]}
+        height={IMAGE_SIZE_PIXELS[size]}
+        sizes={`${IMAGE_SIZE_PIXELS[size]}px`}
+        unoptimized
         className={`inline-flex shrink-0 rounded-full border border-slate-200 bg-slate-100 object-cover shadow-sm ${
           IMAGE_SIZE_STYLES[size]
         } ${className ?? ""}`.trim()}

@@ -1,4 +1,4 @@
-import { ConflictException } from "@nestjs/common";
+import { ConflictException, InternalServerErrorException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { Test } from "@nestjs/testing";
 import { ROLE_NAMES } from "../src/common/constants/role-names";
@@ -14,6 +14,7 @@ import {
 describe("OfferThreadsService write paths", () => {
   const currentUser = {
     id: 10,
+    publicId: "550e8400-e29b-41d4-a716-446655440010",
     mail: "customer@example.com",
     kullaniciAdi: "customer",
     roles: [ROLE_NAMES.MUSTERI],
@@ -21,8 +22,11 @@ describe("OfferThreadsService write paths", () => {
 
   const writableContext: OfferThreadWritableContextRecord = {
     threadId: 41,
+    threadPublicId: "550e8400-e29b-41d4-a716-446655440041",
     offerId: 77,
+    offerPublicId: "550e8400-e29b-41d4-a716-446655440077",
     requestId: 501,
+    requestPublicId: "550e8400-e29b-41d4-a716-446655440501",
     customerId: currentUser.id,
     carrierId: 22,
     customerLastReadMessageId: null,
@@ -34,29 +38,39 @@ describe("OfferThreadsService write paths", () => {
     requestDeletedAt: null,
     requestStatusTuru: "ISTEK",
     requestStatusAdi: "OLUSTURULDU",
-    hasShipment: false,
+    shipment: null,
   };
 
   const message: OfferThreadMessageRecord = {
     id: 9001,
+    publicId: "550e8400-e29b-41d4-a716-446655449001",
     type: "COUNTER_OFFER",
     text: "Yeni fiyat",
     teklifFiyati: 12345,
     systemEventCode: null,
     createdAt: new Date("2026-05-04T10:00:00.000Z"),
     senderUserId: currentUser.id,
+    senderUserPublicId: currentUser.publicId,
     senderName: "Customer User",
     senderUsername: currentUser.kullaniciAdi,
     senderProfileImageStorageKey: null,
+    attachments: [],
   };
+  const offerPublicEntityId = {
+    kind: "uuid",
+    value: writableContext.offerPublicId,
+  } as const;
 
-  const tx = { kind: "thread-tx" };
+  const tx = { kind: "thread-tx" } as unknown as Prisma.TransactionClient;
 
   let service: OfferThreadsService;
   let offerThreadsRepositoryMock: {
     findWritableThreadContextByOfferIdForUser: jest.Mock;
+    findAcceptedThreadIdentityByRequestId: jest.Mock;
     createCounterOfferMessage: jest.Mock;
     createTextMessage: jest.Mock;
+    appendSystemEvent: jest.Mock;
+    appendSystemEventAndClose: jest.Mock;
   };
   let notificationsPublisherMock: {
     publishCounterOffer: jest.Mock;
@@ -71,8 +85,11 @@ describe("OfferThreadsService write paths", () => {
   beforeEach(async () => {
     offerThreadsRepositoryMock = {
       findWritableThreadContextByOfferIdForUser: jest.fn(),
+      findAcceptedThreadIdentityByRequestId: jest.fn(),
       createCounterOfferMessage: jest.fn(),
       createTextMessage: jest.fn(),
+      appendSystemEvent: jest.fn().mockResolvedValue(undefined),
+      appendSystemEventAndClose: jest.fn().mockResolvedValue(undefined),
     };
     notificationsPublisherMock = {
       publishCounterOffer: jest.fn().mockResolvedValue(undefined),
@@ -122,14 +139,14 @@ describe("OfferThreadsService write paths", () => {
     );
     offerThreadsRepositoryMock.createCounterOfferMessage.mockResolvedValue(message);
 
-    const response = await service.createCounterOffer(currentUser, writableContext.offerId, {
+    const response = await service.createCounterOffer(currentUser, offerPublicEntityId, {
       fiyat: 12345,
       mesaj: "Yeni fiyat",
     });
 
     expect(
       offerThreadsRepositoryMock.findWritableThreadContextByOfferIdForUser
-    ).toHaveBeenCalledWith(writableContext.offerId, currentUser.id, tx);
+    ).toHaveBeenCalledWith(offerPublicEntityId, currentUser.id, tx);
     expect(offerThreadsRepositoryMock.createCounterOfferMessage).toHaveBeenCalledWith(
       {
         threadId: writableContext.threadId,
@@ -143,9 +160,9 @@ describe("OfferThreadsService write paths", () => {
     );
     expect(notificationsPublisherMock.publishCounterOffer).toHaveBeenCalledWith({
       recipientUserId: writableContext.carrierId,
-      messageId: message.id,
-      offerId: writableContext.offerId,
-      requestId: writableContext.requestId,
+      messageId: message.publicId,
+      offerId: writableContext.offerPublicId,
+      requestId: writableContext.requestPublicId,
       fiyat: 12345,
       actorUserId: currentUser.id,
     });
@@ -159,7 +176,7 @@ describe("OfferThreadsService write paths", () => {
     });
 
     await expect(
-      service.createCounterOffer(currentUser, writableContext.offerId, {
+      service.createCounterOffer(currentUser, offerPublicEntityId, {
         fiyat: 9999,
         mesaj: "Kapanmis thread",
       })
@@ -173,6 +190,7 @@ describe("OfferThreadsService write paths", () => {
     const textMessage: OfferThreadMessageRecord = {
       ...message,
       id: 9002,
+      publicId: "550e8400-e29b-41d4-a716-446655449002",
       type: "TEXT",
       text: "Merhaba",
       teklifFiyati: null,
@@ -183,7 +201,7 @@ describe("OfferThreadsService write paths", () => {
     );
     offerThreadsRepositoryMock.createTextMessage.mockResolvedValue(textMessage);
 
-    await service.createTextMessage(currentUser, writableContext.offerId, {
+    await service.createTextMessage(currentUser, offerPublicEntityId, {
       mesaj: "Merhaba",
     });
 
@@ -198,9 +216,9 @@ describe("OfferThreadsService write paths", () => {
     );
     expect(notificationsPublisherMock.publishThreadMessage).toHaveBeenCalledWith({
       recipientUserId: writableContext.carrierId,
-      messageId: textMessage.id,
-      offerId: writableContext.offerId,
-      requestId: writableContext.requestId,
+      messageId: textMessage.publicId,
+      offerId: writableContext.offerPublicId,
+      requestId: writableContext.requestPublicId,
       actorUserId: currentUser.id,
     });
   });
@@ -212,7 +230,7 @@ describe("OfferThreadsService write paths", () => {
     });
 
     await expect(
-      service.createTextMessage(currentUser, writableContext.offerId, {
+      service.createTextMessage(currentUser, offerPublicEntityId, {
         mesaj: "Self thread",
       })
     ).rejects.toThrow(
@@ -223,5 +241,88 @@ describe("OfferThreadsService write paths", () => {
 
     expect(offerThreadsRepositoryMock.createTextMessage).not.toHaveBeenCalled();
     expect(notificationsPublisherMock.publishThreadMessage).not.toHaveBeenCalled();
+  });
+
+  it("appends pending delivery events without closing the winning thread", async () => {
+    offerThreadsRepositoryMock.findAcceptedThreadIdentityByRequestId.mockResolvedValue({
+      threadId: writableContext.threadId,
+      threadPublicId: writableContext.threadPublicId,
+      offerId: writableContext.offerId,
+      offerPublicId: writableContext.offerPublicId,
+      customerId: writableContext.customerId,
+      carrierId: writableContext.carrierId,
+    });
+
+    await service.appendShipmentSystemEventByRequestId(
+      writableContext.requestId,
+      writableContext.carrierId,
+      "DELIVERY_PENDING_CONFIRMATION",
+      tx
+    );
+
+    expect(
+      offerThreadsRepositoryMock.findAcceptedThreadIdentityByRequestId
+    ).toHaveBeenCalledWith(writableContext.requestId, tx);
+    expect(offerThreadsRepositoryMock.appendSystemEvent).toHaveBeenCalledWith(
+      {
+        threadId: writableContext.threadId,
+        customerId: writableContext.customerId,
+        carrierId: writableContext.carrierId,
+        actorUserId: writableContext.carrierId,
+        systemEventCode: "DELIVERY_PENDING_CONFIRMATION",
+      },
+      tx
+    );
+    expect(offerThreadsRepositoryMock.appendSystemEventAndClose).not.toHaveBeenCalled();
+  });
+
+  it("blocks generic delivery-confirmed appends so thread closure stays centralized", async () => {
+    await expect(
+      service.appendShipmentSystemEventByRequestId(
+        writableContext.requestId,
+        writableContext.customerId,
+        "DELIVERY_CONFIRMED",
+        tx
+      )
+    ).rejects.toThrow(
+      new InternalServerErrorException(
+        "Delivery confirmation must close the winning thread via appendDeliveryConfirmedAndCloseByRequestId."
+      )
+    );
+
+    expect(
+      offerThreadsRepositoryMock.findAcceptedThreadIdentityByRequestId
+    ).not.toHaveBeenCalled();
+    expect(offerThreadsRepositoryMock.appendSystemEvent).not.toHaveBeenCalled();
+    expect(offerThreadsRepositoryMock.appendSystemEventAndClose).not.toHaveBeenCalled();
+  });
+
+  it("closes the winning thread only through customer delivery confirmation", async () => {
+    offerThreadsRepositoryMock.findAcceptedThreadIdentityByRequestId.mockResolvedValue({
+      threadId: writableContext.threadId,
+      threadPublicId: writableContext.threadPublicId,
+      offerId: writableContext.offerId,
+      offerPublicId: writableContext.offerPublicId,
+      customerId: writableContext.customerId,
+      carrierId: writableContext.carrierId,
+    });
+
+    await service.appendDeliveryConfirmedAndCloseByRequestId(
+      writableContext.requestId,
+      writableContext.customerId,
+      tx
+    );
+
+    expect(offerThreadsRepositoryMock.appendSystemEventAndClose).toHaveBeenCalledWith(
+      {
+        threadId: writableContext.threadId,
+        customerId: writableContext.customerId,
+        carrierId: writableContext.carrierId,
+        actorUserId: writableContext.customerId,
+        systemEventCode: "DELIVERY_CONFIRMED",
+      },
+      tx
+    );
+    expect(offerThreadsRepositoryMock.appendSystemEvent).not.toHaveBeenCalled();
   });
 });

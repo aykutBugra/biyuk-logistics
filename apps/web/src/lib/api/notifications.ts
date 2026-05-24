@@ -1,7 +1,7 @@
 import { apiFetch } from "./api-client";
 
 export type NotificationListItem = {
-  id: number;
+  id: string;
   tip: string;
   baslik: string;
   mesaj: string;
@@ -19,6 +19,7 @@ export type MarkAllNotificationsAsReadResult = {
   updatedCount: number;
 };
 
+// Bildirimler sayfasi kullanicinin tum sistem bildirimlerini buradan ceker.
 export function getMyNotifications(accessToken: string) {
   return apiFetch<NotificationListItem[]>("/notifications/my", {
     method: "GET",
@@ -26,6 +27,7 @@ export function getMyNotifications(accessToken: string) {
   });
 }
 
+// Topbar ve dashboard rozetleri icin okunmamis bildirim sayisi hafif endpoint'ten gelir.
 export function getMyUnreadNotificationCount(accessToken: string) {
   return apiFetch<UnreadNotificationCount>("/notifications/my/unread-count", {
     method: "GET",
@@ -33,8 +35,9 @@ export function getMyUnreadNotificationCount(accessToken: string) {
   });
 }
 
+// Tek bildirime tiklaninca sadece o kayit okundu olarak isaretlenir.
 export function markNotificationAsRead(
-  notificationId: number,
+  notificationId: string,
   accessToken: string
 ) {
   return apiFetch<NotificationListItem>(`/notifications/${notificationId}/read`, {
@@ -43,6 +46,7 @@ export function markNotificationAsRead(
   });
 }
 
+// Bildirimler ekranindaki toplu okundu aksiyonu kac kaydin guncellendigini dondurur.
 export function markAllNotificationsAsRead(accessToken: string) {
   return apiFetch<MarkAllNotificationsAsReadResult>("/notifications/my/read-all", {
     method: "POST",

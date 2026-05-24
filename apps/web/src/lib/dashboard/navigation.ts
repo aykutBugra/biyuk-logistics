@@ -65,6 +65,7 @@ export type DashboardNavigationModel = {
   shellMeta: DashboardShellMeta;
 };
 
+// Sidebar'daki tum menu kayitlari burada tutulur; gorunurluk rol ve workspace'e gore filtrelenir.
 const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
   {
     id: "customer-overview",
@@ -245,6 +246,7 @@ const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
   },
 ];
 
+// Exact ve prefix matcher'lar aktif sayfayi bulmak icin tek yerden cozulur.
 function isMatcherMatch(pathname: string, matcher: DashboardNavMatcher): boolean {
   if (matcher.type === "exact") {
     return pathname === matcher.value;
@@ -253,6 +255,7 @@ function isMatcherMatch(pathname: string, matcher: DashboardNavMatcher): boolean
   return pathname === matcher.value || pathname.startsWith(`${matcher.value}/`);
 }
 
+// Daha uzun veya exact match, sidebar'da daha dogru aktif item secilmesini saglar.
 function getMatcherScore(matcher: DashboardNavMatcher): number {
   if (matcher.type === "exact") {
     return 1000 + matcher.value.length;
@@ -261,6 +264,7 @@ function getMatcherScore(matcher: DashboardNavMatcher): number {
   return matcher.value.length;
 }
 
+// Menu item'i kullanicinin aktif rol/alanina gore gosterilebilir mi kontrol eder.
 function isEntryVisible(
   entry: DashboardNavEntry,
   context: DashboardNavigationContext
@@ -281,6 +285,7 @@ function isEntryVisible(
   }
 }
 
+// Sidebar panelinin ust metinleri aktif workspace'e gore degisir.
 function buildShellMeta(
   context: DashboardNavigationContext,
   pathname: string
@@ -320,6 +325,7 @@ function buildShellMeta(
   };
 }
 
+// Layout'un kullanacagi gruplu navigation modeli ve aktif item burada uretilir.
 export function buildDashboardNavigation(
   context: DashboardNavigationContext
 ): DashboardNavigationModel {
@@ -327,6 +333,7 @@ export function buildDashboardNavigation(
     isEntryVisible(entry, context)
   );
 
+  // Birden fazla prefix eslesirse en spesifik olan aktif sayilir.
   let activeEntry: DashboardNavEntry | null = null;
   let activeEntryScore = -1;
 
@@ -346,6 +353,7 @@ export function buildDashboardNavigation(
 
   const groupMap = new Map<string, DashboardRenderedNavGroup>();
 
+  // Sirali menu kayitlari groupId'ye gore sidebar bolumlerine ayrilir.
   for (const entry of visibleEntries.sort((left, right) => left.order - right.order)) {
     const group = groupMap.get(entry.groupId) ?? {
       id: entry.groupId,

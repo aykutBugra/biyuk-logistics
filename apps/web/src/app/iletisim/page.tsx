@@ -1,5 +1,6 @@
 import PublicRevealGroup from "@/components/PublicRevealGroup";
 
+// Public iletisim sayfasi; kullaniciyi destek ve iletisim bilgilerine yonlendirir.
 export default function ContactPage() {
   return (
     <main className="px-4 py-12">

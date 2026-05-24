@@ -129,10 +129,10 @@ function ExistingRequestImagesPanel({
   images: TransportRequestImage[];
   imageActionError: string | null;
   imageActionsDisabled: boolean;
-  deletingImageId: number | null;
-  settingPrimaryImageId: number | null;
-  onSetPrimary: (imageId: number) => void;
-  onDelete: (imageId: number) => void;
+  deletingImageId: string | null;
+  settingPrimaryImageId: string | null;
+  onSetPrimary: (imageId: string) => void;
+  onDelete: (imageId: string) => void;
 }) {
   return (
     <section className="app-surface-strong rounded-[1.6rem] border border-slate-200/80 p-4 shadow-sm md:p-5">
@@ -218,7 +218,7 @@ export default function EditTransportRequestPage() {
   const router = useRouter();
   const { accessToken, status } = useCustomerPageAccess();
   const params = useParams<{ id: string }>();
-  const requestId = Number(params.id);
+  const requestId = params.id;
 
   const [form, setForm] = useState<UpdateTransportRequestForm>(initialForm);
   const [baslangicKonum, setBaslangicKonum] = useState<SelectedLocation | null>(null);
@@ -235,8 +235,8 @@ export default function EditTransportRequestPage() {
   const [existingImages, setExistingImages] = useState<TransportRequestImage[]>([]);
   const [pendingImages, setPendingImages] = useState<RequestImageDraft[]>([]);
   const [imageActionError, setImageActionError] = useState<string | null>(null);
-  const [deletingImageId, setDeletingImageId] = useState<number | null>(null);
-  const [settingPrimaryImageId, setSettingPrimaryImageId] = useState<number | null>(null);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
+  const [settingPrimaryImageId, setSettingPrimaryImageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
@@ -246,7 +246,7 @@ export default function EditTransportRequestPage() {
       return;
     }
 
-    if (!Number.isInteger(requestId) || requestId <= 0) {
+    if (!requestId.trim()) {
       setErrorMessage("Gecersiz istek numarasi.");
       setIsLoading(false);
       return;
@@ -348,7 +348,7 @@ export default function EditTransportRequestPage() {
   };
 
   const handleDeleteImage = useCallback(
-    async (imageId: number) => {
+    async (imageId: string) => {
       if (!accessToken || deletingImageId !== null || settingPrimaryImageId !== null) {
         return;
       }
@@ -372,7 +372,7 @@ export default function EditTransportRequestPage() {
   );
 
   const handleSetPrimaryImage = useCallback(
-    async (imageId: number) => {
+    async (imageId: string) => {
       if (!accessToken || deletingImageId !== null || settingPrimaryImageId !== null) {
         return;
       }
@@ -402,7 +402,7 @@ export default function EditTransportRequestPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (isSubmitting || !accessToken || !Number.isInteger(requestId) || requestId <= 0) {
+    if (isSubmitting || !accessToken || !requestId.trim()) {
       return;
     }
 

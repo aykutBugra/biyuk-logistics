@@ -57,6 +57,7 @@ const roleDescriptions: Record<RegisterRole, string> = {
   NAKLIYECI: "Ilk aracinla birlikte teklif ve operasyon akisina gir.",
 };
 
+// Register sayfasi musteri veya nakliyeci rolune gore ilk hesap kaydini baslatir.
 export default function RegisterPage() {
   const router = useRouter();
   const [role, setRole] = useState<RegisterRole>("MUSTERI");
@@ -67,6 +68,7 @@ export default function RegisterPage() {
   const [errorState, setErrorState] = useState<RegisterErrorState>(null);
 
   useEffect(() => {
+    // Oturum zaten varsa tekrar kayit formuna dusmeden dashboard'a yonlendir.
     if (getStoredAuth()) {
       router.replace("/dashboard/profil");
       return;
@@ -75,6 +77,7 @@ export default function RegisterPage() {
     setIsCheckingAuth(false);
   }, [router]);
 
+  // Ortak hesap alanlari tum rol secimlerinde ayni state objesinde tutulur.
   const handleAccountChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
@@ -85,6 +88,7 @@ export default function RegisterPage() {
     }));
   };
 
+  // Nakliyeci rolunde ilk arac bilgileri de ayni kayit akisiyle toplanir.
   const handleVehicleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -97,6 +101,7 @@ export default function RegisterPage() {
     }));
   };
 
+  // Rol degisince ilgili form hatalari temizlenir ve UI yeni role gore acilir.
   const handleRoleChange = (nextRole: RegisterRole) => {
     if (isSubmitting) {
       return;
@@ -106,6 +111,7 @@ export default function RegisterPage() {
     setRole(nextRole);
   };
 
+  // Secilen role gore backend register endpoint'ine uygun payload hazirlanir.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 

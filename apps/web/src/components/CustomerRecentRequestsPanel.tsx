@@ -75,12 +75,12 @@ function formatDateBadge(value: string | null): string | null {
   }).format(parsedDate);
 }
 
-function buildOfferCountMap(incomingOffers: MyIncomingOfferItem[]): Map<number, number> {
+function buildOfferCountMap(incomingOffers: MyIncomingOfferItem[]): Map<string, number> {
   return incomingOffers.reduce((map, offer) => {
     const currentCount = map.get(offer.requestId) ?? 0;
     map.set(offer.requestId, currentCount + 1);
     return map;
-  }, new Map<number, number>());
+  }, new Map<string, number>());
 }
 
 export default function CustomerRecentRequestsPanel({

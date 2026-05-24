@@ -90,6 +90,13 @@ function resolveVisualModel(tip: string): NotificationVisualModel {
         boxClassName: "border-blue-100 bg-blue-50",
         iconClassName: "text-blue-700",
       };
+    case "TESLIM_ONAYI_BEKLIYOR":
+      return {
+        label: "Onay",
+        icon: "pi pi-clock",
+        boxClassName: "border-amber-100 bg-amber-50",
+        iconClassName: "text-amber-700",
+      };
     case "IS_TAMAMLANDI":
       return {
         label: "Teslim",

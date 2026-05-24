@@ -18,6 +18,7 @@ import { VehicleCapacityService } from "../src/modules/vehicle-capacity/vehicle-
 describe("OffersService.acceptById", () => {
   const currentUser = {
     id: 10,
+    publicId: "550e8400-e29b-41d4-a716-446655440010",
     mail: "customer@example.com",
     kullaniciAdi: "customer",
     roles: [ROLE_NAMES.MUSTERI],
@@ -25,7 +26,9 @@ describe("OffersService.acceptById", () => {
 
   const offerContext: OfferDecisionContextRecord = {
     offerId: 77,
+    offerPublicId: "550e8400-e29b-41d4-a716-446655440077",
     requestId: 501,
+    requestPublicId: "550e8400-e29b-41d4-a716-446655440501",
     customerId: currentUser.id,
     carrierId: 22,
     offerStatusTuru: "TEKLIF",
@@ -44,6 +47,7 @@ describe("OffersService.acceptById", () => {
   const acceptance: Extract<AcceptOfferResult, { ok: true }> = {
     ok: true,
     jobId: 303,
+    jobPublicId: "550e8400-e29b-41d4-a716-446655440303",
     reservationSnapshot: {
       vehicleId: 901,
       shipmentId: 303,
@@ -53,8 +57,18 @@ describe("OffersService.acceptById", () => {
       reservedHacimM3: 12,
       isDedicated: false,
     },
-    rejectedSiblingOffers: [{ offerId: 78, carrierId: 33 }],
+    rejectedSiblingOffers: [
+      {
+        offerId: 78,
+        offerPublicId: "550e8400-e29b-41d4-a716-446655440078",
+        carrierId: 33,
+      },
+    ],
   };
+  const offerPublicEntityId = {
+    kind: "uuid",
+    value: offerContext.offerPublicId,
+  } as const;
 
   const tx = { kind: "offers-tx" };
 
@@ -69,8 +83,9 @@ describe("OffersService.acceptById", () => {
     publishOfferRejected: jest.Mock;
   };
   let offerThreadsServiceMock: {
-    closeAcceptedOfferThread: jest.Mock;
+    appendAcceptedOfferThread: jest.Mock;
     closeRequestUnavailableThreads: jest.Mock;
+    getLastPriceActorSide: jest.Mock;
   };
   let vehicleCapacityServiceMock: {
     createReservationForShipment: jest.Mock;
@@ -99,8 +114,9 @@ describe("OffersService.acceptById", () => {
       publishOfferRejected: jest.fn().mockResolvedValue(undefined),
     };
     offerThreadsServiceMock = {
-      closeAcceptedOfferThread: jest.fn().mockResolvedValue(undefined),
+      appendAcceptedOfferThread: jest.fn().mockResolvedValue(undefined),
       closeRequestUnavailableThreads: jest.fn().mockResolvedValue(undefined),
+      getLastPriceActorSide: jest.fn().mockResolvedValue("carrier"),
     };
     vehicleCapacityServiceMock = {
       createReservationForShipment: jest.fn().mockResolvedValue(undefined),
@@ -161,7 +177,7 @@ describe("OffersService.acceptById", () => {
   it("commits the acceptance flow only when every mutation succeeds", async () => {
     offersRepositoryMock.acceptOfferInTransaction.mockResolvedValue(acceptance);
 
-    await service.acceptById(currentUser, offerContext.offerId);
+    await service.acceptById(currentUser, offerPublicEntityId);
 
     expect(offersRepositoryMock.acceptOfferInTransaction).toHaveBeenCalledWith(
       tx,
@@ -171,7 +187,7 @@ describe("OffersService.acceptById", () => {
         carrierId: offerContext.carrierId,
       })
     );
-    expect(offerThreadsServiceMock.closeAcceptedOfferThread).toHaveBeenCalledWith(
+    expect(offerThreadsServiceMock.appendAcceptedOfferThread).toHaveBeenCalledWith(
       offerContext.offerId,
       currentUser.id,
       tx
@@ -187,15 +203,15 @@ describe("OffersService.acceptById", () => {
     );
     expect(notificationsPublisherMock.publishOfferAccepted).toHaveBeenCalledWith({
       carrierId: offerContext.carrierId,
-      offerId: offerContext.offerId,
-      requestId: offerContext.requestId,
-      jobId: acceptance.jobId,
+      offerId: offerContext.offerPublicId,
+      requestId: offerContext.requestPublicId,
+      jobId: acceptance.jobPublicId,
       actorUserId: currentUser.id,
     });
     expect(notificationsPublisherMock.publishOfferRejected).toHaveBeenCalledWith({
       carrierId: acceptance.rejectedSiblingOffers[0].carrierId,
-      offerId: acceptance.rejectedSiblingOffers[0].offerId,
-      requestId: offerContext.requestId,
+      offerId: acceptance.rejectedSiblingOffers[0].offerPublicId,
+      requestId: offerContext.requestPublicId,
       actorUserId: currentUser.id,
     });
   });
@@ -206,11 +222,11 @@ describe("OffersService.acceptById", () => {
       reason: "request_not_open",
     } satisfies AcceptOfferResult);
 
-    await expect(service.acceptById(currentUser, offerContext.offerId)).rejects.toThrow(
+    await expect(service.acceptById(currentUser, offerPublicEntityId)).rejects.toThrow(
       new ConflictException("Offer can no longer be accepted.")
     );
 
-    expect(offerThreadsServiceMock.closeAcceptedOfferThread).not.toHaveBeenCalled();
+    expect(offerThreadsServiceMock.appendAcceptedOfferThread).not.toHaveBeenCalled();
     expect(offerThreadsServiceMock.closeRequestUnavailableThreads).not.toHaveBeenCalled();
     expect(vehicleCapacityServiceMock.createReservationForShipment).not.toHaveBeenCalled();
     expect(notificationsPublisherMock.publishOfferAccepted).not.toHaveBeenCalled();
@@ -223,14 +239,14 @@ describe("OffersService.acceptById", () => {
       carrierId: currentUser.id,
     });
 
-    await expect(service.acceptById(currentUser, offerContext.offerId)).rejects.toThrow(
+    await expect(service.acceptById(currentUser, offerPublicEntityId)).rejects.toThrow(
       new ConflictException(
         "Offer decisions are blocked because the transport request owner and offer carrier resolve to the same user."
       )
     );
 
     expect(offersRepositoryMock.acceptOfferInTransaction).not.toHaveBeenCalled();
-    expect(offerThreadsServiceMock.closeAcceptedOfferThread).not.toHaveBeenCalled();
+    expect(offerThreadsServiceMock.appendAcceptedOfferThread).not.toHaveBeenCalled();
     expect(vehicleCapacityServiceMock.createReservationForShipment).not.toHaveBeenCalled();
   });
 });

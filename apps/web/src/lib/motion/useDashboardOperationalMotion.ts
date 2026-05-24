@@ -17,6 +17,7 @@ type DashboardOperationalMotionOptions = {
   cardMotionLimit?: number;
 };
 
+// Operasyon liste sayfalarinda istatistik, ana icerik ve ilk kartlari kademeli acmak icin kullanilir.
 export function useDashboardOperationalMotion(
   contentRef: RefObject<HTMLElement | null>,
   {
@@ -29,12 +30,14 @@ export function useDashboardOperationalMotion(
   const hasAnimatedRef = useRef(false);
 
   useEffect(() => {
+    // Route id degisince onceki animasyon tamamlanmis sayilmaz.
     hasAnimatedRef.current = false;
   }, [routeTransitionId]);
 
   useEffect(() => {
     const contentElement = contentRef.current;
 
+    // Kullanici reduced motion istiyorsa veya hook pasifse hicbir tween baslatilmaz.
     if (!enabled || reducedMotion || !contentElement) {
       return;
     }
@@ -51,6 +54,7 @@ export function useDashboardOperationalMotion(
       const primaryTarget =
         contentElement.querySelector<HTMLElement>("[data-dashboard-primary]");
 
+      // Sayfa icerigi henuz mount olmadiysa observer ile sonraki DOM eklenmesi beklenir.
       if (!statsTarget && !primaryTarget) {
         return false;
       }
@@ -63,6 +67,7 @@ export function useDashboardOperationalMotion(
           ).slice(0, cardMotionLimit)
         : [];
 
+      // Buyuk listelerde sadece ilk kartlara reveal verilir, performans korunur.
       gsap.killTweensOf([
         ...(statsTarget ? [statsTarget] : []),
         ...(primaryTarget ? [primaryTarget] : []),

@@ -1,9 +1,9 @@
 export class OfferResponseDto {
-  id!: number;
-  requestId!: number;
+  id!: string;
+  requestId!: string;
   baslangicSehri!: string;
   varisSehri!: string;
-  aracId!: number | null;
+  aracId!: string | null;
   aracPlaka!: string | null;
   fiyat!: number;
   not!: string | null;

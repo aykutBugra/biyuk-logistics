@@ -12,6 +12,7 @@ import RatingComposerCard from "@/components/RatingComposerCard";
 import RequestImageGallery from "@/components/RequestImageGallery";
 import StatusBadge from "@/components/StatusBadge";
 import { ApiClientError } from "@/lib/api/api-client";
+import { confirmJobDelivery } from "@/lib/api/jobs";
 import {
   getIncomingOffersForRequest,
   type IncomingOfferItem,
@@ -87,6 +88,12 @@ function getJobStatusCopy(status: string): { title: string; description: string 
         description:
           "Tasima sureci resmi olarak basladi. Guncel durumlari bu ekrandan takip edebilirsin.",
       };
+    case "TESLIM_BEKLIYOR":
+      return {
+        title: "Teslim edildi, musteri onayi bekleniyor",
+        description:
+          "Nakliyeci teslimati bildirdi. Teslimat tamamlandiysa asagidan onaylayabilirsin.",
+      };
     case "TAMAMLANDI":
       return {
         title: "Nakliye tamamlandi",
@@ -98,6 +105,21 @@ function getJobStatusCopy(status: string): { title: string; description: string 
         title: "Bu istek icin anlasma saglandi",
         description: "Nakliye kaydi olustu ve durum bilgisi bu ekrandan takip edilebilir.",
       };
+  }
+}
+
+function getJobStatusLabel(status: string): string {
+  switch (status.trim().toUpperCase()) {
+    case "OLUSTURULDU":
+      return "Hazir";
+    case "BASLATILDI":
+      return "Yolda";
+    case "TESLIM_BEKLIYOR":
+      return "Musteri onayi bekliyor";
+    case "TAMAMLANDI":
+      return "Teslim edildi";
+    default:
+      return status;
   }
 }
 
@@ -163,12 +185,13 @@ export default function TransportRequestDetailPage() {
   const confirm = useConfirm();
   const showToast = useToast();
   const params = useParams<{ id: string }>();
-  const requestId = Number(params.id);
+  const requestId = params.id;
   const [request, setRequest] = useState<TransportRequestDetail | null>(null);
   const [incomingOffers, setIncomingOffers] = useState<IncomingOfferItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -180,7 +203,7 @@ export default function TransportRequestDetailPage() {
       return;
     }
 
-    if (!Number.isInteger(requestId) || requestId <= 0) {
+    if (!requestId.trim()) {
       setErrorMessage("Gecersiz istek numarasi.");
       setIsLoading(false);
       return;
@@ -351,6 +374,55 @@ export default function TransportRequestDetailPage() {
     }
   };
 
+  const handleConfirmDelivery = async () => {
+    if (
+      !accessToken ||
+      !request?.nakliye ||
+      !request.nakliye.canConfirmDelivery ||
+      isConfirmingDelivery
+    ) {
+      return;
+    }
+
+    const isConfirmed = await confirm({
+      title: "Teslimati onayla",
+      message: "Teslimatin tamamlandigini onaylamak istedigine emin misin?",
+      confirmLabel: "Teslimati onayla",
+      cancelLabel: "Vazgec",
+      defaultFocus: "accept",
+      dismissableMask: true,
+    });
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    try {
+      setIsConfirmingDelivery(true);
+      await confirmJobDelivery(request.nakliye.id, accessToken);
+      showToast({
+        severity: "success",
+        summary: "Teslimat onaylandi",
+        detail: "Nakliye tamamlandi.",
+      });
+      setReloadKey((currentKey) => currentKey + 1);
+    } catch (error) {
+      showToast({
+        severity: "error",
+        summary: "Teslimat onaylanamadi",
+        detail:
+          error instanceof ApiClientError
+            ? error.message
+            : "Teslimat onaylanirken beklenmeyen bir hata olustu.",
+        life: 3600,
+        closable: true,
+      });
+      setReloadKey((currentKey) => currentKey + 1);
+    } finally {
+      setIsConfirmingDelivery(false);
+    }
+  };
+
   const handleCreateRating = async (input: { puanDegeri: number; yorum?: string }) => {
     if (!accessToken || !request?.nakliye || isSubmittingRating) {
       return;
@@ -472,11 +544,11 @@ export default function TransportRequestDetailPage() {
                     label={getRequestStatusLabel(request.durum)}
                   />
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                    Istek #{request.id}
+                    Istek detayi
                   </span>
                   {request.nakliye ? (
                     <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                      Nakliye #{request.nakliye.id}
+                      Nakliye olustu
                     </span>
                   ) : null}
                 </div>
@@ -697,7 +769,7 @@ export default function TransportRequestDetailPage() {
                 }
               >
                 <dl className="space-y-3">
-                  <DetailInfoRow label="Istek no" value={`#${request.id}`} />
+                  <DetailInfoRow label="Kayit" value="Istek kaydi" />
                   <DetailInfoRow
                     label="Durum"
                     value={getRequestStatusLabel(request.durum)}
@@ -744,13 +816,13 @@ export default function TransportRequestDetailPage() {
                     <div className="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
                       <dt className="text-sm font-semibold text-slate-700">Durum</dt>
                       <dd className="mt-2">
-                        <StatusBadge status={request.nakliye.durum} />
+                        <StatusBadge
+                          status={request.nakliye.durum}
+                          label={getJobStatusLabel(request.nakliye.durum)}
+                        />
                       </dd>
                     </div>
-                    <DetailInfoRow
-                      label="Nakliye kaydi"
-                      value={`#${request.nakliye.id}`}
-                    />
+                    <DetailInfoRow label="Nakliye kaydi" value="Olusturuldu" />
                     <DetailInfoRow
                       label="Anlasilan fiyat"
                       value={formatCurrency(request.nakliye.anlasilanFiyat)}
@@ -780,6 +852,14 @@ export default function TransportRequestDetailPage() {
                       }
                     />
                     <DetailInfoRow
+                      label="Teslim bildirimi"
+                      value={
+                        request.nakliye.teslimBildirimTarihi
+                          ? formatDate(request.nakliye.teslimBildirimTarihi)
+                          : "Henuz bildirilmedi"
+                      }
+                    />
+                    <DetailInfoRow
                       label="Teslim"
                       value={
                         request.nakliye.teslimTarihi
@@ -788,6 +868,16 @@ export default function TransportRequestDetailPage() {
                       }
                     />
                   </dl>
+                  {request.nakliye.canConfirmDelivery ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleConfirmDelivery()}
+                      disabled={isConfirmingDelivery}
+                      className="app-button-primary mt-4 w-full justify-center disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isConfirmingDelivery ? "Onaylaniyor..." : "Teslimati onayla"}
+                    </button>
+                  ) : null}
                 </CustomerSectionSurface>
               ) : null}
             </div>

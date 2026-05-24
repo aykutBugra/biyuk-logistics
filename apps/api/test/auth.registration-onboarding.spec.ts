@@ -29,6 +29,7 @@ function createUniquePlateError(): Prisma.PrismaClientKnownRequestError {
 describe("AuthService registration and carrier onboarding", () => {
   const customerUser: AuthUserRecord = {
     id: 10,
+    publicId: "550e8400-e29b-41d4-a716-446655440010",
     ad: "Aykut",
     soyad: "Test",
     mail: "aykut@example.com",
@@ -89,7 +90,7 @@ describe("AuthService registration and carrier onboarding", () => {
       findActiveByIdentifier: jest.fn(),
       findProfileById: jest.fn(),
       toUserProfile: jest.fn((user) => ({
-        id: user.id,
+        id: user.publicId,
         ad: user.ad,
         soyad: user.soyad,
         mail: user.mail,
@@ -239,7 +240,7 @@ describe("AuthService registration and carrier onboarding", () => {
         password: "password123",
         role: ROLE_NAMES.MUSTERI,
       })
-    ).rejects.toThrow(new ConflictException("Mail is already in use."));
+    ).rejects.toThrow(new ConflictException("Mail zaten kullanımda."));
 
     expect(prismaMock.client.$transaction).not.toHaveBeenCalled();
   });
@@ -255,6 +256,7 @@ describe("AuthService registration and carrier onboarding", () => {
     const response = await service.completeCarrierOnboarding(
       {
         id: customerUser.id,
+        publicId: customerUser.publicId,
         mail: customerUser.mail,
         kullaniciAdi: customerUser.kullaniciAdi,
         roles: [ROLE_NAMES.MUSTERI],
@@ -294,6 +296,7 @@ describe("AuthService registration and carrier onboarding", () => {
       service.completeCarrierOnboarding(
         {
           id: customerUser.id,
+          publicId: customerUser.publicId,
           mail: customerUser.mail,
           kullaniciAdi: customerUser.kullaniciAdi,
           roles: [ROLE_NAMES.MUSTERI],
@@ -308,7 +311,7 @@ describe("AuthService registration and carrier onboarding", () => {
           kasaTipi: "PANELVAN",
         }
       )
-    ).rejects.toThrow(new ConflictException("Vehicle plate is already in use."));
+    ).rejects.toThrow(new ConflictException("Plaka zaten kullanımda."));
 
     expect(rolesServiceMock.assignRoleToUserInTransaction).not.toHaveBeenCalled();
   });
@@ -317,7 +320,7 @@ describe("AuthService registration and carrier onboarding", () => {
     const customerIntroDismissedAt = new Date("2026-05-05T10:00:00.000Z");
 
     usersServiceMock.dismissDashboardIntro.mockResolvedValue({
-      id: customerUser.id,
+      id: customerUser.publicId,
       ad: customerUser.ad,
       soyad: customerUser.soyad,
       mail: customerUser.mail,
@@ -333,6 +336,7 @@ describe("AuthService registration and carrier onboarding", () => {
     const response = await service.dismissDashboardIntro(
       {
         id: customerUser.id,
+        publicId: customerUser.publicId,
         mail: customerUser.mail,
         kullaniciAdi: customerUser.kullaniciAdi,
         roles: [ROLE_NAMES.MUSTERI],

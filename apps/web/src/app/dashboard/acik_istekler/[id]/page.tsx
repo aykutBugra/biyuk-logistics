@@ -92,13 +92,9 @@ function formatOfferStatusLabel(status: string): string {
   }
 }
 
-function parsePositiveInteger(value: string | null): number | null {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+function parsePublicId(value: string | null): string | null {
+  const trimmed = value?.trim() ?? "";
+  return trimmed ? trimmed : null;
 }
 
 function parsePositiveNumber(value: string | null): number | null {
@@ -113,7 +109,7 @@ function parsePositiveNumber(value: string | null): number | null {
 function buildCarrierRouteSelectionPath(
   pathname: string,
   searchParams: ReadonlyURLSearchParams | null,
-  carrierRouteId: number | null,
+  carrierRouteId: string | null,
   maxSapmaKm: number | null
 ): string {
   const nextSearchParams = new URLSearchParams(searchParams?.toString() ?? "");
@@ -122,7 +118,7 @@ function buildCarrierRouteSelectionPath(
     nextSearchParams.delete("carrierRouteId");
     nextSearchParams.delete("maxSapmaKm");
   } else {
-    nextSearchParams.set("carrierRouteId", String(carrierRouteId));
+    nextSearchParams.set("carrierRouteId", carrierRouteId);
 
     if (typeof maxSapmaKm === "number") {
       nextSearchParams.set("maxSapmaKm", String(maxSapmaKm));
@@ -136,7 +132,7 @@ function buildCarrierRouteSelectionPath(
 }
 
 function buildOpenRequestsListPath(
-  carrierRouteId: number | null,
+  carrierRouteId: string | null,
   maxSapmaKm: number | null
 ): string {
   if (carrierRouteId === null) {
@@ -144,7 +140,7 @@ function buildOpenRequestsListPath(
   }
 
   const searchParams = new URLSearchParams({
-    carrierRouteId: String(carrierRouteId),
+    carrierRouteId,
   });
 
   if (typeof maxSapmaKm === "number") {
@@ -156,7 +152,7 @@ function buildOpenRequestsListPath(
 
 function getPreferredOfferForRequest(
   offers: OfferItem[],
-  requestId: number
+  requestId: string
 ): OfferItem | null {
   const matchingOffers = offers.filter((offer) => offer.requestId === requestId);
 
@@ -172,7 +168,8 @@ function getPreferredOfferForRequest(
     return activeOffer;
   }
 
-  return matchingOffers.sort((left, right) => right.id - left.id)[0] ?? null;
+  return matchingOffers
+    .sort((left, right) => right.id.localeCompare(left.id))[0] ?? null;
 }
 
 function DetailInfoRow({
@@ -309,7 +306,7 @@ function OfferSummaryPanel({
               />
             </div>
           </div>
-          <DetailInfoRow label="Teklif no" value={`#${offer.id}`} />
+          <DetailInfoRow label="Teklif" value="Mevcut teklif" />
           <DetailInfoRow label="Arac" value={offer.aracPlaka ?? "Belirtilmedi"} />
           <DetailInfoRow
             label="Son hareket"
@@ -357,8 +354,8 @@ function OpenTransportRequestDetailPageContent({
   const searchParams = useSearchParams();
   const { accessToken, status } = useCarrierPageAccess();
   const { id } = use(params);
-  const requestId = Number(id);
-  const selectedCarrierRouteId = parsePositiveInteger(
+  const requestId = id;
+  const selectedCarrierRouteId = parsePublicId(
     searchParams?.get("carrierRouteId") ?? null
   );
   const selectedMaxSapmaKm =
@@ -423,7 +420,7 @@ function OpenTransportRequestDetailPageContent({
       return;
     }
 
-    if (!Number.isInteger(requestId) || requestId <= 0) {
+    if (!requestId.trim()) {
       setErrorMessage("Gecersiz istek numarasi.");
       setIsLoading(false);
       return;
@@ -464,7 +461,7 @@ function OpenTransportRequestDetailPageContent({
           ...currentForm,
           aracId:
             currentForm.aracId ||
-            (vehicleResponse.length === 1 ? String(vehicleResponse[0].id) : ""),
+            (vehicleResponse.length === 1 ? vehicleResponse[0].id : ""),
         }));
 
         if (requestResponse.hasExistingOffer) {
@@ -634,7 +631,7 @@ function OpenTransportRequestDetailPageContent({
       await createOffer(
         request.id,
         {
-          aracId: Number(form.aracId),
+          aracId: form.aracId,
           fiyat: Number(form.fiyat),
           not: form.not.trim() || undefined,
         },
@@ -698,7 +695,7 @@ function OpenTransportRequestDetailPageContent({
   };
 
   const selectedVehicle =
-    vehicles.find((vehicle) => vehicle.id === Number(form.aracId)) ?? null;
+    vehicles.find((vehicle) => vehicle.id === form.aracId) ?? null;
   const selectedVehicleCapacitySummary = selectedVehicle?.capacitySummary ?? null;
   const needsVehicleForSuggestion = Boolean(
     request?.tekTasimaIstiyor && !selectedVehicle
@@ -785,11 +782,11 @@ function OpenTransportRequestDetailPageContent({
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={request.durum} />
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                    Istek #{request.id}
+                    Istek detayi
                   </span>
                   {currentOffer ? (
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                      Teklif #{currentOffer.id}
+                      Teklifin var
                     </span>
                   ) : null}
                   {request.hasExistingOffer ? (
@@ -835,9 +832,9 @@ function OpenTransportRequestDetailPageContent({
                     Kayit tarihi
                   </p>
                   <p className="mt-1.5 text-sm font-semibold text-slate-900">
-                    {formatDate(request.olusturmaTarihi)}
+                {formatDate(request.olusturmaTarihi)}
                   </p>
-                </div>
+          </div>
 
                 <div
                   className={`flex-1 rounded-[1.1rem] border px-3.5 py-3 ${
@@ -852,7 +849,7 @@ function OpenTransportRequestDetailPageContent({
                     }`}
                   >
                     {request.hasExistingOffer ? "Mevcut teklif" : "Hazirlik durumu"}
-                  </p>
+                </p>
                   <p className="mt-1.5 text-sm font-semibold text-slate-900">
                     {request.hasExistingOffer
                       ? currentOffer
@@ -862,7 +859,7 @@ function OpenTransportRequestDetailPageContent({
                         ? "Teklif girmeye hazirsin"
                         : "Teklif icin aktif arac gerekiyor"}
                   </p>
-                </div>
+              </div>
 
                 <div className="flex flex-wrap gap-2">
                   {currentOffer ? (
@@ -872,12 +869,12 @@ function OpenTransportRequestDetailPageContent({
                     >
                       Konusmaya git
                     </Link>
-                  ) : null}
+                ) : null}
                   <Link href={backHref} className="app-button-secondary">
                     {request.hasExistingOffer ? "Tekliflerime don" : "Listeye don"}
                   </Link>
-                </div>
               </div>
+            </div>
             </div>
           </section>
 
@@ -896,7 +893,7 @@ function OpenTransportRequestDetailPageContent({
               tone="violet"
               icon={<i className="pi pi-clock text-lg" />}
             />
-          </div>
+            </div>
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
             <div className="space-y-4">
@@ -934,14 +931,14 @@ function OpenTransportRequestDetailPageContent({
                       label="Tasima modeli"
                       value={request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}
                     />
-                  </div>
+          </div>
                   <div className="grid gap-3 lg:grid-cols-2">
                     <DetailAddressCard
                       title="Baslangic"
                       location={formatLocationLabel(
-                        request.baslangicKonumMetni,
-                        request.baslangicSehri
-                      )}
+                      request.baslangicKonumMetni,
+                      request.baslangicSehri
+                    )}
                       city={request.normalizeBaslangicSehir || request.baslangicSehri}
                       district={request.normalizeBaslangicIlce}
                     />
@@ -954,7 +951,7 @@ function OpenTransportRequestDetailPageContent({
                       city={request.normalizeVarisSehir || request.varisSehri}
                       district={request.normalizeVarisIlce}
                     />
-                  </div>
+                </div>
                 </div>
               </CustomerSectionSurface>
 
@@ -966,7 +963,7 @@ function OpenTransportRequestDetailPageContent({
                   <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">
                     {request.yukDetay || "Ek aciklama paylasilmadi."}
                   </p>
-                </div>
+                  </div>
               </CustomerSectionSurface>
             </div>
 
@@ -987,8 +984,8 @@ function OpenTransportRequestDetailPageContent({
                       <div className="app-form-error-banner" role="alert">
                         <p className="text-sm font-semibold">Teklif gonderilemedi</p>
                         <p className="mt-1 text-sm">{submitErrorMessage}</p>
-                      </div>
-                    ) : null}
+                  </div>
+                ) : null}
 
                     {!request.hasActiveVehicle ? (
                       <InfoBanner tone="amber">
@@ -996,102 +993,102 @@ function OpenTransportRequestDetailPageContent({
                       </InfoBanner>
                     ) : null}
 
-                    {needsVehicleForSuggestion ? (
+            {needsVehicleForSuggestion ? (
                       <InfoBanner tone="amber">
-                        Tek tasima isteginde onerilen fiyat icin once arac secmelisin.
+                Tek tasima isteginde onerilen fiyat icin once arac secmelisin.
                       </InfoBanner>
-                    ) : null}
+            ) : null}
 
-                    {priceSuggestion ? (
+            {priceSuggestion ? (
                       <InfoBanner tone="blue">
-                        <p className="font-semibold">
+                <p className="font-semibold">
                           Onerilen fiyat: {formatCurrency(priceSuggestion.onerilenFiyat)}
-                        </p>
-                        <p className="mt-1">Mesafe: {priceSuggestion.km.toFixed(1)} km</p>
-                        <p className="mt-1">
-                          Faturalanan yuk: {priceSuggestion.faturalanabilirYukKg.toFixed(0)} kg
-                        </p>
-                        {request.tekTasimaIstiyor && selectedVehicle?.maksimumHacimM3 ? (
-                          <p className="mt-1">
-                            Tek tasima icin arac hacmi esas alindi:{" "}
-                            {selectedVehicle.maksimumHacimM3.toFixed(1)} m3
-                          </p>
-                        ) : null}
+                </p>
+                <p className="mt-1">Mesafe: {priceSuggestion.km.toFixed(1)} km</p>
+                <p className="mt-1">
+                  Faturalanan yuk: {priceSuggestion.faturalanabilirYukKg.toFixed(0)} kg
+                </p>
+                {request.tekTasimaIstiyor && selectedVehicle?.maksimumHacimM3 ? (
+                  <p className="mt-1">
+                    Tek tasima icin arac hacmi esas alindi:{" "}
+                    {selectedVehicle.maksimumHacimM3.toFixed(1)} m3
+                  </p>
+                ) : null}
                       </InfoBanner>
-                    ) : null}
+            ) : null}
 
                     <form className="grid gap-4" onSubmit={handleSubmit}>
-                      <div className="grid gap-2">
-                        <label className="text-sm font-semibold text-gray-900" htmlFor="aracId">
-                          Aktif arac sec
-                        </label>
-                        <select
-                          id="aracId"
-                          name="aracId"
-                          value={form.aracId}
-                          onChange={handleChange}
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-gray-900" htmlFor="aracId">
+                  Aktif arac sec
+                </label>
+                <select
+                  id="aracId"
+                  name="aracId"
+                  value={form.aracId}
+                  onChange={handleChange}
                           aria-invalid={
                             (vehicleSelectionValidationActive && !form.aracId) || undefined
-                          }
+                  }
                           disabled={isSubmitting || !request.hasActiveVehicle}
                           className="app-input block text-sm"
-                        >
-                          <option value="">Arac secin</option>
-                          {vehicles.map((vehicle) => (
-                            <option key={vehicle.id} value={vehicle.id}>
-                              {vehicle.plaka} - {vehicle.marka} {vehicle.model}
-                            </option>
-                          ))}
-                        </select>
+                >
+                  <option value="">Arac secin</option>
+                  {vehicles.map((vehicle) => (
+                    <option key={vehicle.id} value={vehicle.id}>
+                      {vehicle.plaka} - {vehicle.marka} {vehicle.model}
+                    </option>
+                  ))}
+                </select>
                         {vehicleSelectionValidationActive && !form.aracId ? (
                           <p className="app-field-status app-field-error">
                             Teklif vermeden once bir aktif arac sec.
                           </p>
                         ) : null}
-                      </div>
+              </div>
 
                       <MotionCollapse
                         isOpen={Boolean(selectedVehicle && selectedVehicleCapacitySummary)}
                       >
-                        {selectedVehicle && selectedVehicleCapacitySummary ? (
+              {selectedVehicle && selectedVehicleCapacitySummary ? (
                           <div
                             data-dashboard-form-conditional
                             className="grid gap-4 rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4"
                           >
                             <div className="grid gap-3">
                               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                Arac kapasite ozeti
-                              </p>
+                      Arac kapasite ozeti
+                    </p>
                               <DetailInfoRow
                                 label="Toplam agirlik"
                                 value={formatWeightKg(
-                                  selectedVehicleCapacitySummary.toplamAgirlikKg
-                                )}
+                            selectedVehicleCapacitySummary.toplamAgirlikKg
+                          )}
                               />
                               <DetailInfoRow
                                 label="Kalan agirlik"
                                 value={formatWeightKg(
-                                  selectedVehicleCapacitySummary.kalanAgirlikKg
-                                )}
+                            selectedVehicleCapacitySummary.kalanAgirlikKg
+                          )}
                               />
                               <DetailInfoRow
                                 label="Toplam hacim"
                                 value={formatVolumeM3(
-                                  selectedVehicleCapacitySummary.toplamHacimM3
-                                )}
+                            selectedVehicleCapacitySummary.toplamHacimM3
+                          )}
                               />
                               <DetailInfoRow
                                 label="Kalan hacim"
                                 value={formatVolumeM3(
-                                  selectedVehicleCapacitySummary.kalanHacimM3
-                                )}
+                            selectedVehicleCapacitySummary.kalanHacimM3
+                          )}
                               />
-                            </div>
+                  </div>
 
                             <div className="grid gap-3">
                               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                Bu yuk eklendiginde
-                              </p>
+                      Bu yuk eklendiginde
+                    </p>
                               <DetailInfoRow
                                 label="Yuk agirligi"
                                 value={formatWeightKg(request.agirlikKg)}
@@ -1108,86 +1105,86 @@ function OpenTransportRequestDetailPageContent({
                                 label="Teorik sonrasi hacim"
                                 value={formatVolumeM3(teorikKalanHacimM3)}
                               />
-                            </div>
+                  </div>
 
                             <div className="space-y-3">
-                              {showsWeightOverflowWarning ? (
+                    {showsWeightOverflowWarning ? (
                                 <InfoBanner tone="rose">
-                                  Bu aracta kayitli agirlik kapasitesi teorik olarak asiliyor.
+                        Bu aracta kayitli agirlik kapasitesi teorik olarak asiliyor.
                                 </InfoBanner>
-                              ) : null}
-                              {showsVolumeOverflowWarning ? (
+                    ) : null}
+                    {showsVolumeOverflowWarning ? (
                                 <InfoBanner tone="rose">
-                                  Bu aracta kayitli hacim kapasitesi teorik olarak asiliyor.
+                        Bu aracta kayitli hacim kapasitesi teorik olarak asiliyor.
                                 </InfoBanner>
-                              ) : null}
-                              {showsDedicatedIncomingWarning ? (
+                    ) : null}
+                    {showsDedicatedIncomingWarning ? (
                                 <InfoBanner tone="amber">
                                   Bu yuk tek tasima istiyor; secilen aracta aktif rezervasyon varken
                                   operasyonel uyumu ayrica kontrol etmelisin.
                                 </InfoBanner>
-                              ) : null}
-                              {showsDedicatedExistingWarning ? (
+                    ) : null}
+                    {showsDedicatedExistingWarning ? (
                                 <InfoBanner tone="amber">
-                                  Secilen aracta halihazirda tek tasima talebi olan aktif bir
-                                  rezervasyon var.
+                        Secilen aracta halihazirda tek tasima talebi olan aktif bir
+                        rezervasyon var.
                                 </InfoBanner>
-                              ) : null}
+                    ) : null}
                               <InfoBanner
                                 tone={selectedVehicleCapacitySummary.hesapEksigiVar ? "blue" : "slate"}
                               >
-                                Bu ozet yalnizca kayitli agirlik ve hacim verilerine dayanir;
+                        Bu ozet yalnizca kayitli agirlik ve hacim verilerine dayanir;
                                 fiziksel yerlesim ve istif uygunlugu ayrica kontrol edilmelidir.
                               </InfoBanner>
-                            </div>
-                          </div>
-                        ) : null}
+                  </div>
+                </div>
+              ) : null}
                       </MotionCollapse>
 
-                      <div className="grid gap-2">
-                        <label className="text-sm font-semibold text-gray-900" htmlFor="fiyat">
-                          Teklif fiyatiniz (TRY)
-                        </label>
-                        <input
-                          id="fiyat"
-                          name="fiyat"
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          value={form.fiyat}
-                          onChange={handleChange}
-                          placeholder="Orn: 12500"
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-gray-900" htmlFor="fiyat">
+                  Teklif fiyatiniz (TRY)
+                </label>
+                <input
+                  id="fiyat"
+                  name="fiyat"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={form.fiyat}
+                  onChange={handleChange}
+                  placeholder="Orn: 12500"
                           disabled={isSubmitting || !request.hasActiveVehicle}
                           className="app-input block text-sm"
-                          required
-                        />
-                      </div>
+                  required
+                />
+              </div>
 
-                      <div className="grid gap-2">
-                        <label className="text-sm font-semibold text-gray-900" htmlFor="not">
-                          Teklif notu
-                        </label>
-                        <textarea
-                          id="not"
-                          name="not"
-                          value={form.not}
-                          onChange={handleChange}
-                          rows={4}
-                          maxLength={255}
-                          placeholder="Teslim plani, sure veya ek aciklama yazabilirsiniz."
+              <div className="grid gap-2">
+                <label className="text-sm font-semibold text-gray-900" htmlFor="not">
+                  Teklif notu
+                </label>
+                <textarea
+                  id="not"
+                  name="not"
+                  value={form.not}
+                  onChange={handleChange}
+                  rows={4}
+                  maxLength={255}
+                  placeholder="Teslim plani, sure veya ek aciklama yazabilirsiniz."
                           disabled={isSubmitting || !request.hasActiveVehicle}
                           className="app-input block min-h-[7rem] resize-y text-sm"
-                        />
-                      </div>
+                />
+              </div>
 
-                      <button
-                        type="submit"
+              <button
+                type="submit"
                         disabled={isSubmitting || !request.hasActiveVehicle || !form.aracId}
                         className="app-button-primary app-form-submit-button app-pressable w-full justify-center text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                      >
+              >
                         {isSubmitting ? "Teklif gonderiliyor..." : "Teklif olustur"}
-                      </button>
-                    </form>
+              </button>
+            </form>
                   </div>
                 </CustomerSectionSurface>
               )}

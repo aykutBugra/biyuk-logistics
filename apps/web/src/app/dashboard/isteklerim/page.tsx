@@ -27,14 +27,16 @@ function normalizeStatus(value: string): string {
   return value.trim().toUpperCase();
 }
 
-function buildOfferCountMap(offers: MyIncomingOfferItem[]): Map<number, number> {
+// Gelen teklifler requestId bazinda sayilarak istek kartlarina rozet olarak eklenir.
+function buildOfferCountMap(offers: MyIncomingOfferItem[]): Map<string, number> {
   return offers.reduce((map, offer) => {
     const currentCount = map.get(offer.requestId) ?? 0;
     map.set(offer.requestId, currentCount + 1);
     return map;
-  }, new Map<number, number>());
+  }, new Map<string, number>());
 }
 
+// Bekleyen teklif olan kac farkli istek var dashboard metrigi icin hesaplanir.
 function buildPendingOfferRequestCount(offers: MyIncomingOfferItem[]): number {
   const requestIds = new Set(
     offers
@@ -45,6 +47,7 @@ function buildPendingOfferRequestCount(offers: MyIncomingOfferItem[]): number {
   return requestIds.size;
 }
 
+// Musterinin kendi tasima taleplerini ve gelen teklif ozetlerini listeler.
 export default function MyTransportRequestsPage() {
   const router = useRouter();
   const { accessToken, status } = useCustomerPageAccess();
@@ -54,9 +57,10 @@ export default function MyTransportRequestsPage() {
   const [incomingOffers, setIncomingOffers] = useState<MyIncomingOfferItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [deletingRequestId, setDeletingRequestId] = useState<number | null>(null);
+  const [deletingRequestId, setDeletingRequestId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Musteri guard hazir olmadan istek ve teklif listesi cagrilmaz.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -68,6 +72,7 @@ export default function MyTransportRequestsPage() {
 
     const loadRequests = async () => {
       try {
+        // Talepler ve gelen teklifler ayni ekranda birlestirilecegi icin paralel cekilir.
         setIsLoading(true);
         setErrorMessage(null);
 
@@ -146,7 +151,8 @@ export default function MyTransportRequestsPage() {
     };
   }, [accessToken, router, status]);
 
-  const handleDelete = async (requestId: number) => {
+  // Talep silme onaydan sonra backend durum/sahiplik kontrolunden gecerek yapilir.
+  const handleDelete = async (requestId: string) => {
     if (!accessToken || deletingRequestId === requestId) {
       return;
     }
@@ -180,6 +186,7 @@ export default function MyTransportRequestsPage() {
         detail: "Tasima istegi listeden kaldirildi.",
       });
     } catch (error) {
+      // Auth/rol hatasinda musteri tekrar uygun sayfaya yonlendirilir.
       if (error instanceof ApiClientError && error.status === 401) {
         clearStoredAuth();
         showToast({

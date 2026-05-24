@@ -10,7 +10,7 @@ export type CreateCarrierRouteInput = {
 export type UpdateCarrierRouteInput = CreateCarrierRouteInput;
 
 export type CarrierRouteListItem = {
-  id: number;
+  id: string;
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
@@ -37,6 +37,7 @@ export type CarrierRouteDetail = CarrierRouteListItem & {
   varisBoylam: number;
 };
 
+// Nakliyeci yeni hat/rota olustururken secilen iki canonical konum backend'e gider.
 export function createCarrierRoute(
   input: CreateCarrierRouteInput,
   accessToken: string
@@ -48,6 +49,7 @@ export function createCarrierRoute(
   });
 }
 
+// Nakliyecinin kendi tanimli rotalarini liste ekraninda kullanmak icin ceker.
 export function getMyCarrierRoutes(accessToken: string) {
   return apiFetch<CarrierRouteListItem[]>("/carrier-routes/my", {
     method: "GET",
@@ -55,15 +57,17 @@ export function getMyCarrierRoutes(accessToken: string) {
   });
 }
 
-export function getCarrierRouteDetail(id: number, accessToken: string) {
+// Detay ve duzenleme ekranlari tek rota kaydinin tum koordinat bilgilerini ister.
+export function getCarrierRouteDetail(id: string, accessToken: string) {
   return apiFetch<CarrierRouteDetail>(`/carrier-routes/my/${id}`, {
     method: "GET",
     accessToken,
   });
 }
 
+// Rota guncelleme create ile ayni input seklini kullanir.
 export function updateCarrierRoute(
-  id: number,
+  id: string,
   input: UpdateCarrierRouteInput,
   accessToken: string
 ) {
@@ -74,7 +78,8 @@ export function updateCarrierRoute(
   });
 }
 
-export function deleteCarrierRoute(id: number, accessToken: string) {
+// Sadece kullanicinin kendi rotasi backend sahiplik kontrolunden gecerse silinir.
+export function deleteCarrierRoute(id: string, accessToken: string) {
   return apiFetch<void>(`/carrier-routes/my/${id}`, {
     method: "DELETE",
     accessToken,

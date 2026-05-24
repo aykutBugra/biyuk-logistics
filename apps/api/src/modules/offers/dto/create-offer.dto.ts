@@ -1,5 +1,6 @@
 import { Transform } from "class-transformer";
 import {
+  IsUUID,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -19,11 +20,10 @@ const trimOptionalString = ({ value }: { value: unknown }) => {
 
 export class CreateOfferDto {
   @Transform(({ value }: { value: unknown }) =>
-    typeof value === "string" ? Number(value.trim()) : value
+    typeof value === "string" ? value.trim() : value
   )
-  @IsNumber({ allowNaN: false, allowInfinity: false })
-  @Min(1)
-  aracId!: number;
+  @IsUUID("4")
+  aracId!: string;
 
   @Transform(({ value }: { value: unknown }) =>
     typeof value === "string" ? Number(value.trim()) : value

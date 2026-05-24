@@ -8,6 +8,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
+import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { ImageProcessingService } from "../../infrastructure/media/image-processing.service";
 import { MediaStorageService } from "../../infrastructure/media/media-storage.service";
@@ -48,6 +49,8 @@ export class VehiclesService {
     private readonly imageProcessingService: ImageProcessingService
   ) {}
 
+  //Nakliyeci yeni arac olusturur. DTO normalize edilir, marka/model kutuphane id'si
+  //cozulur ve plaka benzersizlik hatalari kullaniciya Conflict olarak doner.
   async create(
     currentUser: AuthenticatedUser,
     createVehicleDto: CreateVehicleDto
@@ -91,6 +94,8 @@ export class VehiclesService {
   async getMine(
     currentUser: AuthenticatedUser
   ): Promise<VehicleListItemResponseDto[]> {
+    //Arac listesi kapasite ozetleriyle birlikte doner; aktif rezervasyonlar
+    //vehicle-capacity servisinden toplu olarak hesaplanir.
     this.assertCarrierRole(currentUser);
 
     const vehicles = await this.vehiclesRepository.findManyByOwnerId(currentUser.id);
@@ -107,8 +112,9 @@ export class VehiclesService {
 
   async getMineById(
     currentUser: AuthenticatedUser,
-    id: number
+    id: PublicEntityId
   ): Promise<VehicleDetailResponseDto> {
+    //Tek arac detayinda da sahiplik kontrolu repository sorgusunun where kosulunda yapilir.
     this.assertCarrierRole(currentUser);
 
     const vehicle = await this.vehiclesRepository.findByIdAndOwnerId(id, currentUser.id);
@@ -128,8 +134,10 @@ export class VehiclesService {
 
   async deleteById(
     currentUser: AuthenticatedUser,
-    id: number
+    id: PublicEntityId
   ): Promise<void> {
+    //Aktif veya tamamlanmamis nakliyeye bagli arac silinemez. Silme hard delete degil
+    //silmeTarihi setlenen soft delete islemidir.
     this.assertCarrierRole(currentUser);
 
     const hasActiveShipment =
@@ -156,9 +164,10 @@ export class VehiclesService {
 
   async updateById(
     currentUser: AuthenticatedUser,
-    id: number,
+    id: PublicEntityId,
     updateVehicleDto: UpdateVehicleDto
   ): Promise<VehicleDetailResponseDto> {
+    //Arac guncelleme, create ile ayni normalize/kutuphane cozumleme yolunu kullanir.
     this.assertCarrierRole(currentUser);
 
     const normalizedVehicle = normalizeVehicleDraft(updateVehicleDto);
@@ -207,9 +216,11 @@ export class VehiclesService {
 
   async updateImage(
     currentUser: AuthenticatedUser,
-    id: number,
+    id: PublicEntityId,
     file: Express.Multer.File | undefined
   ): Promise<VehicleDetailResponseDto> {
+    //Yeni arac fotografi once storage'a yazilir. DB guncellemesi basarisiz olursa
+    //yeni dosya geri silinir; basarili olursa eski fotograf temizlenir.
     this.assertCarrierRole(currentUser);
 
     if (!file) {
@@ -230,7 +241,7 @@ export class VehiclesService {
     const processedImage = await this.imageProcessingService.processVehicleImage(
       file.buffer
     );
-    const storageKey = `vehicle-images/${id}/${randomUUID()}.webp`;
+    const storageKey = `vehicle-images/${existingVehicle.publicId}/${randomUUID()}.webp`;
 
     await this.mediaStorageService.saveFile({
       storageKey,
@@ -274,8 +285,10 @@ export class VehiclesService {
 
   async deleteImage(
     currentUser: AuthenticatedUser,
-    id: number
+    id: PublicEntityId
   ): Promise<VehicleDetailResponseDto> {
+    //Fotograf yoksa arac yine guncel haliyle doner. Fotograf varsa DB key'i null
+    //yapilir ve eski storage dosyasi silinir.
     this.assertCarrierRole(currentUser);
 
     const existingVehicle = await this.vehiclesRepository.findByIdAndOwnerId(
@@ -327,6 +340,7 @@ export class VehiclesService {
   }
 
   private assertCarrierRole(currentUser: AuthenticatedUser) {
+    //Arac yonetimi sadece nakliyeci rolundeki kullanicilar icindir.
     if (currentUser.roles.includes(ROLE_NAMES.NAKLIYECI)) {
       return;
     }
@@ -335,6 +349,7 @@ export class VehiclesService {
   }
 
   private rethrowUniquePlateAsConflict(error: unknown): never | void {
+    //Prisma unique constraint hatasini kullanicinin anlayacagi plaka Conflict mesajina cevirir.
     if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
       return;
     }
@@ -354,8 +369,10 @@ export class VehiclesService {
     vehicle: StoredVehicleRecord,
     capacitySummary: VehicleCapacitySummary
   ): VehicleListItemResponseDto {
+    //Arac kaydini frontend'in liste/detayda kullanacagi response formatina cevirir.
+    //Kapasite ozeti de ayni payload'a eklenir.
     return {
-      id: vehicle.id,
+      id: vehicle.publicId,
       plaka: vehicle.plaka,
       marka: vehicle.marka,
       model: vehicle.model,
@@ -398,6 +415,7 @@ export class VehiclesService {
   private createEmptyCapacitySummary(
     vehicle: StoredVehicleRecord
   ): VehicleCapacitySummary {
+    //Aktif rezervasyon yoksa arac kapasitesi tamamen bos kabul edilir.
     return {
       toplamAgirlikKg: vehicle.maksimumAgirlikKg,
       toplamHacimM3: vehicle.maksimumHacimM3,
@@ -412,6 +430,7 @@ export class VehiclesService {
   }
 
   private assertValidVehicleImageFile(file: Express.Multer.File): void {
+    //Arac fotografi icin bos dosya, desteklenmeyen mimetype ve 5 MB ustu dosya engellenir.
     if (!file.buffer || file.buffer.length === 0) {
       throw new BadRequestException("Dosya icerigi okunamadi.");
     }

@@ -2,7 +2,7 @@ import { RequestImageSummaryResponseDto } from "../../../common/dto/request-imag
 import { OpenRequestRouteCompatibilityResponseDto } from "./open-request-route-compatibility-response.dto";
 
 export class OpenRequestListItemResponseDto {
-  id!: number;
+  id!: string;
   baslangicSehri!: string;
   varisSehri!: string;
   baslangicKonumMetni!: string | null;

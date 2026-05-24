@@ -1,5 +1,5 @@
 export class NotificationListItemResponseDto {
-  id!: number;
+  id!: string;
   tip!: string;
   baslik!: string;
   mesaj!: string;

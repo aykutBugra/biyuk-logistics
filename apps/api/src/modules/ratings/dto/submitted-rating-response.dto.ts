@@ -1,5 +1,5 @@
 export class SubmittedRatingResponseDto {
-  id!: number;
+  id!: string;
   puanDegeri!: number;
   yorum!: string | null;
   tarih!: Date;

@@ -132,7 +132,7 @@ export default function MyRequestCard({
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={request.durum} label={getRequestStatusLabel(request.durum)} />
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                #{request.id}
+                Istek
               </span>
               {request.imageCount && request.imageCount > 1 && !request.primaryImage ? (
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">

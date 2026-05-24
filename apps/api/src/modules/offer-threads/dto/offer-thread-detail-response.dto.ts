@@ -1,15 +1,24 @@
 import { OfferThreadMessageResponseDto } from "./offer-thread-message-response.dto";
 
+export class OfferThreadShipmentResponseDto {
+  id!: string;
+  durum!: string;
+  olusturmaTarihi!: Date;
+  baslangicTarihi!: Date | null;
+  teslimBildirimTarihi!: Date | null;
+  teslimTarihi!: Date | null;
+}
+
 export class OfferThreadDetailResponseDto {
-  id!: number;
-  offerId!: number;
-  requestId!: number;
+  id!: string;
+  offerId!: string;
+  requestId!: string;
   participantSide!: "customer" | "carrier";
   baslangicSehri!: string;
   varisSehri!: string;
   baslangicKonumMetni!: string | null;
   varisKonumMetni!: string | null;
-  karsiTarafId!: number;
+  karsiTarafId!: string;
   karsiTarafAdSoyad!: string;
   karsiTarafKullaniciAdi!: string;
   karsiTarafProfileImageUrl?: string;
@@ -23,6 +32,9 @@ export class OfferThreadDetailResponseDto {
   canSendCounterOffer!: boolean;
   canAcceptOffer!: boolean;
   canRejectOffer!: boolean;
+  canMarkDelivered!: boolean;
+  canConfirmDelivery!: boolean;
   lastPriceActorSide!: "customer" | "carrier";
+  shipment!: OfferThreadShipmentResponseDto | null;
   messages!: OfferThreadMessageResponseDto[];
 }

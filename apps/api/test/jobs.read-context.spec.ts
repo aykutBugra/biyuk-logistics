@@ -10,6 +10,7 @@ import { VehicleCapacityService } from "../src/modules/vehicle-capacity/vehicle-
 describe("JobsService read context", () => {
   const dualRoleUser = {
     id: 10,
+    publicId: "550e8400-e29b-41d4-a716-446655440010",
     mail: "dual@example.com",
     kullaniciAdi: "dual",
     roles: [ROLE_NAMES.MUSTERI, ROLE_NAMES.NAKLIYECI],
@@ -17,7 +18,9 @@ describe("JobsService read context", () => {
 
   const customerJob = {
     id: 501,
+    publicId: "550e8400-e29b-41d4-a716-446655440501",
     requestId: 700,
+    requestPublicId: "550e8400-e29b-41d4-a716-446655440700",
     baslangicSehri: "Istanbul",
     varisSehri: "Ankara",
     anlasilanFiyat: 9500,
@@ -25,8 +28,10 @@ describe("JobsService read context", () => {
     durumAdi: "OLUSTURULDU",
     olusturmaTarihi: new Date("2026-05-01T08:00:00.000Z"),
     baslangicTarihi: null,
+    teslimBildirimTarihi: null,
     teslimTarihi: null,
     counterpartyId: 22,
+    counterpartyPublicId: "550e8400-e29b-41d4-a716-446655440022",
     counterpartyName: "Carrier User",
     counterpartyUsername: "carrier",
   };
@@ -71,7 +76,7 @@ describe("JobsService read context", () => {
   it("requires explicit audience for dual-role job reads", async () => {
     await expect(service.getMine(dualRoleUser, {})).rejects.toThrow(
       new ConflictException(
-        "Dual-role users must specify ?as=customer or ?as=carrier for job reads."
+        "cift rolleri olan kullanıcılar, iş okuma işlemleri için ?as=customer veya ?as=carrier parametresini belirtmek zorundadır."
       )
     );
   });
@@ -85,7 +90,7 @@ describe("JobsService read context", () => {
     );
     expect(response).toEqual([
       expect.objectContaining({
-        id: customerJob.id,
+        id: customerJob.publicId,
         participantSide: "customer",
       }),
     ]);

@@ -13,6 +13,7 @@ export type VehicleFormState = {
   yukseklikCm: string;
 };
 
+// Form inputlari string tutulur; submit aninda sayiya cevrilir.
 export const initialVehicleFormState: VehicleFormState = {
   marka: "",
   model: "",
@@ -26,6 +27,7 @@ export const initialVehicleFormState: VehicleFormState = {
   yukseklikCm: "",
 };
 
+// UI form state'ini backend create endpoint'inin bekledigi sayisal input'a cevirir.
 export function toCreateVehicleInput(values: VehicleFormState): CreateVehicleInput {
   return {
     marka: values.marka,

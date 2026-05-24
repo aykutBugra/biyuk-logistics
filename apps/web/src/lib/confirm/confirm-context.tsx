@@ -18,8 +18,10 @@ export type ConfirmOptions = {
 
 export type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>;
 
+// Confirm dialog tek bir provider tarafindan yonetilir, sayfalar sadece promise tabanli fonksiyon cagirir.
 export const ConfirmContext = createContext<ConfirmFn | null>(null);
 
+// Provider olmadan confirm cagrisi yapilirsa akis sessiz gecmesin diye hata firlatilir.
 export function useConfirm(): ConfirmFn {
   const fn = useContext(ConfirmContext);
 

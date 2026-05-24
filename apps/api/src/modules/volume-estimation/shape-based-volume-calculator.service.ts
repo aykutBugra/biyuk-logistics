@@ -7,7 +7,7 @@ import type {
   VolumeAnalysisResult,
   VolumeAnalysisShapeType,
   VolumeAnalysisSizeClass,
-  VolumeAnalysisSpaceProfile,
+  VolumeAnalysisVolumeProfile,
 } from "./volume-estimation.types";
 import {
   dedupeStrings,
@@ -40,62 +40,96 @@ const FIXED_CAUTION_NOTES = [
 ] as const;
 
 
-//space_profile_base_bands, AI analizinde tanimlanan her bir alan profili ve boyut 
-// sinifi kombinasyonu icin temel bir hacim bandi tanimlar; bu band, sekil tabanli
-//  hesaplamada modifikasyonlar ve bias'lar uygulanmadan onceki konservatif bir 
-// tahmin olarak kullanilir; AI analizinden gelen alan profili veya boyut sinifi
-//  tanimlamalari beklenmedik sekilde hatali olabilir, bu nedenle her kombinasyon
-//  icin genis bir band tanimlamak, hesaplama sonucunun tamamen anlamsiz olmasini 
-// engellemeye yardimci olur; bu bandlar, nakliye endustrisindeki genel tasima
-//  profilleri ve boyutlari hakkinda uzman bilgisi ve deneyime dayali olarak 
-// belirlenmistir
-const SPACE_PROFILE_BASE_BANDS: Record<
-  VolumeAnalysisSpaceProfile,
+//AI'nin volumeProfile + sizeClass yorumunu m3 araligina baglayan temel tablo.
+//Bu tablo kesin olcu degil, lojistik tahmin bandi olarak kullanilir.
+const VOLUME_PROFILE_BANDS: Record<
+  VolumeAnalysisVolumeProfile,
   Record<VolumeAnalysisSizeClass, VolumeBand>
 > = {
-  compact: {
-    small: { min: 0.03, max: 0.12 },
-    medium: { min: 0.12, max: 0.4 },
-    large: { min: 0.4, max: 0.9 },
-    huge: { min: 0.9, max: 1.8 },
+  box_crate: {
+    small: { min: 0.02, max: 0.06 },
+    medium: { min: 0.06, max: 0.15 },
+    large: { min: 0.15, max: 0.35 },
+    huge: { min: 0.35, max: 0.7 },
   },
-  tall: {
+  pallet_load: {
+    small: { min: 0.35, max: 0.7 },
+    medium: { min: 0.7, max: 1.2 },
+    large: { min: 1.2, max: 2 },
+    huge: { min: 2, max: 3.2 },
+  },
+  desk_table: {
+    small: { min: 0.15, max: 0.3 },
+    medium: { min: 0.3, max: 0.55 },
+    large: { min: 0.45, max: 0.8 },
+    huge: { min: 0.8, max: 1.4 },
+  },
+  chair: {
+    small: { min: 0.05, max: 0.12 },
+    medium: { min: 0.12, max: 0.25 },
+    large: { min: 0.25, max: 0.45 },
+    huge: { min: 0.45, max: 0.75 },
+  },
+  sofa: {
+    small: { min: 0.55, max: 0.9 },
+    medium: { min: 0.8, max: 1.3 },
+    large: { min: 1.4, max: 2 },
+    huge: { min: 2, max: 3.2 },
+  },
+  shelf_bookcase: {
+    small: { min: 0.12, max: 0.3 },
+    medium: { min: 0.25, max: 0.55 },
+    large: { min: 0.45, max: 0.8 },
+    huge: { min: 0.8, max: 1.4 },
+  },
+  cabinet_wardrobe: {
+    small: { min: 0.3, max: 0.65 },
+    medium: { min: 0.6, max: 1.1 },
+    large: { min: 1, max: 1.8 },
+    huge: { min: 1.8, max: 3 },
+  },
+  bed_mattress: {
+    small: { min: 0.35, max: 0.7 },
+    medium: { min: 0.6, max: 1.1 },
+    large: { min: 0.9, max: 1.7 },
+    huge: { min: 1.4, max: 2.4 },
+  },
+  appliance: {
+    small: { min: 0.12, max: 0.25 },
+    medium: { min: 0.3, max: 0.4 },
+    large: { min: 0.55, max: 0.85 },
+    huge: { min: 0.85, max: 1.4 },
+  },
+  long_material: {
+    small: { min: 0.05, max: 0.15 },
+    medium: { min: 0.15, max: 0.35 },
+    large: { min: 0.35, max: 0.8 },
+    huge: { min: 0.8, max: 1.6 },
+  },
+  bag_sack: {
+    small: { min: 0.03, max: 0.08 },
+    medium: { min: 0.08, max: 0.18 },
+    large: { min: 0.18, max: 0.35 },
+    huge: { min: 0.35, max: 0.7 },
+  },
+  room_load: {
+    small: { min: 2, max: 4 },
+    medium: { min: 4, max: 8 },
+    large: { min: 8, max: 14 },
+    huge: { min: 14, max: 24 },
+  },
+  household_load: {
+    small: { min: 8, max: 16 },
+    medium: { min: 16, max: 30 },
+    large: { min: 30, max: 50 },
+    huge: { min: 50, max: 80 },
+  },
+  mixed_unknown: {
     small: { min: 0.2, max: 0.5 },
     medium: { min: 0.5, max: 1.2 },
-    large: { min: 1.2, max: 2.2 },
-    huge: { min: 2.2, max: 4 },
-  },
-  wide: {
-    small: { min: 0.15, max: 0.4 },
-    medium: { min: 0.4, max: 1 },
-    large: { min: 1, max: 2.2 },
-    huge: { min: 2.2, max: 4.5 },
-  },
-  bulky: {
-    small: { min: 0.2, max: 0.5 },
-    medium: { min: 0.5, max: 1.3 },
-    large: { min: 1.3, max: 2.8 },
-    huge: { min: 2.8, max: 5 },
-  },
-  long: {
-    small: { min: 0.1, max: 0.3 },
-    medium: { min: 0.3, max: 0.8 },
-    large: { min: 0.8, max: 1.8 },
-    huge: { min: 1.8, max: 3.5 },
-  },
-  mixed: {
-    small: { min: 0.1, max: 0.4 },
-    medium: { min: 0.4, max: 1.1 },
-    large: { min: 1.1, max: 2.5 },
+    large: { min: 1.2, max: 2.5 },
     huge: { min: 2.5, max: 5 },
   },
-};
-
-const PALLET_FLOOR_BANDS: Record<VolumeAnalysisSizeClass, VolumeBand> = {
-  small: { min: 0.3, max: 0.6 },
-  medium: { min: 0.6, max: 1.2 },
-  large: { min: 1, max: 2 },
-  huge: { min: 1.5, max: 3 },
 };
 
 const SHAPE_TYPE_RECOMMENDED_MULTIPLIERS: Record<
@@ -140,6 +174,8 @@ const PLACEMENT_RISK_RANK: Record<VolumeAnalysisPlacementRisk, number> = {
 // uygulayarak kalem bazinda bir hacim tahmini yapar;
 @Injectable()
 export class ShapeBasedVolumeCalculatorService {
+  //AI analizindeki her kalem icin hacim bandi hesaplar, adetle carpar ve toplam
+  //onerilen/min/max hacim sonucunu uretir.
   calculate(
     analysis: VolumeAnalysisResult
   ): ShapeBasedVolumeCalculationResult {
@@ -183,6 +219,7 @@ export class ShapeBasedVolumeCalculatorService {
     state: VolumeState,
     confidence: VolumeAnalysisConfidence
   ): VolumeState {
+    //AI guveni dustukce aralik genisletilir; recommended deger ayni kalir.
     return {
       ...state,
       halfWidth: state.halfWidth * CONFIDENCE_WIDTH_MULTIPLIERS[confidence],
@@ -203,30 +240,12 @@ export class ShapeBasedVolumeCalculatorService {
   }
 
   private calculateItem(item: VolumeAnalysisItem): ItemEstimate {
+    //Tek kalem icin temel bandi alir, sonra sekil, yuk tipi, istif ve risk
+    //modifier'larini sirayla uygular.
     const warnings: string[] = [];
-    const numericOverrideBand = this.resolveNumericOverrideBand(item);
-
-    if (numericOverrideBand) {
-      const overrideWarnings = this.buildNumericOverrideWarnings(item);
-      const overrideState = this.applyConfidenceWidth(
-        this.toState(numericOverrideBand),
-        item.confidence
-      );
-      const finalBand = this.toBand(overrideState);
-
-      warnings.push(...overrideWarnings);
-
-      return {
-        minHacimM3: roundVolume(finalBand.min),
-        maxHacimM3: roundVolume(finalBand.max),
-        recommendedHacimM3: roundVolume(overrideState.recommended),
-        warnings,
-      };
-    }
-
     const effectiveItem = this.applySemanticFallbacks(item, warnings);
     let state = this.toState(
-      SPACE_PROFILE_BASE_BANDS[effectiveItem.spaceProfile][effectiveItem.sizeClass]
+      VOLUME_PROFILE_BANDS[effectiveItem.volumeProfile][effectiveItem.sizeClass]
     );
     const effectiveStackable = this.resolveEffectiveStackable(effectiveItem);
 
@@ -261,23 +280,29 @@ export class ShapeBasedVolumeCalculatorService {
     effectiveStackable: boolean,
     warnings: string[]
   ): VolumeState {
+    //Kullanicinin yukTipi veya AI loadType yorumu, hacim bandini daha konservatif hale getirebilir.
     let nextState = state;
 
-    if (item.loadType === "koli" && !["compact", "mixed"].includes(item.spaceProfile)) {
+    if (item.loadType === "koli" && item.volumeProfile !== "box_crate") {
       warnings.push(
-        `"${item.label}" koli olarak yorumlandi ancak tasima profili alisilmadik gorundu; konservatif hacim korundu.`
+        `"${item.label}" koli olarak yorumlandi ancak hacim profili kutu/kasa degil; konservatif hacim korundu.`
       );
     }
 
-    if (item.loadType === "paletli") {
-      const palletFloor = PALLET_FLOOR_BANDS[item.sizeClass];
-      const flooredBand = this.applyPalletFloor(this.toBand(nextState), palletFloor);
-      nextState = this.toState(flooredBand);
+    if (item.loadType === "paletli" && item.volumeProfile !== "pallet_load") {
+      nextState = {
+        ...nextState,
+        recommended: nextState.recommended * 1.08,
+        halfWidth: nextState.halfWidth * 1.08,
+      };
+      warnings.push(
+        `"${item.label}" paletli yuk olarak secildigi icin hacim araligi konservatif tutuldu.`
+      );
     }
 
     if (
       item.loadType === "beyaz_esya" &&
-      !["tall", "bulky"].includes(item.spaceProfile)
+      item.volumeProfile !== "appliance"
     ) {
       nextState = {
         ...nextState,
@@ -290,7 +315,14 @@ export class ShapeBasedVolumeCalculatorService {
 
     if (
       item.loadType === "mobilya" &&
-      !["wide", "tall", "bulky"].includes(item.spaceProfile)
+      ![
+        "desk_table",
+        "chair",
+        "sofa",
+        "shelf_bookcase",
+        "cabinet_wardrobe",
+        "bed_mattress",
+      ].includes(item.volumeProfile)
     ) {
       nextState = {
         ...nextState,
@@ -303,7 +335,9 @@ export class ShapeBasedVolumeCalculatorService {
 
     if (
       item.loadType === "insaat_malzemesi" &&
-      !["long", "mixed", "bulky"].includes(item.spaceProfile)
+      !["long_material", "pallet_load", "mixed_unknown"].includes(
+        item.volumeProfile
+      )
     ) {
       nextState = {
         ...nextState,
@@ -330,19 +364,15 @@ export class ShapeBasedVolumeCalculatorService {
     return nextState;
   }
 
-  private applyPalletFloor(baseBand: VolumeBand, floorBand: VolumeBand): VolumeBand {
-    return {
-      min: Math.max(baseBand.min, floorBand.min),
-      max: Math.max(baseBand.max, floorBand.max),
-    };
-  }
-
   private applySemanticFallbacks(
     item: VolumeAnalysisItem,
     warnings: string[]
   ): VolumeAnalysisItem {
+    //Etiket uzerinden bariz esya turleri yakalanirsa mixed_unknown gibi belirsiz
+    //AI yorumlari daha anlamli profile'a cekilir.
     const normalizedLabel = normalizeVolumeLabel(item.label);
     const nextItem = { ...item };
+    const inferredProfile = this.inferVolumeProfileFromLabel(normalizedLabel);
 
     if (
       (normalizedLabel.includes("gardrop") || normalizedLabel.includes("dolap")) &&
@@ -364,7 +394,108 @@ export class ShapeBasedVolumeCalculatorService {
       );
     }
 
+    if (inferredProfile && nextItem.volumeProfile === "mixed_unknown") {
+      nextItem.volumeProfile = inferredProfile;
+      warnings.push(
+        `"${item.label}" icin etiket fallback'i ile ${inferredProfile} hacim profili kullanildi.`
+      );
+    }
+
     return nextItem;
+  }
+
+  private inferVolumeProfileFromLabel(
+    normalizedLabel: string
+  ): VolumeAnalysisVolumeProfile | null {
+    if (
+      normalizedLabel.includes("buzdolabi") ||
+      normalizedLabel.includes("camasir makinesi") ||
+      normalizedLabel.includes("bulasik makinesi") ||
+      normalizedLabel.includes("kurutma makinesi")
+    ) {
+      return "appliance";
+    }
+
+    if (
+      normalizedLabel.includes("kanepe") ||
+      normalizedLabel.includes("koltuk") ||
+      normalizedLabel.includes("sofa")
+    ) {
+      return "sofa";
+    }
+
+    if (normalizedLabel.includes("sandalye")) {
+      return "chair";
+    }
+
+    if (
+      normalizedLabel.includes("kitaplik") ||
+      normalizedLabel.includes("raf")
+    ) {
+      return "shelf_bookcase";
+    }
+
+    if (
+      normalizedLabel.includes("gardrop") ||
+      normalizedLabel.includes("dolap")
+    ) {
+      return "cabinet_wardrobe";
+    }
+
+    if (
+      normalizedLabel.includes("masa") ||
+      normalizedLabel.includes("sehpa") ||
+      normalizedLabel.includes("desk") ||
+      normalizedLabel.includes("table")
+    ) {
+      return "desk_table";
+    }
+
+    if (
+      normalizedLabel.includes("koli") ||
+      normalizedLabel.includes("kasa") ||
+      normalizedLabel.includes("crate")
+    ) {
+      return "box_crate";
+    }
+
+    if (normalizedLabel.includes("palet")) {
+      return "pallet_load";
+    }
+
+    if (
+      normalizedLabel.includes("yatak") ||
+      normalizedLabel.includes("dosek") ||
+      normalizedLabel.includes("silte") ||
+      normalizedLabel.includes("mattress")
+    ) {
+      return "bed_mattress";
+    }
+
+    if (
+      normalizedLabel.includes("boru") ||
+      normalizedLabel.includes("profil") ||
+      normalizedLabel.includes("kereste")
+    ) {
+      return "long_material";
+    }
+
+    if (
+      normalizedLabel.includes("cuval") ||
+      normalizedLabel.includes("torba")
+    ) {
+      return "bag_sack";
+    }
+
+    if (normalizedLabel.includes("oda")) {
+      return "room_load";
+    }
+
+    if (normalizedLabel.includes("ev esyasi")) {
+      return "household_load";
+    }
+
+    return null;
   }
 
   private applyShapeTypeModifiers(
@@ -372,6 +503,8 @@ export class ShapeBasedVolumeCalculatorService {
     shapeType: VolumeAnalysisShapeType,
     warnings: string[]
   ): VolumeState {
+    //Irregular veya unknown gibi sekiller tasimada daha fazla bosluk yaratabilecegi icin
+    //recommended ve aralik genisligi modifier alir.
     if (shapeType === "unknown") {
       warnings.push("Sekil yorumu belirsiz olan kalemlerde aralik konservatif genisletildi.");
     }
@@ -388,6 +521,8 @@ export class ShapeBasedVolumeCalculatorService {
     effectiveStackable: boolean,
     warnings: string[]
   ): VolumeState {
+    //Istiflenebilirlik, parcalanabilirlik, hassasiyet ve yerlestirme riski gibi
+    //genel tasima kurallari burada uygulanir.
     let nextState = state;
 
     if (effectiveStackable && !item.fragile) {
@@ -431,43 +566,14 @@ export class ShapeBasedVolumeCalculatorService {
     return nextState;
   }
 
-  private buildNumericOverrideWarnings(item: VolumeAnalysisItem): string[] {
-    const warnings: string[] = [];
-
-    if (item.disassemblable) {
-      warnings.push("Parcali tasima ile efektif hacim azalabilir.");
-    }
-
-    if (item.fragile) {
-      warnings.push("Hassas urun nedeniyle istifleme sinirli olabilir.");
-    }
-
-    if (item.placementRisk === "medium") {
-      warnings.push(
-        `"${item.label}" icin yerlestirme dikkati gerekse de fallback override bandi korundu.`
-      );
-    }
-
-    if (item.placementRisk === "high") {
-      warnings.push(
-        `"${item.label}" icin yerlestirme riski yuksek olsa da fallback override bandi korundu.`
-      );
-    }
-
-    if (
-      item.stackable &&
-      (item.fragile || item.placementRisk === "medium" || item.placementRisk === "high")
-    ) {
-      warnings.push(
-        `"${item.label}" icin istifleme bilgisi override hacim bandini degistirmedi.`
-      );
-    }
-
-    return warnings;
-  }
-
   private resolveEffectiveStackable(item: VolumeAnalysisItem): boolean {
-    if (item.loadType === "koli" && !item.fragile) {
+    //Koli/kasa/cuval gibi yuklerde hassas degilse istiflenebilirlik daha iyimser kabul edilir.
+    if (
+      (item.loadType === "koli" ||
+        item.volumeProfile === "box_crate" ||
+        item.volumeProfile === "bag_sack") &&
+      !item.fragile
+    ) {
       return true;
     }
 
@@ -477,6 +583,7 @@ export class ShapeBasedVolumeCalculatorService {
   private resolveBackendConfidence(
     analysis: VolumeAnalysisResult
   ): VolumeAnalysisConfidence {
+    //Backend guveni, en dusuk item guveni ve merge celiskilerine gore dusurulur.
     const lowestItemConfidence = analysis.items.reduce<VolumeAnalysisConfidence>(
       (lowestConfidence, item) =>
         lowerAnalysisConfidence(lowestConfidence, item.confidence),
@@ -492,7 +599,10 @@ export class ShapeBasedVolumeCalculatorService {
 
     if (
       analysis.items.some(
-        (item) => item.spaceProfile === "mixed" || item.shapeType === "unknown"
+        (item) =>
+          item.spaceProfile === "mixed" ||
+          item.shapeType === "unknown" ||
+          item.volumeProfile === "mixed_unknown"
       )
     ) {
       return lowerAnalysisConfidence(lowestItemConfidence, "medium");
@@ -500,42 +610,8 @@ export class ShapeBasedVolumeCalculatorService {
 
     return lowestItemConfidence;
   }
-
-
-  //resolveNumericOverrideBand fonksiyonu, AI analizindeki belirli kalemler icin onceden tanimlanmis numeric hacim bandlari uygular;
-//bu, AI'nin belirli nesneleri tanimlama veya yorumlama konusunda tutarsiz veya hatali olabilecegi durumlarda daha guvenilir bir tahmin saglamaya yardimci olur; 
-//AI analizindeki kalem label'i belirli anahtar kelimeleri iceriyorsa, ilgili band dondurulur; 
-//bu bandlar, nakliye endustrisindeki yaygin nesneler ve tasima profilleri hakkinda uzman bilgisi ve deneyime dayali olarak belirlenmistir
-  private resolveNumericOverrideBand(item: VolumeAnalysisItem): VolumeBand | null {
-    const normalizedLabel = normalizeVolumeLabel(item.label);
-
-    if (normalizedLabel.includes("buzdolabi")) {
-      return { min: 0.55, max: 0.85 };
-    }
-
-    if (
-      normalizedLabel.includes("camasir makinesi") ||
-      normalizedLabel.includes("bulasik makinesi") ||
-      normalizedLabel.includes("kurutma makinesi")
-    ) {
-      return { min: 0.3, max: 0.4 };
-    }
-
-    if (normalizedLabel.includes("l koltuk")) {
-      return { min: 2, max: 3.2 };
-    }
-
-    if (
-      normalizedLabel.includes("3lu koltuk") ||
-      normalizedLabel.includes("uclu koltuk")
-    ) {
-      return { min: 1.4, max: 2 };
-    }
-
-    return null;
-  }
-
   private toBand(state: VolumeState): VolumeBand {
+    //Recommended + halfWidth modelini min/max bandina cevirir.
     return {
       min: Math.max(0.01, state.recommended - state.halfWidth),
       max: Math.max(state.recommended + state.halfWidth, state.recommended),
@@ -543,6 +619,7 @@ export class ShapeBasedVolumeCalculatorService {
   }
 
   private toState(band: VolumeBand): VolumeState {
+    //Tablodaki min/max bandini modifier uygulanabilir internal state'e cevirir.
     return {
       recommended: (band.min + band.max) / 2,
       halfWidth: (band.max - band.min) / 2,

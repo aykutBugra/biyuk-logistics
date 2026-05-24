@@ -11,6 +11,8 @@ import { MediaStorageService } from "./media-storage.service";
     ImageProcessingService,
     LocalMediaStorageService,
     {
+      //henüz localde saklandığından dolayı LocalMediaStorageService'i 
+      //MediaStorageService olarak kullanırız.
       provide: MediaStorageService,
       useExisting: LocalMediaStorageService,
     },

@@ -1,5 +1,5 @@
 export class CarrierRouteListItemResponseDto {
-  id!: number;
+  id!: string;
   baslangicSehri!: string;
   varisSehri!: string;
   baslangicKonumMetni!: string | null;

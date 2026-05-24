@@ -1,11 +1,11 @@
 export class IncomingOfferListItemResponseDto {
-  id!: number;
-  requestId!: number;
-  carrierId!: number;
+  id!: string;
+  requestId!: string;
+  carrierId!: string;
   carrierName!: string;
   carrierUsername!: string;
   carrierProfileImageUrl?: string;
-  aracId!: number | null;
+  aracId!: string | null;
   aracPlaka!: string | null;
   fiyat!: number;
   not!: string | null;

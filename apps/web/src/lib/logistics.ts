@@ -1,3 +1,4 @@
+// Yuk tipi secenekleri form select'leri ve kart etiketleri icin tek kaynaktan gelir.
 export const CARGO_TYPE_OPTIONS = [
   { value: "GENEL", label: "Genel yuk" },
   { value: "PALETLI", label: "Paletli" },
@@ -8,6 +9,7 @@ export const CARGO_TYPE_OPTIONS = [
   { value: "DIGER", label: "Diger" },
 ] as const;
 
+// Arac kasa tipi etiketleri hem arac formlarinda hem detay kartlarinda kullanilir.
 export const VEHICLE_BODY_TYPE_OPTIONS = [
   { value: "PANELVAN", label: "Panelvan" },
   { value: "KAPALI_KASA", label: "Kapali kasa" },
@@ -18,6 +20,7 @@ export const VEHICLE_BODY_TYPE_OPTIONS = [
   { value: "DIGER", label: "Diger" },
 ] as const;
 
+// Option listelerinden hizli label lookup yapmak icin map objeleri uretilir.
 const cargoTypeLabels = Object.fromEntries(
   CARGO_TYPE_OPTIONS.map((option) => [option.value, option.label])
 ) as Record<string, string>;
@@ -26,6 +29,7 @@ const vehicleBodyTypeLabels = Object.fromEntries(
   VEHICLE_BODY_TYPE_OPTIONS.map((option) => [option.value, option.label])
 ) as Record<string, string>;
 
+// Backend enum degeri bilinmiyorsa ham deger gosterilir, bos ise "Belirtilmedi" yazar.
 export function getCargoTypeLabel(value: string | null | undefined): string {
   if (!value) {
     return "Belirtilmedi";
@@ -44,6 +48,7 @@ export function getVehicleBodyTypeLabel(
   return vehicleBodyTypeLabels[value] ?? value;
 }
 
+// Konum metni varsa onu, yoksa sehir bilgisini kullanarak kartlarda okunur baslik verir.
 export function formatLocationLabel(
   konumMetni: string | null | undefined,
   sehir: string
@@ -51,6 +56,7 @@ export function formatLocationLabel(
   return konumMetni?.trim() || sehir;
 }
 
+// Agirlik, hacim, mesafe ve sure formatlari tum dashboard kartlarinda ayni gorunsun diye merkezilesir.
 export function formatWeightKg(value: number | null | undefined): string {
   if (value === null || value === undefined) {
     return "Belirtilmedi";
@@ -113,6 +119,7 @@ export function formatDimensionsCm(values: {
   return `${values.uzunlukCm} x ${values.genislikCm} x ${values.yukseklikCm} cm`;
 }
 
+// Filtre objesinde en az bir anlamli deger var mi toolbar rozetleri icin kontrol eder.
 export function hasActiveFilters(values: Record<string, unknown>): boolean {
   return Object.values(values).some((value) => {
     if (typeof value === "boolean") {

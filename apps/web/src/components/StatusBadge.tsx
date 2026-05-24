@@ -16,7 +16,11 @@ function getBadgeClasses(status: string): string {
     return "bg-blue-50 text-blue-700 ring-blue-100";
   }
 
-  if (normalizedStatus === "ANLASILDI" || normalizedStatus === "BASLATILDI") {
+  if (
+    normalizedStatus === "ANLASILDI" ||
+    normalizedStatus === "BASLATILDI" ||
+    normalizedStatus === "TESLIM_BEKLIYOR"
+  ) {
     return "bg-amber-50 text-amber-700 ring-amber-100";
   }
 

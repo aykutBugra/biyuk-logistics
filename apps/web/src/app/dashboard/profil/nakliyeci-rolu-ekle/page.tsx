@@ -20,6 +20,7 @@ import {
   type VehicleFormState,
 } from "@/lib/vehicles/vehicle-form";
 
+// Musteri hesabina nakliyeci rolunu ilk arac kaydi ile ekleyen onboarding sayfasi.
 export default function CarrierRoleOnboardingPage() {
   const router = useRouter();
   const { accessToken, isAdmin, isCarrier, isCustomer, status } =
@@ -29,6 +30,7 @@ export default function CarrierRoleOnboardingPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    // Zaten nakliyeci olan veya musteri olmayan kullanici bu akista kalmaz.
     if (status !== "ready") {
       return;
     }
@@ -43,6 +45,7 @@ export default function CarrierRoleOnboardingPage() {
     }
   }, [isAdmin, isCarrier, isCustomer, router, status]);
 
+  // Ilk arac formu string state olarak tutulur.
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -55,6 +58,7 @@ export default function CarrierRoleOnboardingPage() {
     }));
   };
 
+  // Ilk arac basariyla olusunca auth profili guncellenir ve nakliyeci workspace'e gecilir.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 

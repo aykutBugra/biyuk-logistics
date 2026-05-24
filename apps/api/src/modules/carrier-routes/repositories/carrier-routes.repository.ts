@@ -1,9 +1,14 @@
 import { Prisma } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
+import {
+  type PublicEntityId,
+  publicEntityWhere,
+} from "../../../common/public-ids/public-entity-id";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
 const carrierRouteSelect = {
   id: true,
+  publicId: true,
   baslangicSehri: true,
   varisSehri: true,
   baslangicKonumMetni: true,
@@ -27,6 +32,7 @@ const carrierRouteSelect = {
   olusturmaTarihi: true,
 } satisfies Prisma.CarrierRouteSelect;
 
+//Carrier route liste ve detay ekranlari icin ayni route snapshot alanlari okunur.
 type StoredCarrierRouteQuery = Prisma.CarrierRouteGetPayload<{
   select: typeof carrierRouteSelect;
 }>;
@@ -62,6 +68,7 @@ export type UpdateCarrierRouteRecordInput = Omit<
 
 export type StoredCarrierRouteRecord = {
   id: number;
+  publicId: string;
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;
@@ -89,6 +96,7 @@ export type StoredCarrierRouteRecord = {
 export class CarrierRoutesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  //Nakliyecinin route tanimini canonical konum ve rota metrikleriyle kaydeder.
   async create(
     input: CreateCarrierRouteRecordInput
   ): Promise<StoredCarrierRouteRecord> {
@@ -128,6 +136,7 @@ export class CarrierRoutesRepository {
   async findManyByCarrierId(
     nakliyeciId: number
   ): Promise<StoredCarrierRouteRecord[]> {
+    //Nakliyecinin silinmemis route'lari planlanan tarihe gore listelenir.
     const carrierRoutes = await this.prisma.client.carrierRoute.findMany({
       where: {
         nakliyeciId,
@@ -143,12 +152,13 @@ export class CarrierRoutesRepository {
   }
 
   async findByIdAndCarrierId(
-    id: number,
+    id: PublicEntityId,
     nakliyeciId: number
   ): Promise<StoredCarrierRouteRecord | null> {
+    //Detay okuma id ve nakliyeciId ile yapilir; baska nakliyecinin rotasi okunamaz.
     const carrierRoute = await this.prisma.client.carrierRoute.findFirst({
       where: {
-        id,
+        ...publicEntityWhere(id),
         nakliyeciId,
         silmeTarihi: null,
       },
@@ -159,13 +169,14 @@ export class CarrierRoutesRepository {
   }
 
   async updateByIdAndCarrierId(
-    id: number,
+    id: PublicEntityId,
     nakliyeciId: number,
     input: UpdateCarrierRouteRecordInput
   ): Promise<StoredCarrierRouteRecord | null> {
+    //Guncelleme sahiplik ve soft delete filtresiyle yapilir; sonuc tekrar okunup map edilir.
     const result = await this.prisma.client.carrierRoute.updateMany({
       where: {
-        id,
+        ...publicEntityWhere(id),
         nakliyeciId,
         silmeTarihi: null,
       },
@@ -202,7 +213,7 @@ export class CarrierRoutesRepository {
 
     const carrierRoute = await this.prisma.client.carrierRoute.findFirst({
       where: {
-        id,
+        ...publicEntityWhere(id),
         nakliyeciId,
         silmeTarihi: null,
       },
@@ -213,12 +224,13 @@ export class CarrierRoutesRepository {
   }
 
   async softDeleteByIdAndCarrierId(
-    id: number,
+    id: PublicEntityId,
     nakliyeciId: number
   ): Promise<boolean> {
+    //Rota kaydi hard delete edilmez; silmeTarihi setlenerek pasife alinir.
     const result = await this.prisma.client.carrierRoute.updateMany({
       where: {
-        id,
+        ...publicEntityWhere(id),
         nakliyeciId,
         silmeTarihi: null,
       },
@@ -233,8 +245,10 @@ export class CarrierRoutesRepository {
   private mapStoredCarrierRoute(
     carrierRoute: StoredCarrierRouteQuery
   ): StoredCarrierRouteRecord {
+    //Prisma Decimal alanlarini number'a cevirip service'in kullandigi sade route kaydini uretir.
     return {
       id: carrierRoute.id,
+      publicId: carrierRoute.publicId,
       baslangicSehri: carrierRoute.baslangicSehri,
       varisSehri: carrierRoute.varisSehri,
       baslangicKonumMetni: carrierRoute.baslangicKonumMetni,

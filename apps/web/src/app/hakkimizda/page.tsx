@@ -1,5 +1,6 @@
 import PublicRevealGroup from "@/components/PublicRevealGroup";
 
+// Public hakkimizda sayfasi; markanin ne yaptigini ve operasyon yaklasimini anlatir.
 export default function AboutPage() {
   return (
     <main className="px-4 py-12">

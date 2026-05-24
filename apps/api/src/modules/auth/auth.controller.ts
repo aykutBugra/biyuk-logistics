@@ -25,8 +25,12 @@ import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
 import { RegisterDto } from "./dto/register.dto";
 
+
 const MAX_PROFILE_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
+
+//AuthController, kimlik doğrulama ile ilgili HTTP isteklerini işleyen bir denetleyicidir.
+//AuthService'i kullanarak kayıt, giriş, token yenileme, profil güncelleme gibi işlemleri gerçekleştirir.
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

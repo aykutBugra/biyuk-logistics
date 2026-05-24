@@ -1,7 +1,7 @@
 import { RequestImageSummaryResponseDto } from "../../../common/dto/request-image-summary-response.dto";
 
 export class TransportRequestListItemResponseDto {
-  id!: number;
+  id!: string;
   baslangicSehri!: string;
   varisSehri!: string;
   baslangicKonumMetni!: string | null;

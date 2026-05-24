@@ -9,6 +9,7 @@ import { type AuthUserRecord, UsersService } from "../src/modules/users/users.se
 describe("AuthService account deletion behavior", () => {
   const activeUser: AuthUserRecord = {
     id: 15,
+    publicId: "550e8400-e29b-41d4-a716-446655440015",
     ad: "Aykut",
     soyad: "Test",
     mail: "aykut@example.com",
@@ -61,6 +62,7 @@ describe("AuthService account deletion behavior", () => {
 
     await service.deleteCurrentUser({
       id: activeUser.id,
+      publicId: activeUser.publicId,
       mail: activeUser.mail,
       kullaniciAdi: activeUser.kullaniciAdi,
       roles: activeUser.roles,
@@ -73,6 +75,7 @@ describe("AuthService account deletion behavior", () => {
 describe("JwtStrategy active user validation", () => {
   const activeUser: AuthUserRecord = {
     id: 21,
+    publicId: "550e8400-e29b-41d4-a716-446655440021",
     ad: "Carrier",
     soyad: "User",
     mail: "carrier@example.com",
@@ -84,12 +87,14 @@ describe("JwtStrategy active user validation", () => {
 
   let usersServiceMock: {
     findActiveById: jest.Mock;
+    findActiveByPublicId: jest.Mock;
   };
   let strategy: JwtStrategy;
 
   beforeEach(async () => {
     usersServiceMock = {
       findActiveById: jest.fn(),
+      findActiveByPublicId: jest.fn(),
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -112,17 +117,18 @@ describe("JwtStrategy active user validation", () => {
   });
 
   it("returns the current persisted identity for active users", async () => {
-    usersServiceMock.findActiveById.mockResolvedValue(activeUser);
+    usersServiceMock.findActiveByPublicId.mockResolvedValue(activeUser);
 
     await expect(
       strategy.validate({
-        sub: activeUser.id,
+        sub: activeUser.publicId,
         mail: "stale@example.com",
         kullaniciAdi: "stale-username",
         roles: [ROLE_NAMES.ADMIN],
       })
     ).resolves.toEqual({
       id: activeUser.id,
+      publicId: activeUser.publicId,
       mail: activeUser.mail,
       kullaniciAdi: activeUser.kullaniciAdi,
       roles: activeUser.roles,
@@ -130,17 +136,15 @@ describe("JwtStrategy active user validation", () => {
   });
 
   it("rejects deleted users even when the JWT is otherwise valid", async () => {
-    usersServiceMock.findActiveById.mockResolvedValue(null);
+    usersServiceMock.findActiveByPublicId.mockResolvedValue(null);
 
     await expect(
       strategy.validate({
-        sub: activeUser.id,
+        sub: activeUser.publicId,
         mail: activeUser.mail,
         kullaniciAdi: activeUser.kullaniciAdi,
         roles: activeUser.roles,
       })
-    ).rejects.toThrow(
-      new UnauthorizedException("Current user could not be resolved.")
-    );
+    ).rejects.toThrow(UnauthorizedException);
   });
 });

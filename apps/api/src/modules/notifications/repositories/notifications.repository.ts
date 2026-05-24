@@ -1,9 +1,14 @@
 import { Prisma } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
+import {
+  type PublicEntityId,
+  publicEntityWhere,
+} from "../../../common/public-ids/public-entity-id";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
 const notificationSelect = {
   id: true,
+  publicId: true,
   tip: true,
   baslik: true,
   mesaj: true,
@@ -13,6 +18,7 @@ const notificationSelect = {
   olusturmaTarihi: true,
 } satisfies Prisma.BildirimSelect;
 
+//Bildirim listesi ve okundu islemleri ayni temel alanlari kullanir.
 type StoredNotificationQuery = Prisma.BildirimGetPayload<{
   select: typeof notificationSelect;
 }>;
@@ -28,6 +34,7 @@ export type CreateNotificationRecordInput = {
 
 export type StoredNotificationRecord = {
   id: number;
+  publicId: string;
   tip: string;
   baslik: string;
   mesaj: string;
@@ -41,6 +48,8 @@ export type StoredNotificationRecord = {
 export class NotificationsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  //olayAnahtari benzersiz oldugu icin ayni olaydan tekrar bildirim uretilirse
+  //ikinci kayit olusturulmaz ve null doner.
   async createIfAbsent(
     input: CreateNotificationRecordInput
   ): Promise<StoredNotificationRecord | null> {
@@ -71,6 +80,7 @@ export class NotificationsRepository {
   }
 
   async findManyByUserId(userId: number, limit = 50): Promise<StoredNotificationRecord[]> {
+    //Liste once okunmamis sonra okunmus bildirimlerden olusur; toplam sonuc limit ile kesilir.
     const [unreadNotifications, readNotifications] = await Promise.all([
       this.prisma.client.bildirim.findMany({
         where: {
@@ -100,6 +110,7 @@ export class NotificationsRepository {
   }
 
   async countUnreadByUserId(userId: number): Promise<number> {
+    //Badge sayisi icin sadece okunmaTarihi null olan kayitlar sayilir.
     return this.prisma.client.bildirim.count({
       where: {
         kullaniciId: userId,
@@ -109,12 +120,13 @@ export class NotificationsRepository {
   }
 
   async findByIdAndUserId(
-    notificationId: number,
+    notificationId: PublicEntityId,
     userId: number
   ): Promise<StoredNotificationRecord | null> {
+    //Bildirim sahiplik kontrolu id+kullaniciId ile yapilir.
     const notification = await this.prisma.client.bildirim.findFirst({
       where: {
-        id: notificationId,
+        ...publicEntityWhere(notificationId),
         kullaniciId: userId,
       },
       select: notificationSelect,
@@ -124,9 +136,10 @@ export class NotificationsRepository {
   }
 
   async markAsReadByIdAndUserId(
-    notificationId: number,
+    notificationId: PublicEntityId,
     userId: number
   ): Promise<StoredNotificationRecord | null> {
+    //Zaten okunmus bildirim yeniden guncellenmez; mevcut haliyle doner.
     const existingNotification = await this.findByIdAndUserId(notificationId, userId);
 
     if (!existingNotification) {
@@ -139,7 +152,7 @@ export class NotificationsRepository {
 
     const notification = await this.prisma.client.bildirim.update({
       where: {
-        id: notificationId,
+        publicId: existingNotification.publicId,
       },
       data: {
         okunmaTarihi: new Date(),
@@ -151,6 +164,7 @@ export class NotificationsRepository {
   }
 
   async markAllAsReadByUserId(userId: number): Promise<number> {
+    //Kullanicinin tum okunmamis bildirimlerine ayni okunma tarihi basilir.
     const result = await this.prisma.client.bildirim.updateMany({
       where: {
         kullaniciId: userId,
@@ -167,8 +181,10 @@ export class NotificationsRepository {
   private mapStoredNotification(
     notification: StoredNotificationQuery
   ): StoredNotificationRecord {
+    //Prisma sonucunu service katmaninin kullandigi sade bildirim kaydina cevirir.
     return {
       id: notification.id,
+      publicId: notification.publicId,
       tip: notification.tip,
       baslik: notification.baslik,
       mesaj: notification.mesaj,

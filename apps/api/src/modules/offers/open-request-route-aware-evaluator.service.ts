@@ -8,7 +8,7 @@ import {
 } from "./repositories/offers.repository";
 
 export type OpenRequestRouteCompatibilityResult = {
-  carrierRouteId: number;
+  carrierRouteId: string;
   extraMesafeMetre: number;
   extraSureSaniye: number;
   uygunlukEtiketi: "UYGUN" | "SINIRDA" | "UYGUN_DEGIL";
@@ -161,46 +161,25 @@ export class OpenRequestRouteAwareEvaluator {
     }
 
     try {
-      // Nihai karar icin gercek yol metrigini "start -> pickup -> dropoff -> end"
-      // seklinde hesaplatarak ana rota ile karsilastirir.
+
       const routeMetrics = await this.locationsService.getRouteMetrics(
         provider,
-        {
-          lat: carrierRoute.baslangicEnlem,
-          lng: carrierRoute.baslangicBoylam,
-        },
-        {
-          lat: carrierRoute.varisEnlem,
-          lng: carrierRoute.varisBoylam,
-        },
+        {lat: carrierRoute.baslangicEnlem,lng: carrierRoute.baslangicBoylam,},
+        {lat: carrierRoute.varisEnlem,lng: carrierRoute.varisBoylam,},
         [
-          {
-            lat: request.baslangicEnlem,
-            lng: request.baslangicBoylam,
-          },
-          {
-            lat: request.varisEnlem,
-            lng: request.varisBoylam,
-          },
-        ]
-      );
+          {lat: request.baslangicEnlem,lng: request.baslangicBoylam,},
+          {lat: request.varisEnlem,lng: request.varisBoylam,},
+        ]);
 
-      // Burada bulunan ekstra mesafe ve sure, request araya alindiginda secili
-      // ana rotanin ne kadar uzadigini ifade eder.
       const anaRotaMesafeMetre = carrierRoute.rotaMesafeMetre ?? 0;
       const anaRotaSureSaniye = carrierRoute.rotaSureSaniye ?? 0;
       const extraMesafeMetre = Math.max(
-        0,
-        routeMetrics.distanceMeters - anaRotaMesafeMetre
-      );
-
-      // Nihai filtre esigi, kusbakisi degil gercek rota ciktisindan uretilen
-      // ekstra mesafeye gore uygulanir.
+        0,routeMetrics.distanceMeters - anaRotaMesafeMetre);
       if (extraMesafeMetre > effectiveMaxSapmaKm * 1000) {
         return {
-          status: "OUTSIDE_ROUTE_FILTER",
-        };
-      }
+          status: "OUTSIDE_ROUTE_FILTER",};}
+
+
 
       const extraSureSaniye = Math.max(
         0,

@@ -110,6 +110,7 @@ function getConversationPreview(thread: OfferThreadSummary): string {
   return "Konusma akisi hazir.";
 }
 
+// Nakliyeci tarafinda henuz cevap bekleyen konusmalari ayirt eder.
 function isCarrierPendingConversation(thread: OfferThreadSummary): boolean {
   return !thread.isClosed && normalizeStatus(thread.durum) === "OLUSTURULDU";
 }
@@ -150,6 +151,7 @@ function canOpenCarrierRequestDetail(thread: OfferThreadSummary): boolean {
   return isCarrierPendingConversation(thread);
 }
 
+// Thread musteri rolundeki filtre sekmesine uygun mu kontrol edilir.
 function matchesCustomerConversationFilter(
   thread: OfferThreadSummary,
   filter: CustomerConversationFilter
@@ -166,6 +168,7 @@ function matchesCustomerConversationFilter(
   }
 }
 
+// Thread nakliyeci rolundeki filtre sekmesine uygun mu kontrol edilir.
 function matchesCarrierConversationFilter(
   thread: OfferThreadSummary,
   filter: CarrierConversationFilter
@@ -182,6 +185,7 @@ function matchesCarrierConversationFilter(
   }
 }
 
+// Arama, taraf adi, kullanici adi, rota ve son mesaj metni uzerinden yapilir.
 function matchesConversationSearch(
   thread: OfferThreadSummary,
   query: string
@@ -204,6 +208,7 @@ function matchesConversationSearch(
   return searchableText.includes(query);
 }
 
+// Nakliyeci konusmalarinda once okunmamislar, sonra son hareket tarihi one gelir.
 function sortCarrierThreads(
   left: OfferThreadSummary,
   right: OfferThreadSummary
@@ -218,6 +223,7 @@ function sortCarrierThreads(
   );
 }
 
+// Nakliyeci tarafina ozel konusma karti; musteri kartindan farkli aksiyon linkleri tasir.
 function CarrierConversationCard({
   thread,
 }: {
@@ -323,6 +329,7 @@ function CarrierConversationCard({
   );
 }
 
+// Musteri ve nakliyeci konusmalarini aktif workspace'e gore tek ekranda listeler.
 export default function OfferThreadsPage() {
   const router = useRouter();
   const { accessToken, isCarrierWorkspace, isCustomerWorkspace, primaryRole, status } =
@@ -337,6 +344,7 @@ export default function OfferThreadsPage() {
     useState<CarrierConversationFilter>("all");
 
   useEffect(() => {
+    // Dashboard guard hazir olmadan thread listesi cagrilmaz.
     if (status !== "ready" || !accessToken) {
       if (status === "checking") {
         setIsLoading(true);
@@ -348,6 +356,7 @@ export default function OfferThreadsPage() {
 
     const loadThreads = async () => {
       try {
+        // Aktif workspace'e gore customer veya carrier thread listesi istenir.
         setIsLoading(true);
         setErrorMessage(null);
         const response = await getMyOfferThreads(accessToken, {
@@ -395,6 +404,7 @@ export default function OfferThreadsPage() {
   }, [accessToken, primaryRole, router, status]);
 
   useEffect(() => {
+    // Workspace degisince onceki rolun arama/filtre state'i tasinmaz.
     setSearchQuery("");
     setCustomerSelectedFilter("all");
     setCarrierSelectedFilter("all");

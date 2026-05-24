@@ -5,6 +5,7 @@ import type {
   VolumeAnalysisShapeType,
   VolumeAnalysisSizeClass,
   VolumeAnalysisSpaceProfile,
+  VolumeAnalysisVolumeProfile,
   VolumeEstimateConfidenceLevel,
 } from "../volume-estimation.types";
 
@@ -13,6 +14,7 @@ export class EstimateVolumeResponseItemDto {
   loadType!: VolumeAnalysisLoadType;
   shapeType!: VolumeAnalysisShapeType;
   sizeClass!: VolumeAnalysisSizeClass;
+  volumeProfile!: VolumeAnalysisVolumeProfile;
   estimatedCount!: number;
   stackable!: boolean;
   confidence!: VolumeAnalysisConfidence;

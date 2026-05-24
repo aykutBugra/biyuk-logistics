@@ -18,6 +18,8 @@ import { LocationsService } from "./locations.service";
 export class LocationsController {
   constructor(private readonly locationsService: LocationsService) {}
 
+  //Konum arama inputu icin provider autocomplete sonucunu dondurur.
+  //sessionToken varsa provider tarafinda ayni arama oturumunu takip etmek icin kullanilir.
   @Get("autocomplete")
   async autocomplete(
     @CurrentUser() _currentUser: AuthenticatedUser,
@@ -26,6 +28,8 @@ export class LocationsController {
     return this.locationsService.autocomplete(query.q, query.sessionToken);
   }
 
+  //Secilen placeId'nin canonical konum detayini getirir. Transport request ve route
+  //olusturma ekranlari bu detaydan sehir, ilce ve koordinat bilgisi alir.
   @Get("places/:placeId")
   async getPlaceDetails(
     @CurrentUser() _currentUser: AuthenticatedUser,

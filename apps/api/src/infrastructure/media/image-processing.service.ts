@@ -1,6 +1,10 @@
 import sharp from "sharp";
 import { BadRequestException, Injectable } from "@nestjs/common";
 
+
+//yüklenen görselin işlendiği dosya ve bu işlemin sonucunda 
+//döndürülecek veri yapıları tanımlanır.
+//buffer çünkü görsel verisi ikili formatta gelir ve işlenir.
 export type ProcessedRequestImage = {
   detail: {
     buffer: Buffer;
@@ -27,8 +31,9 @@ export type ProcessedSingleImage = {
 export class ImageProcessingService {
   async processRequestImage(inputBuffer: Buffer): Promise<ProcessedRequestImage> {
     try {
-      // Normalize to sRGB first.  { failOn: 'none' } makes Sharp tolerant of
-      // truncated data, unusual EXIF, CMYK, and other edge-case JPEG files.
+
+      //sharp kütüphanesi ile görsel işleme yapılır. İlk olarak görsel döndürülmeden önce normalize edilir.
+      //rotate ile görselin EXIF verilerine göre döndürülmesi sağlanır. toColorspace("srgb") ile renk uzayı sRGB'ye dönüştürülür.
       const normalizedBuffer = await sharp(inputBuffer, { failOn: "none" })
         .rotate()
         .toColorspace("srgb")

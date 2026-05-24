@@ -4,8 +4,11 @@ import type {
   RoleName,
 } from "../../../common/constants/role-names";
 
+
+//burada sifrehash yok çünkü bu endpoint kullanıcı profili bilgilerini döndürürken 
+//şifre bilgisini frontende gönderilirse güvenlik açığı oluşurdu . 
 export class UserProfileResponseDto {
-  id!: number;
+  id!: string;
   ad!: string;
   soyad!: string;
   mail!: string;

@@ -3,6 +3,7 @@ export type TurkeyCityOption = {
   value: string;
 };
 
+// Sehir select'lerinde kullanilan sabit Turkiye il listesi.
 export const TURKEY_CITY_OPTIONS: TurkeyCityOption[] = [
   { label: "Adana", value: "ADANA" },
   { label: "Adıyaman", value: "ADIYAMAN" },
@@ -87,10 +88,12 @@ export const TURKEY_CITY_OPTIONS: TurkeyCityOption[] = [
   { label: "Düzce", value: "DÜZCE" },
 ];
 
+// Value -> label map'i listeyi her seferinde dolasmadan etiketi bulmak icin tutulur.
 const cityLabelMap = new Map(
   TURKEY_CITY_OPTIONS.map((option) => [option.value, option.label])
 );
 
+// Filtrelerde saklanan enum benzeri sehir degerini ekranda okunur etikete cevirir.
 export function getTurkeyCityLabel(value: string | null | undefined): string {
   if (!value) {
     return "";

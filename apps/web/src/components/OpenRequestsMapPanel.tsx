@@ -2,8 +2,12 @@
 
 "use client";
 
-import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  importLibrary,
+  setOptions,
+  type APIOptions,
+} from "@googlemaps/js-api-loader";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CarrierRouteDetail } from "@/lib/api/carrier-routes";
 import type { OpenOfferRequestListItem } from "@/lib/api/offers";
 import {
@@ -16,14 +20,27 @@ type OpenRequestsMapPanelProps = {
   requests: OpenOfferRequestListItem[];
   selectedCarrierRoute: CarrierRouteDetail | null;
   maxSapmaKm?: number | null;
-  selectedRequestId: number | null;
-  onRequestSelect: (requestId: number) => void;
+  selectedRequestId: string | null;
+  onRequestSelect: (requestId: string) => void;
   hideHeader?: boolean;
   isVisible?: boolean;
+  resizeSignal?: number;
+};
+
+type MapPoint = {
+  lat: number;
+  lng: number;
+};
+
+type LoadedGoogleMaps = {
+  googleMaps: typeof google;
+  markerLibrary: google.maps.MarkerLibrary;
 };
 
 const GOOGLE_MAPS_BROWSER_API_KEY =
   process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY?.trim() ?? "";
+const GOOGLE_MAPS_MAP_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim() ?? "";
 
 const DEFAULT_CENTER = {
   lat: 39.0,
@@ -33,22 +50,34 @@ const DEFAULT_CENTER = {
 const MAP_DEFAULT_ZOOM = 6;
 const IS_GOOGLE_MAPS_BROWSER_KEY_MISSING = !GOOGLE_MAPS_BROWSER_API_KEY;
 
-let googleMapsLoaderPromise: Promise<typeof google> | null = null;
+let googleMapsLoaderPromise: Promise<LoadedGoogleMaps> | null = null;
 
-function loadGoogleMaps(): Promise<typeof google> {
+function loadGoogleMaps(): Promise<LoadedGoogleMaps> {
   if (!GOOGLE_MAPS_BROWSER_API_KEY) {
     return Promise.reject(new Error("Maps JavaScript API key is not configured."));
   }
 
   if (!googleMapsLoaderPromise) {
-    setOptions({
+    const loaderOptions: APIOptions = {
       key: GOOGLE_MAPS_BROWSER_API_KEY,
       v: "weekly",
       language: "tr",
       region: "TR",
-    });
+    };
 
-    googleMapsLoaderPromise = importLibrary("maps").then(() => google);
+    if (GOOGLE_MAPS_MAP_ID) {
+      loaderOptions.mapIds = [GOOGLE_MAPS_MAP_ID];
+    }
+
+    setOptions(loaderOptions);
+
+    googleMapsLoaderPromise = Promise.all([
+      importLibrary("maps"),
+      importLibrary("marker"),
+    ]).then(([, markerLibrary]) => ({
+      googleMaps: google,
+      markerLibrary,
+    }));
   }
 
   return googleMapsLoaderPromise;
@@ -58,29 +87,39 @@ function hasValidCoordinate(lat: number, lng: number): boolean {
   return Number.isFinite(lat) && Number.isFinite(lng);
 }
 
-function createMarkerIcon(
-  googleMaps: typeof google,
-  options: {
-    fillColor: string;
-    strokeColor: string;
-    scale: number;
-  }
-): google.maps.Symbol {
-  return {
-    path: googleMaps.maps.SymbolPath.CIRCLE,
-    fillColor: options.fillColor,
-    fillOpacity: 1,
-    strokeColor: options.strokeColor,
-    strokeOpacity: 1,
-    strokeWeight: 2,
-    scale: options.scale,
-  };
+function createMarkerContent(options: {
+  fillColor: string;
+  strokeColor: string;
+  glyph: string;
+  size: number;
+}): HTMLDivElement {
+  const markerElement = document.createElement("div");
+  markerElement.textContent = options.glyph;
+  markerElement.setAttribute("aria-hidden", "true");
+  Object.assign(markerElement.style, {
+    alignItems: "center",
+    backgroundColor: options.fillColor,
+    border: `2px solid ${options.strokeColor}`,
+    borderRadius: "9999px",
+    boxShadow: "0 6px 14px rgba(15, 23, 42, 0.22)",
+    boxSizing: "border-box",
+    color: "#ffffff",
+    display: "flex",
+    fontSize: options.size >= 16 ? "11px" : "10px",
+    fontWeight: "700",
+    height: `${options.size}px`,
+    justifyContent: "center",
+    lineHeight: "1",
+    width: `${options.size}px`,
+  });
+
+  return markerElement;
 }
 
 function fitMapToPoints(
   map: google.maps.Map,
   googleMaps: typeof google,
-  points: Array<{ lat: number; lng: number }>
+  points: MapPoint[]
 ) {
   if (points.length === 0) {
     map.setCenter(DEFAULT_CENTER);
@@ -99,6 +138,16 @@ function fitMapToPoints(
   map.fitBounds(bounds, 56);
 }
 
+function clearMapOverlays(
+  markers: google.maps.marker.AdvancedMarkerElement[],
+  polylines: google.maps.Polyline[]
+) {
+  markers.forEach((marker) => {
+    marker.map = null;
+  });
+  polylines.forEach((polyline) => polyline.setMap(null));
+}
+
 export default function OpenRequestsMapPanel({
   requests,
   selectedCarrierRoute,
@@ -107,14 +156,28 @@ export default function OpenRequestsMapPanel({
   onRequestSelect,
   hideHeader = false,
   isVisible = true,
+  resizeSignal = 0,
 }: OpenRequestsMapPanelProps) {
-  const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
+  const mapHostElementRef = useRef<HTMLDivElement | null>(null);
+  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const polylinesRef = useRef<google.maps.Polyline[]>([]);
-  const activeVisiblePointsRef = useRef<Array<{ lat: number; lng: number }>>([]);
+  const activeVisiblePointsRef = useRef<MapPoint[]>([]);
+  const [mapElement, setMapElement] = useState<HTMLDivElement | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [mapRevision, setMapRevision] = useState(0);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+
+  const handleMapElementRef = useCallback((node: HTMLDivElement | null) => {
+    setMapElement(node);
+  }, []);
+
+  const clearCurrentMapOverlays = useCallback(() => {
+    clearMapOverlays(markersRef.current, polylinesRef.current);
+    markersRef.current = [];
+    polylinesRef.current = [];
+    activeVisiblePointsRef.current = [];
+  }, []);
 
   const selectedRequest = useMemo(
     () => requests.find((request) => request.id === selectedRequestId) ?? null,
@@ -138,27 +201,44 @@ export default function OpenRequestsMapPanel({
       return;
     }
 
+    if (!mapElement) {
+      clearCurrentMapOverlays();
+      mapRef.current = null;
+      mapHostElementRef.current = null;
+      return;
+    }
+
     const initializeMap = async () => {
       try {
-        const googleMaps = await loadGoogleMaps();
+        const { googleMaps } = await loadGoogleMaps();
 
-        if (!isMounted || !mapElementRef.current) {
+        if (!isMounted) {
           return;
         }
 
-        if (!mapRef.current) {
-          mapRef.current = new googleMaps.maps.Map(mapElementRef.current, {
+        const shouldCreateMap =
+          !mapRef.current || mapHostElementRef.current !== mapElement;
+
+        if (shouldCreateMap) {
+          clearCurrentMapOverlays();
+          mapRef.current = new googleMaps.maps.Map(mapElement, {
             center: DEFAULT_CENTER,
             zoom: MAP_DEFAULT_ZOOM,
+            mapId: GOOGLE_MAPS_MAP_ID || googleMaps.maps.Map.DEMO_MAP_ID,
+            renderingType: googleMaps.maps.RenderingType.RASTER,
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: false,
             clickableIcons: false,
             gestureHandling: "greedy",
           });
+          mapHostElementRef.current = mapElement;
         }
 
         setIsMapReady(true);
+        if (shouldCreateMap) {
+          setMapRevision((currentRevision) => currentRevision + 1);
+        }
         setLoadErrorMessage(null);
       } catch {
         if (!isMounted) {
@@ -176,7 +256,15 @@ export default function OpenRequestsMapPanel({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [clearCurrentMapOverlays, mapElement]);
+
+  useEffect(() => {
+    return () => {
+      clearCurrentMapOverlays();
+      mapRef.current = null;
+      mapHostElementRef.current = null;
+    };
+  }, [clearCurrentMapOverlays]);
 
   useEffect(() => {
     if (!isMapReady || !mapRef.current) {
@@ -187,7 +275,7 @@ export default function OpenRequestsMapPanel({
 
     const renderMapState = async () => {
       try {
-        const googleMaps = await loadGoogleMaps();
+        const { googleMaps, markerLibrary } = await loadGoogleMaps();
 
         if (isCancelled || !mapRef.current) {
           return;
@@ -195,12 +283,9 @@ export default function OpenRequestsMapPanel({
 
         const map = mapRef.current;
 
-        markersRef.current.forEach((marker) => marker.setMap(null));
-        polylinesRef.current.forEach((polyline) => polyline.setMap(null));
-        markersRef.current = [];
-        polylinesRef.current = [];
+        clearCurrentMapOverlays();
 
-        const allVisiblePoints: Array<{ lat: number; lng: number }> = [];
+        const allVisiblePoints: MapPoint[] = [];
 
         if (
           selectedCarrierRoute &&
@@ -222,35 +307,33 @@ export default function OpenRequestsMapPanel({
             lng: selectedCarrierRoute.varisBoylam,
           };
 
-          const routeStartMarker = new googleMaps.maps.Marker({
+          const routeStartMarker = new markerLibrary.AdvancedMarkerElement({
             map,
             position: routeStart,
             title: "Rota baslangici",
-            label: {
-              text: "B",
-              color: "#ffffff",
-              fontWeight: "700",
-            },
-            icon: createMarkerIcon(googleMaps, {
+            zIndex: 10,
+            anchorLeft: "-50%",
+            anchorTop: "-50%",
+            content: createMarkerContent({
               fillColor: "#2563eb",
               strokeColor: "#1d4ed8",
-              scale: 8,
+              glyph: "B",
+              size: 16,
             }),
           });
 
-          const routeEndMarker = new googleMaps.maps.Marker({
+          const routeEndMarker = new markerLibrary.AdvancedMarkerElement({
             map,
             position: routeEnd,
             title: "Rota varisi",
-            label: {
-              text: "V",
-              color: "#ffffff",
-              fontWeight: "700",
-            },
-            icon: createMarkerIcon(googleMaps, {
+            zIndex: 10,
+            anchorLeft: "-50%",
+            anchorTop: "-50%",
+            content: createMarkerContent({
               fillColor: "#1d4ed8",
               strokeColor: "#172554",
-              scale: 8,
+              glyph: "V",
+              size: 16,
             }),
           });
 
@@ -286,42 +369,44 @@ export default function OpenRequestsMapPanel({
             lng: request.varisBoylam,
           };
 
-          const pickupMarker = new googleMaps.maps.Marker({
+          const pickupMarker = new markerLibrary.AdvancedMarkerElement({
             map,
             position: pickup,
             title: `${request.id} pickup`,
-            label: {
-              text: "A",
-              color: "#ffffff",
-              fontWeight: "700",
-            },
             zIndex: isSelected ? 30 : 20,
-            icon: createMarkerIcon(googleMaps, {
+            gmpClickable: true,
+            anchorLeft: "-50%",
+            anchorTop: "-50%",
+            content: createMarkerContent({
               fillColor: isSelected ? "#16a34a" : "#22c55e",
               strokeColor: isSelected ? "#14532d" : "#15803d",
-              scale: isSelected ? 8 : 6,
+              glyph: "A",
+              size: isSelected ? 16 : 12,
             }),
           });
 
-          const dropoffMarker = new googleMaps.maps.Marker({
+          const dropoffMarker = new markerLibrary.AdvancedMarkerElement({
             map,
             position: dropoff,
             title: `${request.id} dropoff`,
-            label: {
-              text: "T",
-              color: "#ffffff",
-              fontWeight: "700",
-            },
             zIndex: isSelected ? 30 : 20,
-            icon: createMarkerIcon(googleMaps, {
+            gmpClickable: true,
+            anchorLeft: "-50%",
+            anchorTop: "-50%",
+            content: createMarkerContent({
               fillColor: isSelected ? "#f97316" : "#fb923c",
               strokeColor: isSelected ? "#9a3412" : "#c2410c",
-              scale: isSelected ? 8 : 6,
+              glyph: "T",
+              size: isSelected ? 16 : 12,
             }),
           });
 
-          pickupMarker.addListener("click", () => onRequestSelect(request.id));
-          dropoffMarker.addListener("click", () => onRequestSelect(request.id));
+          pickupMarker.addEventListener("gmp-click", () =>
+            onRequestSelect(request.id)
+          );
+          dropoffMarker.addEventListener("gmp-click", () =>
+            onRequestSelect(request.id)
+          );
 
           markersRef.current.push(pickupMarker, dropoffMarker);
           allVisiblePoints.push(pickup, dropoff);
@@ -338,7 +423,7 @@ export default function OpenRequestsMapPanel({
             selectedRequest.varisBoylam
           )
         ) {
-          const selectedPath = [
+          const selectedPath: MapPoint[] = [
             {
               lat: selectedRequest.baslangicEnlem,
               lng: selectedRequest.baslangicBoylam,
@@ -390,8 +475,10 @@ export default function OpenRequestsMapPanel({
       isCancelled = true;
     };
   }, [
+    clearCurrentMapOverlays,
     isMapReady,
     isVisible,
+    mapRevision,
     onRequestSelect,
     requests,
     selectedCarrierRoute,
@@ -405,16 +492,17 @@ export default function OpenRequestsMapPanel({
     }
 
     let isCancelled = false;
+    let animationFrameId: number | null = null;
 
     const syncVisibleMapState = async () => {
       try {
-        const googleMaps = await loadGoogleMaps();
+        const { googleMaps } = await loadGoogleMaps();
 
         if (isCancelled || !mapRef.current) {
           return;
         }
 
-        requestAnimationFrame(() => {
+        animationFrameId = requestAnimationFrame(() => {
           if (isCancelled || !mapRef.current) {
             return;
           }
@@ -441,8 +529,11 @@ export default function OpenRequestsMapPanel({
 
     return () => {
       isCancelled = true;
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+      }
     };
-  }, [isMapReady, isVisible, requests, selectedCarrierRoute, selectedRequestId]);
+  }, [isMapReady, isVisible, resizeSignal]);
 
   const hasRenderableContent =
     renderableRequestCount > 0 ||
@@ -532,7 +623,7 @@ export default function OpenRequestsMapPanel({
 
             {selectedRequest ? (
               <p className="text-sm font-medium text-slate-600">
-                Secili istek: #{selectedRequest.id}
+                Secili istek
               </p>
             ) : null}
           </div>
@@ -547,19 +638,18 @@ export default function OpenRequestsMapPanel({
         </div>
       ) : null}
 
-      {!mapFallbackMessage && !hasRenderableContent ? (
-        <div
-          className={`${hideHeader ? "" : "mt-3 "}rounded-[0.95rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-7 text-center text-sm text-slate-500`}
-        >
-          Haritada gosterilecek uygun koordinatli istek bulunmuyor.
+      {!mapFallbackMessage ? (
+        <div className={`${hideHeader ? "" : "mt-3 "}relative`}>
+          <div
+            ref={handleMapElementRef}
+            className="h-[300px] rounded-[0.95rem] border border-slate-200 bg-slate-100 md:h-[340px] xl:h-[360px]"
+          />
+          {!hasRenderableContent ? (
+            <div className="pointer-events-none absolute inset-x-3 top-3 rounded-[0.95rem] border border-dashed border-slate-300 bg-white/95 px-4 py-3 text-center text-sm font-medium text-slate-500 shadow-sm">
+              Haritada gosterilecek uygun koordinatli istek bulunmuyor.
+            </div>
+          ) : null}
         </div>
-      ) : null}
-
-      {!mapFallbackMessage && hasRenderableContent ? (
-        <div
-          ref={mapElementRef}
-          className={`${hideHeader ? "" : "mt-3 "}h-[300px] rounded-[0.95rem] border border-slate-200 bg-slate-100 md:h-[340px] xl:h-[360px]`}
-        />
       ) : null}
     </section>
   );

@@ -12,9 +12,12 @@ export const VEHICLE_CAPACITY_RELEASE_REASONS = {
   CANCELED: "CANCELED",
 } as const;
 
+//Rezervasyon serbest birakilirken neden bilgisi tutulur; boylece kapasite gecmisi
+//sonradan incelenebilir.
 export type VehicleCapacityReleaseReason =
   (typeof VEHICLE_CAPACITY_RELEASE_REASONS)[keyof typeof VEHICLE_CAPACITY_RELEASE_REASONS];
 
+//Kapasite hesabi icin arac kaydindan gereken minimum alanlar.
 export type VehicleCapacityBase = {
   id: number;
   maksimumAgirlikKg: number;
@@ -43,6 +46,7 @@ export class VehicleCapacityService {
     input: CreateVehicleCapacityReservationInput,
     executor?: Prisma.TransactionClient
   ): Promise<void> {
+    //Teklif kabul edilip nakliye olusunca arac kapasitesinden ilgili agirlik/hacim rezerve edilir.
     await this.vehicleCapacityRepository.createActiveReservation(input, executor);
   }
 
@@ -51,6 +55,7 @@ export class VehicleCapacityService {
     releaseReason: VehicleCapacityReleaseReason,
     executor?: Prisma.TransactionClient
   ): Promise<boolean> {
+    //Nakliye tamamlaninca veya arac degisince aktif rezervasyon serbest birakilir.
     return this.vehicleCapacityRepository.releaseActiveReservationByShipmentId(
       shipmentId,
       releaseReason,
@@ -63,6 +68,8 @@ export class VehicleCapacityService {
     nextVehicleId: number,
     executor?: Prisma.TransactionClient
   ): Promise<boolean> {
+    //Nakliyenin araci degisirse eski aktif rezervasyon kapatilir ve ayni yuk bilgisiyle
+    //yeni araca rezervasyon acilir.
     const activeReservation =
       await this.vehicleCapacityRepository.findActiveReservationByShipmentId(
         shipmentId,
@@ -102,6 +109,8 @@ export class VehicleCapacityService {
   async getCapacitySummaryMapForVehicles(
     vehicles: VehicleCapacityBase[]
   ): Promise<Map<number, VehicleCapacitySummary>> {
+    //Arac listesi icin aktif rezervasyonlari toplu cekip her arac bazinda kalan
+    //agirlik/hacim ozetini hesaplar.
     const summaries = new Map<number, VehicleCapacitySummary>();
 
     if (vehicles.length === 0) {
@@ -155,6 +164,7 @@ export class VehicleCapacityService {
   private groupReservationsByVehicleId(
     reservations: VehicleCapacityReservationAggregateRecord[]
   ): Map<number, VehicleCapacityReservationAggregateRecord[]> {
+    //Rezervasyonlari vehicleId bazinda gruplayarak kapasite hesaplarini kolaylastirir.
     const groupedReservations = new Map<
       number,
       VehicleCapacityReservationAggregateRecord[]

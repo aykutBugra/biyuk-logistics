@@ -39,7 +39,7 @@ type OfferSortMode = "newest" | "oldest" | "price-desc" | "price-asc";
 type OfferViewModel = MyOfferCardModel & {
   isNegotiation: boolean;
   searchText: string;
-  sortId: number;
+  sortId: string;
   sortPrice: number;
   lastActivityAt: string | null;
 };
@@ -290,7 +290,7 @@ export default function MyOffersPage() {
   const [offers, setOffers] = useState<OfferItem[]>([]);
   const [threads, setThreads] = useState<OfferThreadSummary[]>([]);
   const [requestDetailsById, setRequestDetailsById] = useState<
-    Record<number, OpenOfferRequestDetail | null>
+    Record<string, OpenOfferRequestDetail | null>
   >({});
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<OfferFilterTab>("all");
@@ -584,7 +584,7 @@ export default function MyOffersPage() {
 
   const sortedOffers = [...filteredOffers].sort((left, right) => {
     if (sortMode === "oldest") {
-      return left.sortId - right.sortId;
+      return left.sortId.localeCompare(right.sortId);
     }
 
     if (sortMode === "price-desc") {
@@ -595,7 +595,7 @@ export default function MyOffersPage() {
       return left.sortPrice - right.sortPrice;
     }
 
-    return right.sortId - left.sortId;
+    return right.sortId.localeCompare(left.sortId);
   });
 
   const handleResetLocalFilters = () => {

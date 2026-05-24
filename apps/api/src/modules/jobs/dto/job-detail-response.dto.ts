@@ -1,13 +1,14 @@
 import { RatingContextResponseDto } from "../../ratings/dto/rating-context-response.dto";
 
 export class JobDetailResponseDto {
-  id!: number;
-  requestId!: number;
+  id!: string;
+  requestId!: string;
   participantSide!: "customer" | "carrier";
   durum!: string;
   anlasilanFiyat!: number;
   olusturmaTarihi!: Date;
   baslangicTarihi!: Date | null;
+  teslimBildirimTarihi!: Date | null;
   teslimTarihi!: Date | null;
   baslangicSehri!: string;
   varisSehri!: string;
@@ -24,23 +25,25 @@ export class JobDetailResponseDto {
   tasimaTarihi!: string | null;
   yukDetay!: string;
   carrier!: {
-    id: number;
+    id: string;
     name: string;
     username: string;
   };
   customer!: {
-    id: number;
+    id: string;
     name: string;
     username: string;
   };
   vehicle!: {
-    id: number;
+    id: string;
     plaka: string;
     marka: string;
     model: string;
     isArchived: boolean;
   };
   canStart!: boolean;
+  canMarkDelivered!: boolean;
+  canConfirmDelivery!: boolean;
   canComplete!: boolean;
   ratingContext!: RatingContextResponseDto;
 }

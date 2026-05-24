@@ -23,8 +23,8 @@ type PreviewImage = {
 
 type VolumeEstimateAssistantProps = {
   accessToken: string;
+  action: (value: string) => void;
   disabled: boolean;
-  onApplyEstimate: (value: string) => void;
   yukTipi: string;
 };
 
@@ -118,8 +118,8 @@ function getItemConfidenceClasses(confidence: VolumeEstimateItem["confidence"]) 
 
 export default function VolumeEstimateAssistant({
   accessToken,
+  action,
   disabled,
-  onApplyEstimate,
   yukTipi,
 }: VolumeEstimateAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -217,8 +217,8 @@ export default function VolumeEstimateAssistant({
       return;
     }
 
-    onApplyEstimate(String(estimate.recommendedHacimM3));
-  };
+    action(String(estimate.recommendedHacimM3));
+};
 
   return (
     <div className="app-surface-muted rounded-[1.1rem] border border-slate-200 p-4 sm:p-5">

@@ -6,6 +6,8 @@ type RouteContext = {
   varisSehri: string;
 };
 
+//Publisher, is akisi servislerinin bildirim detaylarini bilmeden tek tip bildirim
+//kaydi olusturmasini saglar.
 @Injectable()
 export class NotificationsPublisher {
   private readonly logger = new Logger(NotificationsPublisher.name);
@@ -18,8 +20,8 @@ export class NotificationsPublisher {
   // bildirimi üretir.
   async publishIncomingOffer(input: {
     customerId: number;
-    offerId: number;
-    requestId: number;
+    offerId: string;
+    requestId: string;
     actorUserId?: number;
     route: RouteContext;
   }): Promise<void> {
@@ -37,9 +39,9 @@ export class NotificationsPublisher {
   // Teklif kabul edildiğinde kazanan nakliyeciyi artık nakliye kaydına yönlendirir.
   async publishOfferAccepted(input: {
     carrierId: number;
-    offerId: number;
-    requestId: number;
-    jobId: number;
+    offerId: string;
+    requestId: string;
+    jobId: string;
     actorUserId?: number;
   }): Promise<void> {
     await this.publish({
@@ -47,7 +49,7 @@ export class NotificationsPublisher {
       actorUserId: input.actorUserId,
       tip: "TEKLIF_KABUL_EDILDI",
       baslik: "Teklifin kabul edildi",
-      mesaj: `Istek #${input.requestId} icin teklifin kabul edildi ve nakliye kaydi olusturuldu.`,
+      mesaj: "Teklifin kabul edildi ve nakliye kaydi olusturuldu.",
       hedefUrl: `/dashboard/nakliyelerim/${input.jobId}`,
       olayAnahtari: `TEKLIF_KABUL_EDILDI:${input.offerId}`,
     });
@@ -57,8 +59,8 @@ export class NotificationsPublisher {
   // konuşma ekranına geri getiren bildirim üretir.
   async publishOfferRejected(input: {
     carrierId: number;
-    offerId: number;
-    requestId: number;
+    offerId: string;
+    requestId: string;
     actorUserId?: number;
   }): Promise<void> {
     await this.publish({
@@ -66,7 +68,7 @@ export class NotificationsPublisher {
       actorUserId: input.actorUserId,
       tip: "TEKLIF_REDDEDILDI",
       baslik: "Teklifin reddedildi",
-      mesaj: `Istek #${input.requestId} icin teklifin reddedildi.`,
+      mesaj: "Teklifin reddedildi.",
       hedefUrl: `/dashboard/konusmalar/teklif/${input.offerId}`,
       olayAnahtari: `TEKLIF_REDDEDILDI:${input.offerId}`,
     });
@@ -76,9 +78,9 @@ export class NotificationsPublisher {
   // geri çağıran asenkron işaret görevini görür.
   async publishThreadMessage(input: {
     recipientUserId: number;
-    messageId: number;
-    offerId: number;
-    requestId: number;
+    messageId: string;
+    offerId: string;
+    requestId: string;
     actorUserId?: number;
   }): Promise<void> {
     await this.publish({
@@ -86,7 +88,7 @@ export class NotificationsPublisher {
       actorUserId: input.actorUserId,
       tip: "MESAJ_GELDI",
       baslik: "Yeni mesaj geldi",
-      mesaj: `Istek #${input.requestId} icin yeni bir mesaj aldin.`,
+      mesaj: "Yeni bir teklif mesaji aldin.",
       hedefUrl: `/dashboard/konusmalar/teklif/${input.offerId}`,
       olayAnahtari: `MESAJ_GELDI:${input.messageId}`,
     });
@@ -96,9 +98,9 @@ export class NotificationsPublisher {
   // fiyat revizyonunu bildirim düzeyinde de ayırt edebilir.
   async publishCounterOffer(input: {
     recipientUserId: number;
-    messageId: number;
-    offerId: number;
-    requestId: number;
+    messageId: string;
+    offerId: string;
+    requestId: string;
     fiyat: number;
     actorUserId?: number;
   }): Promise<void> {
@@ -107,16 +109,17 @@ export class NotificationsPublisher {
       actorUserId: input.actorUserId,
       tip: "KARSI_TEKLIF_GELDI",
       baslik: "Karsi teklif geldi",
-      mesaj: `Istek #${input.requestId} icin yeni fiyat: ${input.fiyat.toFixed(2)} TL.`,
+      mesaj: `Yeni fiyat: ${input.fiyat.toFixed(2)} TL.`,
       hedefUrl: `/dashboard/konusmalar/teklif/${input.offerId}`,
       olayAnahtari: `KARSI_TEKLIF_GELDI:${input.messageId}`,
     });
   }
 
+  //Nakliye basladiginda musteriyi kendi istek detayina yonlendirir.
   async publishJobStarted(input: {
     customerId: number;
-    jobId: number;
-    requestId: number;
+    jobId: string;
+    requestId: string;
     actorUserId?: number;
     route: RouteContext;
   }): Promise<void> {
@@ -131,10 +134,11 @@ export class NotificationsPublisher {
     });
   }
 
+  //Nakliye tamamlandiginda musteriyi bilgilendirir.
   async publishJobCompleted(input: {
     customerId: number;
-    jobId: number;
-    requestId: number;
+    jobId: string;
+    requestId: string;
     actorUserId?: number;
     route: RouteContext;
   }): Promise<void> {
@@ -149,10 +153,47 @@ export class NotificationsPublisher {
     });
   }
 
+  async publishDeliveryConfirmationRequested(input: {
+    customerId: number;
+    jobId: string;
+    requestId: string;
+    actorUserId?: number;
+    route: RouteContext;
+  }): Promise<void> {
+    await this.publish({
+      kullaniciId: input.customerId,
+      actorUserId: input.actorUserId,
+      tip: "TESLIM_ONAYI_BEKLIYOR",
+      baslik: "Teslimat onayi bekleniyor",
+      mesaj: `${this.formatRoute(input.route)} icin nakliyeci teslimati bildirdi.`,
+      hedefUrl: `/dashboard/isteklerim/${input.requestId}`,
+      olayAnahtari: `TESLIM_ONAYI_BEKLIYOR:${input.jobId}`,
+    });
+  }
+
+  async publishJobCompletedForCarrier(input: {
+    carrierId: number;
+    jobId: string;
+    requestId: string;
+    actorUserId?: number;
+    route: RouteContext;
+  }): Promise<void> {
+    await this.publish({
+      kullaniciId: input.carrierId,
+      actorUserId: input.actorUserId,
+      tip: "IS_TAMAMLANDI",
+      baslik: "Teslimat onaylandi",
+      mesaj: `${this.formatRoute(input.route)} icin teslimat musteri tarafindan onaylandi.`,
+      hedefUrl: `/dashboard/nakliyelerim/${input.jobId}`,
+      olayAnahtari: `IS_TAMAMLANDI_CARRIER:${input.jobId}`,
+    });
+  }
+
+  //Kullanici puan aldiginda puanlarim ekranina yonlenen bildirim uretir.
   async publishRatingReceived(input: {
     ratedUserId: number;
-    ratingId: number;
-    jobId: number;
+    ratingId: string;
+    jobId: string;
     puanDegeri: number;
     actorUserId?: number;
   }): Promise<void> {
@@ -161,15 +202,16 @@ export class NotificationsPublisher {
       actorUserId: input.actorUserId,
       tip: "RATING_ALDIN",
       baslik: "Yeni puan aldin",
-      mesaj: `Nakliye #${input.jobId} icin ${input.puanDegeri}/5 puan aldin.`,
+      mesaj: `${input.puanDegeri}/5 puan aldin.`,
       hedefUrl: "/dashboard/puanlarim",
       olayAnahtari: `RATING_ALDIN:${input.ratingId}`,
     });
   }
 
+  //Nakliye tamamlaninca nakliyeciye musteri puanlamasi bekledigini hatirlatir.
   async publishRatingPending(input: {
     userId: number;
-    jobId: number;
+    jobId: string;
     actorUserId?: number;
   }): Promise<void> {
     await this.publish({
@@ -177,7 +219,7 @@ export class NotificationsPublisher {
       actorUserId: input.actorUserId,
       tip: "RATING_BEKLIYOR",
       baslik: "Musteriyi puanlaman bekleniyor",
-      mesaj: `Tamamlanan nakliye #${input.jobId} icin musteri deneyimini degerlendirebilirsin.`,
+      mesaj: "Tamamlanan nakliye icin musteri deneyimini degerlendirebilirsin.",
       hedefUrl: `/dashboard/nakliyelerim/${input.jobId}`,
       olayAnahtari: `RATING_BEKLIYOR:${input.jobId}:${input.userId}`,
     });

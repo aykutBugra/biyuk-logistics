@@ -1,15 +1,20 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
+import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
 import { unwrapTransactionResult } from "../../common/utils/unwrap-transaction-result";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { NotificationsPublisher } from "../notifications/notifications.publisher";
+import { OfferThreadsService } from "../offer-threads/offer-threads.service";
 import { JobAudienceQueryDto, type JobAudience } from "./dto/job-audience-query.dto";
 import { JobDetailResponseDto } from "./dto/job-detail-response.dto";
 import { JobListItemResponseDto } from "./dto/job-list-item-response.dto";
@@ -24,6 +29,7 @@ import {
   VehicleCapacityService,
 } from "../vehicle-capacity/vehicle-capacity.service";
 
+//nakliye tablosu durumlaridir gercek tasima isinin hangi asamada oldugunu gosterir. 
 const CREATED_JOB_STATUS = {
   durumTuru: "NAKLIYE",
   durumAdi: "OLUSTURULDU",
@@ -34,11 +40,18 @@ const STARTED_JOB_STATUS = {
   durumAdi: "BASLATILDI",
 } as const;
 
+const PENDING_DELIVERY_JOB_STATUS = {
+  durumTuru: "NAKLIYE",
+  durumAdi: "TESLIM_BEKLIYOR",
+} as const;
+
 const COMPLETED_JOB_STATUS = {
   durumTuru: "NAKLIYE",
   durumAdi: "TAMAMLANDI",
 } as const;
 
+
+//istek tablosu durumlaridir. musterinin nakliye istegi hangi asamada oldugunu gosterir.
 const AGREED_REQUEST_STATUS = {
   durumTuru: "ISTEK",
   durumAdi: "ANLASILDI",
@@ -49,15 +62,31 @@ const COMPLETED_REQUEST_STATUS = {
   durumAdi: "TAMAMLANDI",
 } as const;
 
+
+
 @Injectable()
 export class JobsService {
   constructor(
+    //bu servis asagidaki 4 seye ihtiyac duyuyor .
+    //1. JobsRepository: Nakliye verilerine erişmek ve güncellemek 
+    //2. NotificationsPublisher: Nakliye işlemleri sırasında ilgili taraflara bildirim göndermek için 
+    //3. VehicleCapacityService: Nakliye işlemi sırasında araç kapasitesi yönetimi yapmak için 
+    //4. PrismaService: Veritabanı işlemlerini yönetmek için kullanılan Prisma ORM'nin servisidir
     private readonly jobsRepository: JobsRepository,
     private readonly notificationsPublisher: NotificationsPublisher,
+    @Optional()
+    @Inject(OfferThreadsService)
+    private readonly offerThreadsService: OfferThreadsService | undefined,
     private readonly vehicleCapacityService: VehicleCapacityService,
     private readonly prisma: PrismaService
   ) {}
 
+
+  // Kullanıcının kendi nakliye işlerini listeler.
+  // Kullanıcı hem MUSTERI hem NAKLIYECI rolüne sahip olabilir; bu yüzden ?as=customer
+  // veya ?as=carrier ile hangi rolden bakıldığı netleştirilir. Carrier bağlamında
+  // nakliyeci olarak üstlendiği işler, customer bağlamında müşteri olarak oluşturduğu
+  // isteklerden doğan işler döner.
   async getMine(
     currentUser: AuthenticatedUser,
     query: JobAudienceQueryDto
@@ -73,9 +102,12 @@ export class JobsService {
     return jobs.map((job) => this.toListItemResponse(job, audience));
   }
 
+  //belirli bir nakliyenin datayini getirir. Erişim kontrolü yapılır. 
+  //Nakliyeci sadece kendi nakliyelerini, müşteri sadece kendi isteklerinden doğan 
+  //nakliyeleri görebilir.
   async getById(
     currentUser: AuthenticatedUser,
-    jobId: number,
+    jobId: PublicEntityId,
     query: JobAudienceQueryDto
   ): Promise<JobDetailResponseDto> {
     const audience = this.resolveAudience(currentUser, query.as);
@@ -84,24 +116,31 @@ export class JobsService {
     return this.toDetailResponse(job, currentUser, audience);
   }
 
+
+
+
+
+  // Nakliyeci, nakliyeyi başlatır. Nakliye sadece "olusturuldu" durumundayken başlatılabilir.
   async startById(
     currentUser: AuthenticatedUser,
-    jobId: number
+    jobId: PublicEntityId
   ): Promise<JobDetailResponseDto> {
     this.assertCarrierRole(currentUser);
 
+    //is gercekten bu nakliyeciye mi ait konrol edilir. Boylece baska bir nakliyecinin nakliyesi baslatilamaz.
     const job = await this.jobsRepository.findByIdAndCarrierId(jobId, currentUser.id);
-
+    //is yoksa bulunamadi don
     if (!job) {
-      throw new NotFoundException("Shipment not found.");
+      throw new NotFoundException("Nakliye bulunamadı.");
     }
-
+    //Bu kontrol, nakliyeci ve müşteri aynı kullanıcıysa lifecycle işlemini engeller.
     this.assertDistinctShipmentParticipants(job);
-
+    //İş sadece şu durumdaysa başlatılabilir:NAKLIYE / OLUSTURULDU
     if (!this.isJobCreated(job.durumTuru, job.durumAdi)) {
-      throw new ConflictException("Shipment can no longer be started.");
+      throw new ConflictException("Nakliye artık başlatılamaz.");
     }
 
+    //Burada iki durumun DB id değeri bulunuyor.
     const [createdStatusId, startedStatusId] = await Promise.all([
       this.requireStatusId(
         CREATED_JOB_STATUS.durumTuru,
@@ -115,30 +154,34 @@ export class JobsService {
       ),
     ]);
 
+    //sonra repo ile update işlemi yapılıyor. Bu update işlemi, nakliye durumunu 
+    //"başlatıldı" olarak değiştirir.
     const wasStarted = await this.jobsRepository.startByIdAndCarrierId(
-      jobId,
+      job.id,
       currentUser.id,
       createdStatusId,
       startedStatusId
     );
 
     if (!wasStarted) {
-      throw new ConflictException("Shipment can no longer be started.");
+      throw new ConflictException("Nakliye artık başlatılamaz.");
     }
 
+    //guncel is tekrar okunur 
     const updatedJob = await this.jobsRepository.findByIdAndCarrierId(
       jobId,
       currentUser.id
     );
 
     if (!updatedJob) {
-      throw new NotFoundException("Shipment not found.");
+      throw new NotFoundException("Nakliye bulunamadı.");
     }
 
+    //ilgili taraflara bildirim gonderilir 
     await this.notificationsPublisher.publishJobStarted({
       customerId: updatedJob.customerId,
-      jobId: updatedJob.id,
-      requestId: updatedJob.requestId,
+      jobId: updatedJob.publicId,
+      requestId: updatedJob.requestPublicId,
       actorUserId: currentUser.id,
       route: {
         baslangicSehri: updatedJob.baslangicSehri,
@@ -149,38 +192,131 @@ export class JobsService {
     return this.toDetailResponse(updatedJob, currentUser, "carrier");
   }
 
+
+
+
+
   async completeById(
     currentUser: AuthenticatedUser,
-    jobId: number
+    jobId: PublicEntityId
+  ): Promise<JobDetailResponseDto> {
+    return this.markDeliveredById(currentUser, jobId);
+  }
+
+  async markDeliveredById(
+    currentUser: AuthenticatedUser,
+    jobId: PublicEntityId
   ): Promise<JobDetailResponseDto> {
     this.assertCarrierRole(currentUser);
 
     const job = await this.jobsRepository.findByIdAndCarrierId(jobId, currentUser.id);
 
     if (!job) {
-      throw new NotFoundException("Shipment not found.");
+      throw new NotFoundException("Nakliye bulunamadÄ±.");
     }
 
     this.assertDistinctShipmentParticipants(job);
 
     if (!this.isJobStarted(job.durumTuru, job.durumAdi)) {
-      throw new ConflictException("Shipment can no longer be completed.");
+      throw new ConflictException("Nakliye teslim bildirimi icin uygun degil.");
     }
 
     if (!this.isRequestAgreed(job.requestStatusTuru, job.requestStatusAdi)) {
-      throw new ConflictException("Shipment can no longer be completed.");
+      throw new ConflictException("Nakliye teslim bildirimi icin uygun degil.");
+    }
+
+    const [startedStatusId, pendingDeliveryStatusId] = await Promise.all([
+      this.requireStatusId(
+        STARTED_JOB_STATUS.durumTuru,
+        STARTED_JOB_STATUS.durumAdi,
+        "Shipment started status"
+      ),
+      this.requireStatusId(
+        PENDING_DELIVERY_JOB_STATUS.durumTuru,
+        PENDING_DELIVERY_JOB_STATUS.durumAdi,
+        "Shipment pending delivery confirmation status"
+      ),
+    ]);
+
+    await this.prisma.client.$transaction(
+      async (tx) => {
+        unwrapTransactionResult(
+          await this.jobsRepository.markDeliveredByIdAndCarrierIdInTransaction(tx, {
+            jobId: job.id,
+            carrierId: currentUser.id,
+            startedStatusId,
+            pendingDeliveryStatusId,
+          }),
+          () => new ConflictException("Nakliye teslim bildirimi icin uygun degil.")
+        );
+
+        await this.requireOfferThreadsService().appendShipmentSystemEventByRequestId(
+          job.requestId,
+          currentUser.id,
+          "DELIVERY_PENDING_CONFIRMATION",
+          tx
+        );
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      }
+    );
+
+    const updatedJob = await this.jobsRepository.findByIdAndCarrierId(
+      jobId,
+      currentUser.id
+    );
+
+    if (!updatedJob) {
+      throw new NotFoundException("Nakliye bulunamadÄ±.");
+    }
+
+    await this.notificationsPublisher.publishDeliveryConfirmationRequested({
+      customerId: updatedJob.customerId,
+      jobId: updatedJob.publicId,
+      requestId: updatedJob.requestPublicId,
+      actorUserId: currentUser.id,
+      route: {
+        baslangicSehri: updatedJob.baslangicSehri,
+        varisSehri: updatedJob.varisSehri,
+      },
+    });
+
+    return this.toDetailResponse(updatedJob, currentUser, "carrier");
+  }
+
+  async confirmDeliveryById(
+    currentUser: AuthenticatedUser,
+    jobId: PublicEntityId
+  ): Promise<JobDetailResponseDto> {
+    this.assertCustomerRole(currentUser);
+
+    const job = await this.jobsRepository.findByIdAndCustomerId(jobId, currentUser.id);
+
+    if (!job) {
+      throw new NotFoundException("Nakliye bulunamadÄ±.");
+    }
+
+    this.assertDistinctShipmentParticipants(job);
+
+    if (!this.isJobPendingDelivery(job.durumTuru, job.durumAdi)) {
+      throw new ConflictException("Nakliye teslim onayi icin uygun degil.");
+    }
+
+    if (!this.isRequestAgreed(job.requestStatusTuru, job.requestStatusAdi)) {
+      throw new ConflictException("Nakliye teslim onayi icin uygun degil.");
     }
 
     const [
-      startedStatusId,
+      pendingDeliveryStatusId,
       completedJobStatusId,
       agreedRequestStatusId,
       completedRequestStatusId,
     ] = await Promise.all([
       this.requireStatusId(
-        STARTED_JOB_STATUS.durumTuru,
-        STARTED_JOB_STATUS.durumAdi,
-        "Shipment started status"
+        PENDING_DELIVERY_JOB_STATUS.durumTuru,
+        PENDING_DELIVERY_JOB_STATUS.durumAdi,
+        "Shipment pending delivery confirmation status"
       ),
       this.requireStatusId(
         COMPLETED_JOB_STATUS.durumTuru,
@@ -199,46 +335,57 @@ export class JobsService {
       ),
     ]);
 
-    await this.prisma.client.$transaction(async (tx) => {
-      unwrapTransactionResult(
-        await this.jobsRepository.completeByIdAndCarrierIdInTransaction(tx, {
-          jobId,
-          carrierId: currentUser.id,
-          requestId: job.requestId,
-          startedStatusId,
-          completedJobStatusId,
-          agreedRequestStatusId,
-          completedRequestStatusId,
-        }),
-        (reason) =>
-          new ConflictException(
-            reason === "request_not_agreed"
-              ? "Shipment can no longer be completed because the related request is no longer in an agreed state."
-              : "Shipment can no longer be completed."
-          )
-      );
+    await this.prisma.client.$transaction(
+      async (tx) => {
+        unwrapTransactionResult(
+          await this.jobsRepository.confirmDeliveryByIdAndCustomerIdInTransaction(tx, {
+            jobId: job.id,
+            customerId: currentUser.id,
+            requestId: job.requestId,
+            pendingDeliveryStatusId,
+            completedJobStatusId,
+            agreedRequestStatusId,
+            completedRequestStatusId,
+          }),
+          (reason) =>
+            new ConflictException(
+              reason === "request_not_agreed"
+                ? "Nakliye teslim onayi icin uygun degil cunku ilgili istek artik anlasildi durumunda degil."
+                : "Nakliye teslim onayi icin uygun degil."
+            )
+        );
 
-      await this.vehicleCapacityService.releaseReservationByShipmentId(
-        jobId,
-        VEHICLE_CAPACITY_RELEASE_REASONS.COMPLETED,
-        tx
-      );
-    });
+        await this.vehicleCapacityService.releaseReservationByShipmentId(
+          job.id,
+          VEHICLE_CAPACITY_RELEASE_REASONS.COMPLETED,
+          tx
+        );
 
-    const updatedJob = await this.jobsRepository.findByIdAndCarrierId(
+        await this.requireOfferThreadsService().appendDeliveryConfirmedAndCloseByRequestId(
+          job.requestId,
+          currentUser.id,
+          tx
+        );
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      }
+    );
+
+    const updatedJob = await this.jobsRepository.findByIdAndCustomerId(
       jobId,
       currentUser.id
     );
 
     if (!updatedJob) {
-      throw new NotFoundException("Shipment not found.");
+      throw new NotFoundException("Nakliye bulunamadÄ±.");
     }
 
     await Promise.all([
-      this.notificationsPublisher.publishJobCompleted({
-        customerId: updatedJob.customerId,
-        jobId: updatedJob.id,
-        requestId: updatedJob.requestId,
+      this.notificationsPublisher.publishJobCompletedForCarrier({
+        carrierId: updatedJob.carrierId,
+        jobId: updatedJob.publicId,
+        requestId: updatedJob.requestPublicId,
         actorUserId: currentUser.id,
         route: {
           baslangicSehri: updatedJob.baslangicSehri,
@@ -247,24 +394,25 @@ export class JobsService {
       }),
       this.notificationsPublisher.publishRatingPending({
         userId: updatedJob.carrierId,
-        jobId: updatedJob.id,
+        jobId: updatedJob.publicId,
         actorUserId: currentUser.id,
       }),
     ]);
 
-    return this.toDetailResponse(updatedJob, currentUser, "carrier");
+    return this.toDetailResponse(updatedJob, currentUser, "customer");
   }
 
+  //bu metot, belirli bir nakliye kaydını okuyarak kullanıcının bu kayda erişim hakkı olup olmadığını kontrol eder.
   private async findReadableJob(
     currentUser: AuthenticatedUser,
-    jobId: number,
+    jobId: PublicEntityId,
     audience: JobAudience
   ): Promise<StoredJobDetailRecord> {
     if (audience === "carrier") {
       const job = await this.jobsRepository.findByIdAndCarrierId(jobId, currentUser.id);
 
       if (!job) {
-        throw new NotFoundException("Shipment not found.");
+        throw new NotFoundException("Nakliye bulunamadı.");
       }
 
       return job;
@@ -273,12 +421,13 @@ export class JobsService {
     const job = await this.jobsRepository.findByIdAndCustomerId(jobId, currentUser.id);
 
     if (!job) {
-      throw new NotFoundException("Shipment not found.");
+      throw new NotFoundException("Nakliye bulunamadı.");
     }
 
     return job;
   }
 
+  //bu metot, nakliye ve istek durumlarının DB'deki id değerlerini çözer. Bu id'ler, nakliye başlatma ve tamamlama işlemlerinde kullanılır.1
   private async requireStatusId(
     durumTuru: string,
     durumAdi: string,
@@ -298,6 +447,14 @@ export class JobsService {
     );
   }
 
+  private requireOfferThreadsService(): OfferThreadsService {
+    if (this.offerThreadsService) {
+      return this.offerThreadsService;
+    }
+
+    throw new InternalServerErrorException("Offer thread service is not configured.");
+  }
+
   private isCarrier(currentUser: AuthenticatedUser): boolean {
     return currentUser.roles.includes(ROLE_NAMES.NAKLIYECI);
   }
@@ -314,6 +471,18 @@ export class JobsService {
     throw new ForbiddenException("Only carriers can manage shipment lifecycle.");
   }
 
+  private assertCustomerRole(currentUser: AuthenticatedUser) {
+    if (this.isCustomer(currentUser)) {
+      return;
+    }
+
+    throw new ForbiddenException("Only customers can confirm delivery.");
+  }
+
+
+  //kullanicinin rolleri kontrol edilir
+  //hicbiri yoksa erisim engellenir.
+  //birden fazla rol varsa, hangi rolden bakildigi belirtilmedikce erisim engellenir.
   private resolveAudience(
     currentUser: AuthenticatedUser,
     requestedAudience?: JobAudience
@@ -322,12 +491,12 @@ export class JobsService {
     const hasCustomerRole = this.isCustomer(currentUser);
 
     if (!hasCarrierRole && !hasCustomerRole) {
-      throw new ForbiddenException("Only customers and carriers can access jobs.");
+      throw new ForbiddenException("Sadece nakliyeciler ve müşteriler bu işlere erişebilir.");
     }
 
     if (requestedAudience === "carrier") {
       if (!hasCarrierRole) {
-        throw new ForbiddenException("Carrier context is not available for the current user.");
+        throw new ForbiddenException("Nakliyeci context'i mevcut kullanıcı için mevcut değil.");
       }
 
       return requestedAudience;
@@ -335,21 +504,25 @@ export class JobsService {
 
     if (requestedAudience === "customer") {
       if (!hasCustomerRole) {
-        throw new ForbiddenException("Customer context is not available for the current user.");
+        throw new ForbiddenException("Müşteri context'i mevcut kullanıcı için mevcut değil.");
       }
 
       return requestedAudience;
     }
 
+    //Yani hem müşteri hem nakliyeci olan biri liste/detay okurken hangi taraftan baktığını söylemek zorunda:
     if (hasCarrierRole && hasCustomerRole) {
       throw new ConflictException(
-        "Dual-role users must specify ?as=customer or ?as=carrier for job reads."
+        "cift rolleri olan kullanıcılar, iş okuma işlemleri için ?as=customer veya ?as=carrier parametresini belirtmek zorundadır."
       );
     }
 
     return hasCarrierRole ? "carrier" : "customer";
   }
 
+  //assertDistinctShipmentParticipants metodu, nakliyeci ve müşterinin aynı kullanıcıya karşılık gelmesi durumunu kontrol eder. 
+  //Eğer her iki taraf da aynı kullanıcıysa, nakliye işleminin devam etmesini engellemek için bir ConflictException fırlatır. 
+  // Bu, nakliye sürecinde her iki tarafın da farklı kullanıcılar olması gerektiği kuralını uygular ve böylece potansiyel olarak hatalı veya kötü niyetli işlemlerin önüne geçer.
   private assertDistinctShipmentParticipants(
     job: Pick<StoredJobDetailRecord, "carrierId" | "customerId">
   ) {
@@ -358,10 +531,11 @@ export class JobsService {
     }
 
     throw new ConflictException(
-      "Shipment lifecycle is blocked because the carrier and customer resolve to the same user."
+      "Gönderi yaşam döngüsü, nakliyeci ve müşteri aynı kullanıcıya yönlendirildiği için bloke olmuştur."
     );
   }
 
+  //Gelen DB durumunu normalize edip şuna eşit mi bakıyor:NAKLIYE / OLUSTURULDU
   private isJobCreated(durumTuru: string, durumAdi: string): boolean {
     return (
       durumTuru.trim().toUpperCase() === CREATED_JOB_STATUS.durumTuru &&
@@ -369,6 +543,7 @@ export class JobsService {
     );
   }
 
+  //Gelen DB durumunu normalize edip şuna eşit mi bakıyor:NAKLIYE / BASLATILDI
   private isJobStarted(durumTuru: string, durumAdi: string): boolean {
     return (
       durumTuru.trim().toUpperCase() === STARTED_JOB_STATUS.durumTuru &&
@@ -376,6 +551,14 @@ export class JobsService {
     );
   }
 
+  private isJobPendingDelivery(durumTuru: string, durumAdi: string): boolean {
+    return (
+      durumTuru.trim().toUpperCase() === PENDING_DELIVERY_JOB_STATUS.durumTuru &&
+      durumAdi.trim().toUpperCase() === PENDING_DELIVERY_JOB_STATUS.durumAdi
+    );
+  }
+
+  //Gelen DB durumunu normalize edip şuna eşit mi bakıyor:ISTEK / ANLASILDI
   private isRequestAgreed(durumTuru: string, durumAdi: string): boolean {
     return (
       durumTuru.trim().toUpperCase() === AGREED_REQUEST_STATUS.durumTuru &&
@@ -383,13 +566,14 @@ export class JobsService {
     );
   }
 
+  //Liste ekranı için sade veri döner.
   private toListItemResponse(
     job: StoredJobRecord,
     audience: JobAudience
   ): JobListItemResponseDto {
     return {
-      id: job.id,
-      requestId: job.requestId,
+      id: job.publicId,
+      requestId: job.requestPublicId,
       participantSide: audience,
       baslangicSehri: job.baslangicSehri,
       varisSehri: job.varisSehri,
@@ -398,29 +582,35 @@ export class JobsService {
       durum: job.durumAdi,
       olusturmaTarihi: job.olusturmaTarihi,
       baslangicTarihi: job.baslangicTarihi,
+      teslimBildirimTarihi: job.teslimBildirimTarihi,
       teslimTarihi: job.teslimTarihi,
-      counterpartyId: job.counterpartyId,
+      counterpartyId: job.counterpartyPublicId,
       counterpartyName: job.counterpartyName,
       counterpartyUsername: job.counterpartyUsername,
     };
   }
 
+  //detay ekranı için daha kapsamlı veri döner. Ayrıca, kullanıcının bu nakliyeyi ]
+  //başlatıp başlatamayacağı veya tamamlayıp tamamlayamayacağı bilgisi de dahil edilir.
   private toDetailResponse(
     job: StoredJobDetailRecord,
     currentUser: AuthenticatedUser,
     audience: JobAudience
   ): JobDetailResponseDto {
+    //Yani işi sadece o işi alan nakliyeci başlatabilir veya tamamlayabilir. 
+    //Müşteri hiçbir şekilde başlatamaz veya tamamlayamaz.
     const canManageLifecycle =
       audience === "carrier" && job.carrierId === currentUser.id;
 
     return {
-      id: job.id,
-      requestId: job.requestId,
+      id: job.publicId,
+      requestId: job.requestPublicId,
       participantSide: audience,
       durum: job.durumAdi,
       anlasilanFiyat: job.anlasilanFiyat,
       olusturmaTarihi: job.olusturmaTarihi,
       baslangicTarihi: job.baslangicTarihi,
+      teslimBildirimTarihi: job.teslimBildirimTarihi,
       teslimTarihi: job.teslimTarihi,
       baslangicSehri: job.baslangicSehri,
       varisSehri: job.varisSehri,
@@ -437,23 +627,34 @@ export class JobsService {
       tasimaTarihi: job.tasimaTarihi,
       yukDetay: job.yukDetay,
       carrier: {
-        id: job.carrierId,
+        id: job.carrierPublicId,
         name: job.carrierName,
         username: job.carrierUsername,
       },
       customer: {
-        id: job.customerId,
+        id: job.customerPublicId,
         name: job.customerName,
         username: job.customerUsername,
       },
       vehicle: {
-        id: job.aracId,
+        id: job.aracPublicId,
         plaka: job.aracPlaka,
         marka: job.aracMarka,
         model: job.aracModel,
         isArchived: job.aracDeletedAt !== null,
       },
+      //Frontend butonları buradan yönetebilir. 
+      //Örneğin, nakliyeci sadece nakliyesi "olusturuldu" durumundayken 
+      //"Başlat" butonunu görebilir ve sadece "baslatildi" durumundayken 
+      //"Tamamla" butonunu görebilir. Müşteri ise hiçbir zaman bu butonları 
+      //görmez çünkü lifecycle işlemlerini yönetemez.
       canStart: canManageLifecycle && this.isJobCreated(job.durumTuru, job.durumAdi),
+      canMarkDelivered:
+        canManageLifecycle && this.isJobStarted(job.durumTuru, job.durumAdi),
+      canConfirmDelivery:
+        audience === "customer" &&
+        job.customerId === currentUser.id &&
+        this.isJobPendingDelivery(job.durumTuru, job.durumAdi),
       canComplete:
         canManageLifecycle && this.isJobStarted(job.durumTuru, job.durumAdi),
       ratingContext: buildRatingContext({

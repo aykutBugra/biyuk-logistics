@@ -26,7 +26,7 @@ export type CarrierDiscoveryFilterForm = {
 
 type CarrierDiscoveryFiltersProps = {
   resultsCount: number;
-  selectedCarrierRouteId: number | null;
+  selectedCarrierRouteId: string | null;
   selectedCarrierRoute: CarrierRouteListItem | null;
   routes: CarrierRouteListItem[];
   isRoutesLoading: boolean;

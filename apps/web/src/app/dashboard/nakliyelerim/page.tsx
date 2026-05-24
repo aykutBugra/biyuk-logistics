@@ -62,7 +62,11 @@ function normalizeStatus(value: string): string {
 
 function isActiveJobStatus(status: string): boolean {
   const normalizedStatus = normalizeStatus(status);
-  return normalizedStatus === "OLUSTURULDU" || normalizedStatus === "BASLATILDI";
+  return (
+    normalizedStatus === "OLUSTURULDU" ||
+    normalizedStatus === "BASLATILDI" ||
+    normalizedStatus === "TESLIM_BEKLIYOR"
+  );
 }
 
 function isCompletedJobStatus(status: string): boolean {
@@ -192,6 +196,12 @@ function buildShipmentSignal(
       sinyalTonu: "blue",
     };
   }
+  if (normalizedStatus === "TESLIM_BEKLIYOR") {
+    return {
+      sinyalEtiketi: "Musteri onayi bekliyor",
+      sinyalTonu: "amber" as const,
+    };
+  }
 
   return {
     sinyalEtiketi: "Hazirlaniyor",
@@ -209,6 +219,7 @@ function buildTimelineSteps(job: JobListItem, detail: JobDetail | null) {
       state:
         normalizedStatus === "OLUSTURULDU" ||
         normalizedStatus === "BASLATILDI" ||
+        normalizedStatus === "TESLIM_BEKLIYOR" ||
         normalizedStatus === "TAMAMLANDI"
           ? ("complete" as const)
           : ("pending" as const),
@@ -219,16 +230,24 @@ function buildTimelineSteps(job: JobListItem, detail: JobDetail | null) {
       state:
         normalizedStatus === "BASLATILDI"
           ? ("current" as const)
-          : normalizedStatus === "TAMAMLANDI"
+          : normalizedStatus === "TESLIM_BEKLIYOR" ||
+              normalizedStatus === "TAMAMLANDI"
             ? ("complete" as const)
             : ("pending" as const),
     },
     {
-      label: "Teslim edildi",
-      timestamp: formatDateTime(detail?.teslimTarihi ?? job.teslimTarihi),
+      label: "Teslim onayi",
+      timestamp: formatDateTime(
+        detail?.teslimTarihi ??
+          job.teslimTarihi ??
+          detail?.teslimBildirimTarihi ??
+          job.teslimBildirimTarihi
+      ),
       state:
         normalizedStatus === "TAMAMLANDI"
           ? ("complete" as const)
+          : normalizedStatus === "TESLIM_BEKLIYOR"
+            ? ("current" as const)
           : ("pending" as const),
     },
   ];
@@ -242,6 +261,8 @@ function buildShipmentNote(status: string, isDelayed: boolean): string {
   switch (normalizeStatus(status)) {
     case "BASLATILDI":
       return "Yuk sahada ilerliyor. Teslim sureci aktif olarak devam ediyor.";
+    case "TESLIM_BEKLIYOR":
+      return "Teslim edildi, musteri onayi bekleniyor.";
     case "TAMAMLANDI":
       return "Teslimat basariyla tamamlandi ve kayit kapanisa hazir.";
     default:
@@ -380,7 +401,7 @@ export default function MyJobsPage() {
   const { accessToken, status } = useCarrierPageAccess();
   const [jobs, setJobs] = useState<JobListItem[]>([]);
   const [threads, setThreads] = useState<OfferThreadSummary[]>([]);
-  const [jobDetailsById, setJobDetailsById] = useState<Record<number, JobDetail | null>>(
+  const [jobDetailsById, setJobDetailsById] = useState<Record<string, JobDetail | null>>(
     {}
   );
   const [searchQuery, setSearchQuery] = useState("");

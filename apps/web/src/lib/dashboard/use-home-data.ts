@@ -116,6 +116,7 @@ type UseHomeDataParams = {
 
 const DEFAULT_DASHBOARD_MAX_SAPMA_KM = 50;
 
+// Backend status degerleri farkli casing ile gelirse hesaplar bozulmasin diye normalize edilir.
 function normalizeStatus(value: string): string {
   return value.trim().toUpperCase();
 }
@@ -134,7 +135,11 @@ function isCompletedRequestStatus(status: string): boolean {
 
 function isActiveJobStatus(status: string): boolean {
   const normalizedStatus = normalizeStatus(status);
-  return normalizedStatus === "OLUSTURULDU" || normalizedStatus === "BASLATILDI";
+  return (
+    normalizedStatus === "OLUSTURULDU" ||
+    normalizedStatus === "BASLATILDI" ||
+    normalizedStatus === "TESLIM_BEKLIYOR"
+  );
 }
 
 function isCompletedJobStatus(status: string): boolean {
@@ -151,6 +156,7 @@ function createInitialHomeState(): DashboardHomeState {
   };
 }
 
+// Nakliyeci tarafinda rota onerisi icin en son eklenen rota varsayilan secilir.
 function selectPrimaryRoute(routes: CarrierRouteListItem[]): CarrierRouteListItem | null {
   return (
     [...routes].sort(
@@ -160,6 +166,7 @@ function selectPrimaryRoute(routes: CarrierRouteListItem[]): CarrierRouteListIte
   );
 }
 
+// Rota uyumu uygun olan istekler once, sinirdakiler sonra siralanir.
 function getRouteMatchRank(request: OpenOfferRequestListItem): number {
   const label = request.rotaUyumu?.uygunlukEtiketi?.trim().toUpperCase();
 
@@ -174,6 +181,7 @@ function getRouteMatchRank(request: OpenOfferRequestListItem): number {
   return 2;
 }
 
+// Ana ekranda tek firsat gosterilecegi icin en iyi rota uyumu ve en yeni kayit oncelenir.
 function selectFeaturedRequest(
   requests: OpenOfferRequestListItem[]
 ): OpenOfferRequestListItem | null {
@@ -202,6 +210,7 @@ function selectFeaturedRequest(
   );
 }
 
+// Secili rota icin acik istek sayisi ve ortalama sapma bilgisi ozetlenir.
 function buildRoutePreview(
   route: CarrierRouteListItem | null,
   requests: OpenOfferRequestListItem[]
@@ -226,6 +235,7 @@ function buildRoutePreview(
   };
 }
 
+// Bildirim tipinden dashboard aktivite rengini turetir.
 function resolveNotificationTone(tip: string): CarrierDashboardActivity["tone"] {
   const normalizedTip = normalizeStatus(tip);
 
@@ -244,6 +254,7 @@ function resolveNotificationTone(tip: string): CarrierDashboardActivity["tone"] 
   return "slate";
 }
 
+// Nakliyeci ana ekranindaki son hareket listesi bildirim, konusma, is ve rota verilerinden olusur.
 function buildRecentActivities(params: {
   notifications: NotificationListItem[];
   threads: OfferThreadSummary[];
@@ -323,6 +334,7 @@ function buildRecentActivities(params: {
   return [];
 }
 
+// Dashboard ana ekraninin musteri, nakliyeci ve ortak sayaclarini tek hook icinde toplar.
 export function useHomeData({
   auth,
   hasCustomerRole,
@@ -334,6 +346,7 @@ export function useHomeData({
   const [homeState, setHomeState] = useState<DashboardHomeState>(createInitialHomeState);
 
   useEffect(() => {
+    // Auth henuz bilinmiyorsa veya intro aciksa veri cekme ertelenir.
     if (auth === undefined) {
       return;
     }
@@ -348,6 +361,7 @@ export function useHomeData({
       try {
         setHomeState((state) => ({ ...state, isLoading: true, errorMessage: null }));
 
+        // Ortak sayac her rolde lazim, role ozel veri ise sadece kullanicinin yetkisi varsa cekilir.
         const unreadNotificationsPromise = getMyUnreadNotificationCount(auth.accessToken);
         const customerPromise = hasCustomerRole
           ? Promise.all([
@@ -370,6 +384,7 @@ export function useHomeData({
               ]);
 
               const primaryRoute = selectPrimaryRoute(routes);
+              // Rota varsa acik istekler bu rota ve varsayilan sapma limitiyle daraltilir.
               const suitableRequests = primaryRoute
                 ? await getOpenOfferRequests(auth.accessToken, {
                     carrierRouteId: primaryRoute.id,
@@ -400,6 +415,7 @@ export function useHomeData({
           return;
         }
 
+        // Musteri icin talep, teklif ve okunmamis konusma sayaclari tek view modele cevrilir.
         const customerData: CustomerHomeData | null = customerResponse
           ? (() => {
               const [requests, incomingOffers, threads] = customerResponse;
@@ -439,6 +455,7 @@ export function useHomeData({
             })()
           : null;
 
+        // Nakliyeci icin teklif, nakliye, rota, arac ve kesif verisi ayni dashboard modelinde birlesir.
         const carrierData: CarrierHomeData | null = carrierResponse
           ? (() => {
               const {

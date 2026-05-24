@@ -226,10 +226,10 @@ export default function CarrierRoutesPage() {
   const { accessToken, status } = useCarrierPageAccess();
   const [routes, setRoutes] = useState<CarrierRouteListItem[]>([]);
   const [routeDetailsById, setRouteDetailsById] = useState<
-    Record<number, CarrierRouteDetail | null | undefined>
+    Record<string, CarrierRouteDetail | null | undefined>
   >({});
   const [routeMatchesById, setRouteMatchesById] = useState<
-    Record<number, OpenOfferRequestListItem[] | null | undefined>
+    Record<string, OpenOfferRequestListItem[] | null | undefined>
   >({});
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<RouteFilterTab>("all");
@@ -509,7 +509,7 @@ export default function CarrierRoutesPage() {
     hasCoordinates(routeDetailsById[route.id] ?? null)
   ).length;
   const suitableOpenRequestCount = (() => {
-    const uniqueRequestIds = new Set<number>();
+    const uniqueRequestIds = new Set<string>();
 
     for (const value of Object.values(routeMatchesById)) {
       if (!Array.isArray(value)) {

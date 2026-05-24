@@ -1,10 +1,15 @@
 import { Prisma } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
+import {
+  type PublicEntityId,
+  publicEntityWhere,
+} from "../../../common/public-ids/public-entity-id";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { StoredSubmittedRatingRecord } from "../rating-context.helpers";
 
 const shipmentRatingSelect = {
   id: true,
+  publicId: true,
   puanlayanId: true,
   puanlananId: true,
   puanDegeri: true,
@@ -12,8 +17,11 @@ const shipmentRatingSelect = {
   tarih: true,
 } satisfies Prisma.PuanlamaSelect;
 
+//Puanlanabilir nakliye sorgusunda katilimci bilgisi, durum ve daha once verilmis
+//puanlar birlikte okunur.
 const rateableJobSelect = {
   id: true,
+  publicId: true,
   nakliyeciId: true,
   durum: {
     select: {
@@ -24,6 +32,7 @@ const rateableJobSelect = {
   istek: {
     select: {
       id: true,
+      publicId: true,
       musteriId: true,
     },
   },
@@ -34,12 +43,14 @@ const rateableJobSelect = {
 
 const ratingListSelect = {
   id: true,
+  publicId: true,
   puanDegeri: true,
   yorum: true,
   tarih: true,
   puanlayan: {
     select: {
       id: true,
+      publicId: true,
       ad: true,
       soyad: true,
       kullaniciAdi: true,
@@ -48,6 +59,7 @@ const ratingListSelect = {
   puanlanan: {
     select: {
       id: true,
+      publicId: true,
       ad: true,
       soyad: true,
       kullaniciAdi: true,
@@ -56,10 +68,12 @@ const ratingListSelect = {
   nakliye: {
     select: {
       id: true,
+      publicId: true,
       nakliyeciId: true,
       istek: {
         select: {
           id: true,
+          publicId: true,
           musteriId: true,
           baslangicSehri: true,
           varisSehri: true,
@@ -69,6 +83,7 @@ const ratingListSelect = {
   },
 } satisfies Prisma.PuanlamaSelect;
 
+//Prisma payload tipleri, mapper metodlarinda alan guvenligi saglamak icin kullanilir.
 type StoredRateableJobQuery = Prisma.NakliyeGetPayload<{
   select: typeof rateableJobSelect;
 }>;
@@ -79,7 +94,9 @@ type StoredRatingListQuery = Prisma.PuanlamaGetPayload<{
 
 export type StoredRateableJobRecord = {
   id: number;
+  publicId: string;
   requestId: number;
+  requestPublicId: string;
   carrierId: number;
   customerId: number;
   durumTuru: string;
@@ -98,17 +115,22 @@ export type CreateRatingRecordInput = {
 
 export type StoredRatingListRecord = {
   id: number;
+  publicId: string;
   jobId: number;
+  jobPublicId: string;
   requestId: number;
+  requestPublicId: string;
   puanDegeri: number;
   yorum: string | null;
   tarih: Date;
   baslangicSehri: string;
   varisSehri: string;
   puanlayanId: number;
+  puanlayanPublicId: string;
   puanlayanName: string;
   puanlayanUsername: string;
   puanlananId: number;
+  puanlananPublicId: string;
   puanlananName: string;
   puanlananUsername: string;
   rolBaglami: string;
@@ -128,6 +150,7 @@ export type StoredRatingSummaryRecord = {
 export class RatingsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  //Puanlama tanim tablosundan SAYISAL_1_5 gibi scheme id'sini bulur.
   async findRatingTypeIdByType(type: string): Promise<number | null> {
     const ratingType = await this.prisma.client.puanTanimlari.findFirst({
       where: {
@@ -148,12 +171,14 @@ export class RatingsRepository {
   }
 
   async findRateableJobByIdAndParticipant(
-    jobId: number,
+    jobId: PublicEntityId,
     participantId: number
   ): Promise<StoredRateableJobRecord | null> {
+    //Nakliye sadece musteri veya nakliyeci tarafindan puanlanabilir; sorgu bu sahiplik
+    //kontrolunu OR kosuluyla DB seviyesinde yapar.
     const job = await this.prisma.client.nakliye.findFirst({
       where: {
-        id: jobId,
+        ...publicEntityWhere(jobId),
         OR: [
           {
             nakliyeciId: participantId,
@@ -172,6 +197,7 @@ export class RatingsRepository {
   }
 
   async create(input: CreateRatingRecordInput): Promise<StoredSubmittedRatingRecord> {
+    //Puanlama kaydini olusturur. Unique constraint tekrar puanlamayi DB seviyesinde de engeller.
     const rating = await this.prisma.client.puanlama.create({
       data: {
         nakliyeId: input.nakliyeId,
@@ -188,6 +214,7 @@ export class RatingsRepository {
   }
 
   async findManyGivenByUserId(userId: number): Promise<StoredRatingListRecord[]> {
+    //Kullanicinin verdigi puanlari tarih sirasina gore getirir.
     const ratings = await this.prisma.client.puanlama.findMany({
       where: {
         puanlayanId: userId,
@@ -200,6 +227,7 @@ export class RatingsRepository {
   }
 
   async findManyReceivedByUserId(userId: number): Promise<StoredRatingListRecord[]> {
+    //Kullanicinin aldigi puanlari tarih sirasina gore getirir.
     const ratings = await this.prisma.client.puanlama.findMany({
       where: {
         puanlananId: userId,
@@ -212,6 +240,7 @@ export class RatingsRepository {
   }
 
   async getReceivedSummaryByUserId(userId: number): Promise<StoredRatingSummaryRecord> {
+    //Alinan puanlar nakliyeci rolu ve musteri rolu icin ayri aggregate edilir.
     const [asCarrier, asCustomer] = await Promise.all([
       this.prisma.client.puanlama.aggregate({
         where: {
@@ -254,9 +283,12 @@ export class RatingsRepository {
   private mapStoredRateableJob(
     job: StoredRateableJobQuery
   ): StoredRateableJobRecord {
+    //Nakliye kaydini puanlama kararinda gereken sade forma cevirir.
     return {
       id: job.id,
+      publicId: job.publicId,
       requestId: job.istek.id,
+      requestPublicId: job.istek.publicId,
       carrierId: job.nakliyeciId,
       customerId: job.istek.musteriId,
       durumTuru: job.durum.durumTuru,
@@ -268,8 +300,10 @@ export class RatingsRepository {
   private mapStoredSubmittedRating(
     rating: Prisma.PuanlamaGetPayload<{ select: typeof shipmentRatingSelect }>
   ): StoredSubmittedRatingRecord {
+    //Yeni olusan veya mevcut puan kaydini ortak submitted rating formatina cevirir.
     return {
       id: rating.id,
+      publicId: rating.publicId,
       puanlayanId: rating.puanlayanId,
       puanlananId: rating.puanlananId,
       puanDegeri: rating.puanDegeri,
@@ -281,19 +315,25 @@ export class RatingsRepository {
   private mapStoredRatingListRecord(
     rating: StoredRatingListQuery
   ): StoredRatingListRecord {
+    //Liste response'lari icin nakliye rotasi, puanlayan ve puanlanan bilgileri birlestirilir.
     return {
       id: rating.id,
+      publicId: rating.publicId,
       jobId: rating.nakliye.id,
+      jobPublicId: rating.nakliye.publicId,
       requestId: rating.nakliye.istek.id,
+      requestPublicId: rating.nakliye.istek.publicId,
       puanDegeri: rating.puanDegeri,
       yorum: rating.yorum,
       tarih: rating.tarih,
       baslangicSehri: rating.nakliye.istek.baslangicSehri,
       varisSehri: rating.nakliye.istek.varisSehri,
       puanlayanId: rating.puanlayan.id,
+      puanlayanPublicId: rating.puanlayan.publicId,
       puanlayanName: `${rating.puanlayan.ad} ${rating.puanlayan.soyad}`.trim(),
       puanlayanUsername: rating.puanlayan.kullaniciAdi,
       puanlananId: rating.puanlanan.id,
+      puanlananPublicId: rating.puanlanan.publicId,
       puanlananName: `${rating.puanlanan.ad} ${rating.puanlanan.soyad}`.trim(),
       puanlananUsername: rating.puanlanan.kullaniciAdi,
       rolBaglami:
@@ -309,6 +349,7 @@ export class RatingsRepository {
       _all: number;
     };
   }): StoredRatingSummaryBucket {
+    //Aggregate sonucunda puan yoksa averageRating null kalir, sayi her zaman doner.
     return {
       averageRating:
         typeof aggregate._avg.puanDegeri === "number"
