@@ -15,6 +15,7 @@ import {
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
 import { useConfirm } from "@/lib/confirm/confirm-context";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   formatLocationLabel,
   formatRouteDistanceKm,
@@ -30,9 +31,7 @@ function formatDateTime(value: string): string {
 }
 
 function formatPlannedDate(value: string): string {
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-  }).format(new Date(`${value}T00:00:00`));
+  return formatDateOnly(value, value);
 }
 
 function hasRouteCoordinates(route: CarrierRouteDetail): boolean {

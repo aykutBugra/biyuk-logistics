@@ -25,7 +25,7 @@ const contentMap: Record<
     eyebrow: "Filtre sonucu",
     title: "Filtrelere uyan istek yok",
     description:
-      "Secili filtreler bu an icin bir sonuc donmuyor. Sehir, hacim veya tarih alanlarini genisletmeyi dene.",
+      "Secili filtreler bu an icin bir sonuc donmuyor. Sehir, hacim veya yuk alanlarini genisletmeyi dene.",
   },
   "no-route-match": {
     eyebrow: "Rota uyumu",

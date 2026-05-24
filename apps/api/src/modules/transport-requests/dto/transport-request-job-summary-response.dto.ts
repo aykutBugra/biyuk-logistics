@@ -13,6 +13,8 @@ export class TransportRequestJobSummaryResponseDto {
   baslangicTarihi!: Date | null;
   teslimBildirimTarihi!: Date | null;
   teslimTarihi!: Date | null;
+  planlananAlimTarihi!: string | null;
+  tahminiTeslimTarihi!: string | null;
   canConfirmDelivery!: boolean;
   ratingContext!: RatingContextResponseDto;
 }

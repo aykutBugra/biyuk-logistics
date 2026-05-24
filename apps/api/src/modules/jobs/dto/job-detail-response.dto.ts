@@ -10,6 +10,8 @@ export class JobDetailResponseDto {
   baslangicTarihi!: Date | null;
   teslimBildirimTarihi!: Date | null;
   teslimTarihi!: Date | null;
+  planlananAlimTarihi!: string | null;
+  tahminiTeslimTarihi!: string | null;
   baslangicSehri!: string;
   varisSehri!: string;
   baslangicKonumMetni!: string | null;

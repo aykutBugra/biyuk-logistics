@@ -10,6 +10,7 @@ import {
   formatRouteDistanceKm,
   formatRouteDuration,
 } from "@/lib/logistics";
+import { formatDateOnly } from "@/lib/date-only";
 import { TURKEY_CITY_OPTIONS } from "@/lib/turkey-cities";
 
 export type CarrierDiscoveryFilterForm = {
@@ -21,7 +22,6 @@ export type CarrierDiscoveryFilterForm = {
   minHacimM3: string;
   maxHacimM3: string;
   yukTipi: string;
-  tasimaTarihi: string;
 };
 
 type CarrierDiscoveryFiltersProps = {
@@ -46,12 +46,6 @@ type CarrierDiscoveryFiltersProps = {
 };
 
 const MAX_SAPMA_PRESETS = [25, 50, 100, 150] as const;
-
-function formatPlannedDate(value: string): string {
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-  }).format(new Date(`${value}T00:00:00`));
-}
 
 export default function CarrierDiscoveryFilters({
   resultsCount,
@@ -186,7 +180,7 @@ export default function CarrierDiscoveryFilters({
                     </p>
                     <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
                       <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
-                        {formatPlannedDate(selectedCarrierRoute.planlananTarih)}
+                        {formatDateOnly(selectedCarrierRoute.planlananTarih)}
                       </span>
                       <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-blue-100">
                         {formatRouteDistanceKm(selectedCarrierRoute.rotaMesafeMetre)}
@@ -293,10 +287,10 @@ export default function CarrierDiscoveryFilters({
             <div className="rounded-[1rem] border border-slate-200 bg-white p-3.5">
               <div className="space-y-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Konum ve tarih
+                  Konum
                 </p>
                 <p className="text-sm leading-5 text-slate-600">
-                  Bolge ve tarih sec.
+                  Bolge sec.
                 </p>
               </div>
 
@@ -317,22 +311,6 @@ export default function CarrierDiscoveryFilters({
                   value={filters.varisSehir}
                   onChange={onVarisSehirChange}
                 />
-                <div className="space-y-1">
-                  <label
-                    className="text-sm font-medium text-slate-700"
-                    htmlFor="tasimaTarihi"
-                  >
-                    Tasima tarihi
-                  </label>
-                  <input
-                    id="tasimaTarihi"
-                    name="tasimaTarihi"
-                    type="date"
-                    value={filters.tasimaTarihi}
-                    onChange={onFilterChange}
-                    className="app-input w-full"
-                  />
-                </div>
               </div>
             </div>
 

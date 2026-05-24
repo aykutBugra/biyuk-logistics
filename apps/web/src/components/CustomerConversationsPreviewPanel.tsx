@@ -3,6 +3,7 @@
 import Link from "next/link";
 import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import type { OfferThreadSummary } from "@/lib/api/offer-threads";
+import { formatDateOnly } from "@/lib/date-only";
 
 type CustomerConversationsPreviewPanelProps = {
   threads: OfferThreadSummary[];
@@ -92,6 +93,9 @@ export default function CustomerConversationsPreviewPanel({
                 </div>
                 <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-500">
                   {thread.lastMessageSummary ?? "Konusma hazir."}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-400">
+                  Planlanan alim: {formatDateOnly(thread.planlananAlimTarihi)}
                 </p>
               </div>
               <span className="shrink-0 text-xs font-medium text-slate-400">

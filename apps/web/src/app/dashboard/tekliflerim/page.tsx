@@ -26,6 +26,7 @@ import {
 } from "@/lib/api/offers";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   formatLocationLabel,
   formatVolumeM3,
@@ -86,15 +87,7 @@ function formatPlanningDate(value: string | null): string | null {
     return null;
   }
 
-  const parsedDate = new Date(`${value}T00:00:00`);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-  }).format(parsedDate);
+  return formatDateOnly(value);
 }
 
 function buildInitials(value: string | null | undefined): string {
@@ -154,7 +147,7 @@ function buildOfferChips(detail: OpenOfferRequestDetail | null): MyOfferCardChip
   const plannedDate = formatPlanningDate(detail.tasimaTarihi);
 
   if (plannedDate) {
-    chips.push({ label: plannedDate, tone: "blue" });
+    chips.push({ label: `Tercih: ${plannedDate}`, tone: "blue" });
   }
 
   if (detail.tekTasimaIstiyor) {
@@ -510,7 +503,9 @@ export default function MyOffersPage() {
     const customerProfileImageUrl = thread?.karsiTarafProfileImageUrl;
     const trackingParts = [
       offer.aracPlaka ? `Arac: ${offer.aracPlaka}` : "Arac bilgisi yok",
-      detail?.tasimaTarihi ? `Planlanan tarih: ${detail.tasimaTarihi}` : null,
+      offer.planlananAlimTarihi
+        ? `Planlanan alim: ${formatDateOnly(offer.planlananAlimTarihi)}`
+        : null,
     ].filter(Boolean);
 
     const searchText = [
@@ -534,6 +529,8 @@ export default function MyOffersPage() {
       rotaMeta: buildRouteMeta(offer, detail),
       fiyat: offer.fiyat,
       aracPlaka: offer.aracPlaka,
+      planlananAlimTarihi: formatDateOnly(offer.planlananAlimTarihi, ""),
+      tahminiTeslimTarihi: formatDateOnly(offer.tahminiTeslimTarihi, ""),
       musteriAdi: customerName,
       musteriKullaniciAdi: customerUsername,
       musteriBasHarfler: buildInitials(customerName ?? customerUsername),

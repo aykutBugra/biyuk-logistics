@@ -26,6 +26,7 @@ import {
 } from "@/lib/api/offer-threads";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
+import { dateOnlyToLocalDate, formatDateOnly } from "@/lib/date-only";
 import {
   formatLocationLabel,
   formatVolumeM3,
@@ -95,24 +96,11 @@ function formatPlanningDate(value: string | null): string | null {
     return null;
   }
 
-  const parsedDate = new Date(`${value}T00:00:00`);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-  }).format(parsedDate);
+  return formatDateOnly(value);
 }
 
 function parsePlanningDate(value: string | null): Date | null {
-  if (!value) {
-    return null;
-  }
-
-  const parsedDate = new Date(`${value}T00:00:00`);
-  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+  return dateOnlyToLocalDate(value);
 }
 
 function startOfToday(): Date {
@@ -142,7 +130,7 @@ function buildJobChips(detail: JobDetail | null) {
   const planningDate = formatPlanningDate(detail.tasimaTarihi);
 
   if (planningDate) {
-    chips.push({ label: planningDate, tone: "blue" as const });
+    chips.push({ label: `Tercih: ${planningDate}`, tone: "blue" as const });
   }
 
   if (detail.tekTasimaIstiyor) {
@@ -381,7 +369,7 @@ function TodayTasksPanel(props: { tasks: ShipmentViewModel[] }) {
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-slate-950">{task.rotaBaslik}</p>
                   <p className="mt-1 text-sm text-slate-500">
-                    {task.planlananTeslimat ?? "Tarih bekleniyor"}
+      {task.tahminiTeslimTarihi ?? task.planlananAlimTarihi ?? "Tarih bekleniyor"}
                   </p>
                 </div>
                 <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
@@ -618,7 +606,9 @@ export default function MyJobsPage() {
 
   const shipmentCards: ShipmentViewModel[] = jobs.map((job) => {
     const detail = jobDetailsById[job.id] ?? null;
-    const planningDate = parsePlanningDate(detail?.tasimaTarihi ?? null);
+    const planningDate = parsePlanningDate(
+      job.tahminiTeslimTarihi ?? detail?.tahminiTeslimTarihi ?? null
+    );
     const isDelayed =
       planningDate !== null &&
       planningDate.getTime() < todayStart.getTime() &&
@@ -626,7 +616,12 @@ export default function MyJobsPage() {
     const signal = buildShipmentSignal(job.durum, isDelayed);
     const conversationThread =
       threadByConversationKey.get(`${job.requestId}-${job.counterpartyId}`) ?? null;
-    const plannedDeliveryLabel = formatPlanningDate(detail?.tasimaTarihi ?? null);
+    const plannedPickupLabel = formatPlanningDate(
+      job.planlananAlimTarihi ?? detail?.planlananAlimTarihi ?? null
+    );
+    const plannedDeliveryLabel = formatPlanningDate(
+      job.tahminiTeslimTarihi ?? detail?.tahminiTeslimTarihi ?? null
+    );
     const searchText = [
       job.baslangicSehri,
       job.varisSehri,
@@ -655,7 +650,8 @@ export default function MyJobsPage() {
         ? `Arac: ${detail.vehicle.plaka} - ${detail.vehicle.marka} ${detail.vehicle.model}`
         : `Arac: ${job.aracPlaka}`,
       chipler: buildJobChips(detail),
-      planlananTeslimat: plannedDeliveryLabel,
+      planlananAlimTarihi: plannedPickupLabel,
+      tahminiTeslimTarihi: plannedDeliveryLabel,
       kayitTarihi: formatDateTime(job.olusturmaTarihi) ?? "Bilinmiyor",
       durumNotu: buildShipmentNote(job.durum, isDelayed),
       sinyalEtiketi: signal.sinyalEtiketi,

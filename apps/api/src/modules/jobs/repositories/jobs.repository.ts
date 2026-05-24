@@ -26,6 +26,8 @@ const jobRecordSelect = {
   baslangicTarihi: true,
   teslimBildirimTarihi: true,
   teslimTarihi: true,
+  planlananAlimTarihi: true,
+  tahminiTeslimTarihi: true,
   durum: {
     select: {
       durumTuru: true,
@@ -125,6 +127,8 @@ export type StoredJobRecord = {
   baslangicTarihi: Date | null;
   teslimBildirimTarihi: Date | null;
   teslimTarihi: Date | null;
+  planlananAlimTarihi: Date | null;
+  tahminiTeslimTarihi: Date | null;
   counterpartyId: number;
   counterpartyPublicId: string;
   counterpartyName: string;
@@ -161,6 +165,8 @@ export type StoredJobDetailRecord = {
   baslangicTarihi: Date | null;
   teslimBildirimTarihi: Date | null;
   teslimTarihi: Date | null;
+  planlananAlimTarihi: Date | null;
+  tahminiTeslimTarihi: Date | null;
   carrierId: number;
   carrierPublicId: string;
   carrierName: string;
@@ -439,6 +445,8 @@ export class JobsRepository {
       baslangicTarihi: job.baslangicTarihi,
       teslimBildirimTarihi: job.teslimBildirimTarihi,
       teslimTarihi: job.teslimTarihi,
+      planlananAlimTarihi: job.planlananAlimTarihi,
+      tahminiTeslimTarihi: job.tahminiTeslimTarihi,
       counterpartyId: counterparty.id,
       counterpartyPublicId: counterparty.publicId,
       counterpartyName: `${counterparty.ad} ${counterparty.soyad}`.trim(),
@@ -476,6 +484,8 @@ export class JobsRepository {
       baslangicTarihi: job.baslangicTarihi,
       teslimBildirimTarihi: job.teslimBildirimTarihi,
       teslimTarihi: job.teslimTarihi,
+      planlananAlimTarihi: job.planlananAlimTarihi,
+      tahminiTeslimTarihi: job.tahminiTeslimTarihi,
       carrierId: job.nakliyeci.id,
       carrierPublicId: job.nakliyeci.publicId,
       carrierName: `${job.nakliyeci.ad} ${job.nakliyeci.soyad}`.trim(),

@@ -50,6 +50,8 @@ describe("JobsService.markDeliveredById", () => {
     hacimM3: 12,
     yukTipi: "GENEL",
     tasimaTarihi: "2026-05-05",
+    planlananAlimTarihi: new Date("2026-05-05T00:00:00.000Z"),
+    tahminiTeslimTarihi: new Date("2026-05-06T00:00:00.000Z"),
     yukDetay: "Mobilya",
     anlasilanFiyat: 12500,
     durumTuru: "NAKLIYE",

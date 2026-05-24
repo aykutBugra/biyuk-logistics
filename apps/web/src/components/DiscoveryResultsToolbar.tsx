@@ -1,6 +1,6 @@
 "use client";
 
-export type DiscoverySortMode = "recommended" | "newest" | "date";
+export type DiscoverySortMode = "recommended" | "newest";
 
 type DiscoveryResultsToolbarProps = {
   resultsCount: number;
@@ -15,7 +15,6 @@ type DiscoveryResultsToolbarProps = {
 const SORT_OPTIONS: Array<{ value: DiscoverySortMode; label: string }> = [
   { value: "recommended", label: "En uygun" },
   { value: "newest", label: "En yeni" },
-  { value: "date", label: "Tasima tarihi" },
 ];
 
 export default function DiscoveryResultsToolbar({

@@ -21,6 +21,7 @@ import { createRatingForJob } from "@/lib/api/ratings";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
 import { useConfirm } from "@/lib/confirm/confirm-context";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   formatLocationLabel,
   formatVolumeM3,
@@ -50,13 +51,7 @@ function formatDateTime(value: string | null): string {
 }
 
 function formatPlanningDate(value: string | null): string {
-  if (!value) {
-    return "Belirtilmedi";
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-  }).format(new Date(`${value}T00:00:00`));
+  return formatDateOnly(value);
 }
 
 function getJobStatusLabel(status: string): string {
@@ -513,7 +508,7 @@ export default function CarrierJobDetailPage() {
                     {formatVolumeM3(job.hacimM3)}
                   </span>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                    Tasima {formatPlanningDate(job.tasimaTarihi)}
+                    Tercih {formatPlanningDate(job.tasimaTarihi)}
                   </span>
                   {job.tekTasimaIstiyor ? (
                     <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
@@ -648,7 +643,7 @@ export default function CarrierJobDetailPage() {
                   <DetailInfoRow label="Agirlik" value={formatWeightKg(job.agirlikKg)} />
                   <DetailInfoRow label="Hacim" value={formatVolumeM3(job.hacimM3)} />
                   <DetailInfoRow
-                    label="Tasima tarihi"
+                    label="Tercih edilen tasima tarihi"
                     value={formatPlanningDate(job.tasimaTarihi)}
                   />
                   <div className="md:col-span-2">
@@ -727,6 +722,14 @@ export default function CarrierJobDetailPage() {
                   </div>
                   <DetailInfoRow label="Anlasilan fiyat" value={formatCurrency(job.anlasilanFiyat)} />
                   <DetailInfoRow label="Kayit tarihi" value={formatDateTime(job.olusturmaTarihi)} />
+                  <DetailInfoRow
+                    label="Planlanan alim tarihi"
+                    value={formatPlanningDate(job.planlananAlimTarihi)}
+                  />
+                  <DetailInfoRow
+                    label="Tahmini teslim tarihi"
+                    value={formatPlanningDate(job.tahminiTeslimTarihi)}
+                  />
                   <DetailInfoRow label="Baslangic" value={formatDateTime(job.baslangicTarihi)} />
                   <DetailInfoRow label="Teslim bildirimi" value={formatDateTime(job.teslimBildirimTarihi)} />
                   <DetailInfoRow label="Teslim" value={formatDateTime(job.teslimTarihi)} />

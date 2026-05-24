@@ -23,7 +23,8 @@ export type MyShipmentCardModel = {
   musteriKullaniciAdi: string | null;
   aracEtiketi: string;
   chipler: MyOfferCardChip[];
-  planlananTeslimat: string | null;
+  planlananAlimTarihi: string | null;
+  tahminiTeslimTarihi: string | null;
   kayitTarihi: string;
   durumNotu: string;
   sinyalEtiketi: string;
@@ -232,10 +233,16 @@ export default function MyShipmentCard({ shipment }: MyShipmentCardProps) {
           <div className="flex flex-col gap-3 xl:items-end">
             <div className="w-full rounded-[1rem] border border-slate-100 bg-slate-50/80 p-4 xl:max-w-[220px]">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Planlanan teslimat
+                Planlanan alim tarihi
               </p>
               <p className="mt-2 text-base font-black tracking-tight text-slate-950">
-                {shipment.planlananTeslimat ?? "Belirtilmedi"}
+                {shipment.planlananAlimTarihi ?? "Belirtilmedi"}
+              </p>
+              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Tahmini teslim tarihi
+              </p>
+              <p className="mt-2 text-base font-black tracking-tight text-slate-950">
+                {shipment.tahminiTeslimTarihi ?? "Belirtilmedi"}
               </p>
               <p className="mt-3 text-xs text-slate-500">
                 Kayit: {shipment.kayitTarihi}

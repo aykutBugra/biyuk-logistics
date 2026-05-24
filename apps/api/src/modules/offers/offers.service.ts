@@ -17,6 +17,10 @@ import {
   type PublicEntityId,
 } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import {
+  formatDateOnlyFromDate,
+  parseDateOnlyToUtcDate,
+} from "../../common/utils/date-only";
 import { unwrapTransactionResult } from "../../common/utils/unwrap-transaction-result";
 import { MediaStorageService } from "../../infrastructure/media/media-storage.service";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -294,6 +298,8 @@ export class OffersService {
       );
     }
 
+    const plannedDates = this.parseOfferPlannedDates(createOfferDto);
+
     const initialStatusId = await this.requireStatusId(
       OPEN_OFFER_STATUS.durumTuru,
       OPEN_OFFER_STATUS.durumAdi,
@@ -307,6 +313,8 @@ export class OffersService {
           aracId: selectedVehicle.id,
           fiyat: createOfferDto.fiyat,
           not: createOfferDto.not?.trim() || null,
+          planlananAlimTarihi: plannedDates.planlananAlimTarihi,
+          tahminiTeslimTarihi: plannedDates.tahminiTeslimTarihi,
           durumId: initialStatusId,
         },
         tx
@@ -488,6 +496,8 @@ export class OffersService {
             carrierId: offer.carrierId,
             aracId: offer.aracId!,
             fiyat: offer.fiyat,
+            planlananAlimTarihi: offer.planlananAlimTarihi,
+            tahminiTeslimTarihi: offer.tahminiTeslimTarihi,
           }),
           (reason) =>
             new ConflictException(
@@ -646,6 +656,41 @@ export class OffersService {
     }
 
     return offer;
+  }
+
+  private parseOfferPlannedDates(createOfferDto: CreateOfferDto): {
+    planlananAlimTarihi: Date;
+    tahminiTeslimTarihi: Date | null;
+  } {
+    let planlananAlimTarihi: Date;
+    let tahminiTeslimTarihi: Date | null = null;
+
+    try {
+      planlananAlimTarihi = parseDateOnlyToUtcDate(
+        createOfferDto.planlananAlimTarihi
+      );
+      tahminiTeslimTarihi = createOfferDto.tahminiTeslimTarihi
+        ? parseDateOnlyToUtcDate(createOfferDto.tahminiTeslimTarihi)
+        : null;
+    } catch {
+      throw new BadRequestException(
+        "Planlanan alim ve tahmini teslim tarihleri YYYY-MM-DD formatinda olmalidir."
+      );
+    }
+
+    if (
+      tahminiTeslimTarihi &&
+      tahminiTeslimTarihi.getTime() < planlananAlimTarihi.getTime()
+    ) {
+      throw new BadRequestException(
+        "Tahmini teslim tarihi planlanan alim tarihinden once olamaz."
+      );
+    }
+
+    return {
+      planlananAlimTarihi,
+      tahminiTeslimTarihi,
+    };
   }
 
   private async requireStatusId(
@@ -857,6 +902,8 @@ export class OffersService {
       aracPlaka: offer.aracPlaka,
       fiyat: offer.fiyat,
       not: offer.not,
+      planlananAlimTarihi: formatDateOnlyFromDate(offer.planlananAlimTarihi),
+      tahminiTeslimTarihi: formatDateOnlyFromDate(offer.tahminiTeslimTarihi),
       durum: offer.durumAdi,
     };
   }
@@ -883,6 +930,8 @@ export class OffersService {
       aracPlaka: offer.aracPlaka,
       fiyat: offer.fiyat,
       not: offer.not,
+      planlananAlimTarihi: formatDateOnlyFromDate(offer.planlananAlimTarihi),
+      tahminiTeslimTarihi: formatDateOnlyFromDate(offer.tahminiTeslimTarihi),
       durum: offer.durumAdi,
     };
   }
@@ -912,6 +961,8 @@ export class OffersService {
       aracPlaka: offer.aracPlaka,
       fiyat: offer.fiyat,
       not: offer.not,
+      planlananAlimTarihi: formatDateOnlyFromDate(offer.planlananAlimTarihi),
+      tahminiTeslimTarihi: formatDateOnlyFromDate(offer.tahminiTeslimTarihi),
       durum: offer.durumAdi,
     };
   }

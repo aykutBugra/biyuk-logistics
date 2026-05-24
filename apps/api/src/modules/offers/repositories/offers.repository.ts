@@ -109,6 +109,8 @@ export type CreateOfferRecordInput = {
   aracId: number;
   fiyat: number;
   not: string | null;
+  planlananAlimTarihi: Date;
+  tahminiTeslimTarihi: Date | null;
   durumId: number;
 };
 
@@ -124,6 +126,8 @@ export type StoredOfferRecord = {
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
+  planlananAlimTarihi: Date | null;
+  tahminiTeslimTarihi: Date | null;
   durumAdi: string;
 };
 
@@ -142,6 +146,8 @@ export type IncomingOfferListItemRecord = {
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
+  planlananAlimTarihi: Date | null;
+  tahminiTeslimTarihi: Date | null;
   durumAdi: string;
 };
 
@@ -169,6 +175,8 @@ export type MyIncomingOfferListItemRecord = {
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
+  planlananAlimTarihi: Date | null;
+  tahminiTeslimTarihi: Date | null;
   durumAdi: string;
 };
 
@@ -190,6 +198,8 @@ export type OfferDecisionContextRecord = {
   aracDeletedAt: Date | null;
   aracOwnerId: number | null;
   fiyat: number;
+  planlananAlimTarihi: Date | null;
+  tahminiTeslimTarihi: Date | null;
 };
 
 export type AcceptOfferInput = {
@@ -204,6 +214,8 @@ export type AcceptOfferInput = {
   carrierId: number;
   aracId: number;
   fiyat: number;
+  planlananAlimTarihi: Date | null;
+  tahminiTeslimTarihi: Date | null;
 };
 
 export type AcceptOfferResult =
@@ -654,6 +666,8 @@ export class OffersRepository {
         aracId: input.aracId,
         fiyat: new Prisma.Decimal(input.fiyat),
         not: input.not,
+        planlananAlimTarihi: input.planlananAlimTarihi,
+        tahminiTeslimTarihi: input.tahminiTeslimTarihi,
         durumId: input.durumId,
       },
       select: {
@@ -661,6 +675,8 @@ export class OffersRepository {
         publicId: true,
         fiyat: true,
         not: true,
+        planlananAlimTarihi: true,
+        tahminiTeslimTarihi: true,
         istek: {
           select: {
             id: true,
@@ -696,6 +712,8 @@ export class OffersRepository {
       aracPlaka: offer.arac?.plaka ?? null,
       fiyat: offer.fiyat.toNumber(),
       not: offer.not,
+      planlananAlimTarihi: offer.planlananAlimTarihi,
+      tahminiTeslimTarihi: offer.tahminiTeslimTarihi,
       durumAdi: offer.durum.durumAdi,
     };
   }
@@ -717,6 +735,8 @@ export class OffersRepository {
         publicId: true,
         fiyat: true,
         not: true,
+        planlananAlimTarihi: true,
+        tahminiTeslimTarihi: true,
         istek: {
           select: {
             id: true,
@@ -752,6 +772,8 @@ export class OffersRepository {
       aracPlaka: offer.arac?.plaka ?? null,
       fiyat: offer.fiyat.toNumber(),
       not: offer.not,
+      planlananAlimTarihi: offer.planlananAlimTarihi,
+      tahminiTeslimTarihi: offer.tahminiTeslimTarihi,
       durumAdi: offer.durum.durumAdi,
     }));
   }
@@ -792,6 +814,8 @@ export class OffersRepository {
         publicId: true,
         fiyat: true,
         not: true,
+        planlananAlimTarihi: true,
+        tahminiTeslimTarihi: true,
         istekId: true,
         istek: {
           select: {
@@ -838,6 +862,8 @@ export class OffersRepository {
       aracPlaka: offer.arac?.plaka ?? null,
       fiyat: offer.fiyat.toNumber(),
       not: offer.not,
+      planlananAlimTarihi: offer.planlananAlimTarihi,
+      tahminiTeslimTarihi: offer.tahminiTeslimTarihi,
       durumAdi: offer.durum.durumAdi,
     }));
   }
@@ -882,6 +908,8 @@ export class OffersRepository {
         publicId: true,
         fiyat: true,
         not: true,
+        planlananAlimTarihi: true,
+        tahminiTeslimTarihi: true,
         istekId: true,
         istek: {
           select: {
@@ -946,6 +974,8 @@ export class OffersRepository {
       aracPlaka: offer.arac?.plaka ?? null,
       fiyat: offer.fiyat.toNumber(),
       not: offer.not,
+      planlananAlimTarihi: offer.planlananAlimTarihi,
+      tahminiTeslimTarihi: offer.tahminiTeslimTarihi,
       durumAdi: offer.durum.durumAdi,
     }));
   }
@@ -962,6 +992,8 @@ export class OffersRepository {
         id: true,
         publicId: true,
         fiyat: true,
+        planlananAlimTarihi: true,
+        tahminiTeslimTarihi: true,
         nakliyeciId: true,
         durum: {
           select: {
@@ -1021,6 +1053,8 @@ export class OffersRepository {
       aracDeletedAt: offer.arac?.silmeTarihi ?? null,
       aracOwnerId: offer.arac?.sahipId ?? null,
       fiyat: offer.fiyat.toNumber(),
+      planlananAlimTarihi: offer.planlananAlimTarihi,
+      tahminiTeslimTarihi: offer.tahminiTeslimTarihi,
     };
   }
 
@@ -1155,6 +1189,8 @@ export class OffersRepository {
         nakliyeciId: input.carrierId,
         aracId: input.aracId,
         anlasilanFiyat: new Prisma.Decimal(input.fiyat),
+        planlananAlimTarihi: input.planlananAlimTarihi,
+        tahminiTeslimTarihi: input.tahminiTeslimTarihi,
         durumId: input.initialShipmentStatusId,
       },
       select: {

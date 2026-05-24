@@ -18,5 +18,7 @@ export class MyIncomingOfferListItemResponseDto {
   aracPlaka!: string | null;
   fiyat!: number;
   not!: string | null;
+  planlananAlimTarihi!: string | null;
+  tahminiTeslimTarihi!: string | null;
   durum!: string;
 }

@@ -23,6 +23,7 @@ export type OpenOfferRequestFilters = {
   minHacimM3?: number;
   maxHacimM3?: number;
   yukTipi?: string;
+  // Compatibility-only: backend still accepts this for older clients, but the UI no longer exposes it.
   tasimaTarihi?: string;
 };
 
@@ -78,6 +79,8 @@ export type CreateOfferInput = {
   aracId: string;
   fiyat: number;
   not?: string;
+  planlananAlimTarihi: string;
+  tahminiTeslimTarihi?: string;
 };
 
 export type OfferItem = {
@@ -89,6 +92,8 @@ export type OfferItem = {
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
+  planlananAlimTarihi: string | null;
+  tahminiTeslimTarihi: string | null;
   durum: string;
 };
 
@@ -103,6 +108,8 @@ export type IncomingOfferItem = {
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
+  planlananAlimTarihi: string | null;
+  tahminiTeslimTarihi: string | null;
   durum: string;
 };
 
@@ -126,6 +133,8 @@ export type MyIncomingOfferItem = {
   aracPlaka: string | null;
   fiyat: number;
   not: string | null;
+  planlananAlimTarihi: string | null;
+  tahminiTeslimTarihi: string | null;
   durum: string;
 };
 

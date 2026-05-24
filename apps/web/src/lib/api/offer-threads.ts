@@ -36,6 +36,8 @@ export type OfferThreadShipment = {
   baslangicTarihi: string | null;
   teslimBildirimTarihi: string | null;
   teslimTarihi: string | null;
+  planlananAlimTarihi: string | null;
+  tahminiTeslimTarihi: string | null;
 };
 
 export type OfferThreadSummary = {
@@ -52,6 +54,8 @@ export type OfferThreadSummary = {
   karsiTarafKullaniciAdi: string;
   karsiTarafProfileImageUrl?: string;
   fiyat: number;
+  planlananAlimTarihi: string | null;
+  tahminiTeslimTarihi: string | null;
   durum: string;
   isClosed: boolean;
   closedAt: string | null;
@@ -75,6 +79,8 @@ export type OfferThreadDetail = {
   karsiTarafKullaniciAdi: string;
   karsiTarafProfileImageUrl?: string;
   fiyat: number;
+  planlananAlimTarihi: string | null;
+  tahminiTeslimTarihi: string | null;
   durum: string;
   isClosed: boolean;
   closedAt: string | null;

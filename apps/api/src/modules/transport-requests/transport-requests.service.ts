@@ -12,6 +12,7 @@ import { RequestImageResponseDto } from "../../common/dto/request-image-response
 import { RequestImageSummaryResponseDto } from "../../common/dto/request-image-summary-response.dto";
 import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { formatDateOnlyFromDate } from "../../common/utils/date-only";
 import { MediaStorageService } from "../../infrastructure/media/media-storage.service";
 import { ImageProcessingService } from "../../infrastructure/media/image-processing.service";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -662,6 +663,8 @@ export class TransportRequestsService {
       baslangicTarihi: job.baslangicTarihi,
       teslimBildirimTarihi: job.teslimBildirimTarihi,
       teslimTarihi: job.teslimTarihi,
+      planlananAlimTarihi: formatDateOnlyFromDate(job.planlananAlimTarihi),
+      tahminiTeslimTarihi: formatDateOnlyFromDate(job.tahminiTeslimTarihi),
       canConfirmDelivery:
         job.durumTuru.trim().toUpperCase() ===
           PENDING_DELIVERY_JOB_STATUS.durumTuru &&

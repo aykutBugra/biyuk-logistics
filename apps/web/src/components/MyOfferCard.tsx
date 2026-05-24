@@ -19,6 +19,8 @@ export type MyOfferCardModel = {
   rotaMeta: string | null;
   fiyat: number;
   aracPlaka: string | null;
+  planlananAlimTarihi: string | null;
+  tahminiTeslimTarihi: string | null;
   musteriAdi: string | null;
   musteriKullaniciAdi: string | null;
   musteriBasHarfler: string;
@@ -198,6 +200,12 @@ export default function MyOfferCard({ offer }: MyOfferCardProps) {
                   <span>{offer.takipMetni}</span>
                   {offer.sonHareketTarihi ? (
                     <span>Son hareket: {offer.sonHareketTarihi}</span>
+                  ) : null}
+                  {offer.planlananAlimTarihi ? (
+                    <span>Planlanan alim: {offer.planlananAlimTarihi}</span>
+                  ) : null}
+                  {offer.tahminiTeslimTarihi ? (
+                    <span>Tahmini teslim: {offer.tahminiTeslimTarihi}</span>
                   ) : null}
                 </div>
 

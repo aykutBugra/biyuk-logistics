@@ -12,6 +12,8 @@ export class OfferThreadSummaryResponseDto {
   karsiTarafKullaniciAdi!: string;
   karsiTarafProfileImageUrl?: string;
   fiyat!: number;
+  planlananAlimTarihi!: string | null;
+  tahminiTeslimTarihi!: string | null;
   durum!: string;
   isClosed!: boolean;
   closedAt!: Date | null;

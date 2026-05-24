@@ -38,6 +38,8 @@ describe("OfferThreadsService write paths", () => {
     requestDeletedAt: null,
     requestStatusTuru: "ISTEK",
     requestStatusAdi: "OLUSTURULDU",
+    planlananAlimTarihi: new Date("2026-06-12T00:00:00.000Z"),
+    tahminiTeslimTarihi: new Date("2026-06-14T00:00:00.000Z"),
     shipment: null,
   };
 

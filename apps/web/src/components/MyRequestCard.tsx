@@ -6,6 +6,7 @@ import Link from "next/link";
 import CustomerWorkspaceSignalPill from "@/components/CustomerWorkspaceSignalPill";
 import StatusBadge from "@/components/StatusBadge";
 import type { TransportRequestListItem } from "@/lib/api/transport-requests";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   formatLocationLabel,
   formatVolumeM3,
@@ -170,7 +171,7 @@ export default function MyRequestCard({
               ) : null}
               {request.tasimaTarihi ? (
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                  {request.tasimaTarihi}
+                  Tercih: {formatDateOnly(request.tasimaTarihi)}
                 </span>
               ) : null}
             </div>

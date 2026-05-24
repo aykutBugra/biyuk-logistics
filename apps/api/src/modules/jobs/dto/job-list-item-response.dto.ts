@@ -11,6 +11,8 @@ export class JobListItemResponseDto {
   baslangicTarihi!: Date | null;
   teslimBildirimTarihi!: Date | null;
   teslimTarihi!: Date | null;
+  planlananAlimTarihi!: string | null;
+  tahminiTeslimTarihi!: string | null;
   counterpartyId!: string;
   counterpartyName!: string;
   counterpartyUsername!: string;

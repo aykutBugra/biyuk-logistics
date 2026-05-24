@@ -21,6 +21,7 @@ import {
 import { getOpenOfferRequests, type OpenOfferRequestListItem } from "@/lib/api/offers";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   formatLocationLabel,
   formatRouteDistanceKm,
@@ -67,15 +68,7 @@ function formatDateTime(value: string): string {
 }
 
 function formatPlanningDate(value: string): string {
-  const parsedDate = new Date(`${value}T00:00:00`);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-  }).format(parsedDate);
+  return formatDateOnly(value, value);
 }
 
 function hasDistanceMetrics(route: CarrierRouteListItem): boolean {

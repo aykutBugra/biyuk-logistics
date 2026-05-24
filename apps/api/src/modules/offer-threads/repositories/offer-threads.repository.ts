@@ -105,6 +105,8 @@ export type OfferThreadSummaryRecord = {
   carrierUsername: string;
   carrierProfileImageStorageKey: string | null;
   fiyat: number;
+  planlananAlimTarihi: Date | null;
+  tahminiTeslimTarihi: Date | null;
   durum: string;
   closedAt: Date | null;
   customerLastReadMessageId: number | null;
@@ -135,6 +137,8 @@ export type OfferThreadWritableContextRecord = {
   carrierLastReadMessageId: number | null;
   closedAt: Date | null;
   fiyat: number;
+  planlananAlimTarihi: Date | null;
+  tahminiTeslimTarihi: Date | null;
   durumTuru: string;
   durumAdi: string;
   requestDeletedAt: Date | null;
@@ -161,6 +165,8 @@ export type OfferThreadShipmentRecord = {
   baslangicTarihi: Date | null;
   teslimBildirimTarihi: Date | null;
   teslimTarihi: Date | null;
+  planlananAlimTarihi: Date | null;
+  tahminiTeslimTarihi: Date | null;
 };
 
 export type CreateOfferThreadInput = {
@@ -265,6 +271,8 @@ export class OfferThreadsRepository {
           select: {
             publicId: true,
             fiyat: true,
+            planlananAlimTarihi: true,
+            tahminiTeslimTarihi: true,
             durum: {
               select: {
                 durumTuru: true,
@@ -312,6 +320,8 @@ export class OfferThreadsRepository {
       carrierUsername: thread.carrier.kullaniciAdi,
       carrierProfileImageStorageKey: thread.carrier.profilFotografiStorageKey,
       fiyat: thread.offer.fiyat.toNumber(),
+      planlananAlimTarihi: thread.offer.planlananAlimTarihi,
+      tahminiTeslimTarihi: thread.offer.tahminiTeslimTarihi,
       durum: thread.offer.durum.durumAdi,
       closedAt: thread.closedAt,
       customerLastReadMessageId: thread.customerLastReadMessageId,
@@ -363,6 +373,8 @@ export class OfferThreadsRepository {
           select: {
             publicId: true,
             fiyat: true,
+            planlananAlimTarihi: true,
+            tahminiTeslimTarihi: true,
             durum: {
               select: {
                 durumTuru: true,
@@ -393,6 +405,8 @@ export class OfferThreadsRepository {
                 baslangicTarihi: true,
                 teslimBildirimTarihi: true,
                 teslimTarihi: true,
+                planlananAlimTarihi: true,
+                tahminiTeslimTarihi: true,
                 durum: {
                   select: {
                     durumTuru: true,
@@ -436,6 +450,8 @@ export class OfferThreadsRepository {
       carrierUsername: thread.carrier.kullaniciAdi,
       carrierProfileImageStorageKey: thread.carrier.profilFotografiStorageKey,
       fiyat: thread.offer.fiyat.toNumber(),
+      planlananAlimTarihi: thread.offer.planlananAlimTarihi,
+      tahminiTeslimTarihi: thread.offer.tahminiTeslimTarihi,
       durumTuru: thread.offer.durum.durumTuru,
       durumAdi: thread.offer.durum.durumAdi,
       durum: thread.offer.durum.durumAdi,
@@ -483,6 +499,8 @@ export class OfferThreadsRepository {
           select: {
             publicId: true,
             fiyat: true,
+            planlananAlimTarihi: true,
+            tahminiTeslimTarihi: true,
             durum: {
               select: {
                 durumTuru: true,
@@ -509,6 +527,8 @@ export class OfferThreadsRepository {
                 baslangicTarihi: true,
                 teslimBildirimTarihi: true,
                 teslimTarihi: true,
+                planlananAlimTarihi: true,
+                tahminiTeslimTarihi: true,
                 durum: {
                   select: {
                     durumTuru: true,
@@ -539,6 +559,8 @@ export class OfferThreadsRepository {
       carrierLastReadMessageId: thread.carrierLastReadMessageId,
       closedAt: thread.closedAt,
       fiyat: thread.offer.fiyat.toNumber(),
+      planlananAlimTarihi: thread.offer.planlananAlimTarihi,
+      tahminiTeslimTarihi: thread.offer.tahminiTeslimTarihi,
       durumTuru: thread.offer.durum.durumTuru,
       durumAdi: thread.offer.durum.durumAdi,
       requestDeletedAt: thread.request.silmeTarihi,
@@ -1014,6 +1036,8 @@ export class OfferThreadsRepository {
     baslangicTarihi: Date | null;
     teslimBildirimTarihi: Date | null;
     teslimTarihi: Date | null;
+    planlananAlimTarihi: Date | null;
+    tahminiTeslimTarihi: Date | null;
     durum: {
       durumTuru: string;
       durumAdi: string;
@@ -1028,6 +1052,8 @@ export class OfferThreadsRepository {
       baslangicTarihi: shipment.baslangicTarihi,
       teslimBildirimTarihi: shipment.teslimBildirimTarihi,
       teslimTarihi: shipment.teslimTarihi,
+      planlananAlimTarihi: shipment.planlananAlimTarihi,
+      tahminiTeslimTarihi: shipment.tahminiTeslimTarihi,
     };
   }
 }

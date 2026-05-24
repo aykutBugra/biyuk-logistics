@@ -5,6 +5,7 @@ import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import CustomerWorkspaceSignalPill from "@/components/CustomerWorkspaceSignalPill";
 import StatusBadge from "@/components/StatusBadge";
 import type { MyIncomingOfferItem } from "@/lib/api/offers";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   formatLocationLabel,
   formatVolumeM3,
@@ -118,7 +119,7 @@ export default function IncomingOfferCard({
           ) : null}
           {offer.tasimaTarihi ? (
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-              {offer.tasimaTarihi}
+              Tercih: {formatDateOnly(offer.tasimaTarihi)}
             </span>
           ) : null}
         </div>
@@ -153,6 +154,25 @@ export default function IncomingOfferCard({
               ) : (
                 <p className="mt-2 text-sm text-slate-400">Teklif notu eklenmedi.</p>
               )}
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-[0.95rem] border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Planlanan alim
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {formatDateOnly(offer.planlananAlimTarihi)}
+                  </p>
+                </div>
+                <div className="rounded-[0.95rem] border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Tahmini teslim
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {formatDateOnly(offer.tahminiTeslimTarihi)}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 

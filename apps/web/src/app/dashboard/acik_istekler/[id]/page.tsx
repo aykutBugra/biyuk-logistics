@@ -34,6 +34,7 @@ import {
 import { getMyVehicles, type VehicleListItem } from "@/lib/api/vehicles";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCarrierPageAccess } from "@/lib/auth/use-carrier-page-access";
+import { formatDateOnly, isDateOnlyBefore } from "@/lib/date-only";
 import {
   formatLocationLabel,
   formatRouteDistanceKm,
@@ -48,12 +49,16 @@ type OfferForm = {
   aracId: string;
   fiyat: string;
   not: string;
+  planlananAlimTarihi: string;
+  tahminiTeslimTarihi: string;
 };
 
 const initialForm: OfferForm = {
   aracId: "",
   fiyat: "",
   not: "",
+  planlananAlimTarihi: "",
+  tahminiTeslimTarihi: "",
 };
 
 function formatDate(value: string): string {
@@ -64,9 +69,7 @@ function formatDate(value: string): string {
 }
 
 function formatPlannedDate(value: string): string {
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-  }).format(new Date(`${value}T00:00:00`));
+  return formatDateOnly(value);
 }
 
 function formatCurrency(value: number): string {
@@ -309,6 +312,14 @@ function OfferSummaryPanel({
           <DetailInfoRow label="Teklif" value="Mevcut teklif" />
           <DetailInfoRow label="Arac" value={offer.aracPlaka ?? "Belirtilmedi"} />
           <DetailInfoRow
+            label="Planlanan alim"
+            value={formatDateOnly(offer.planlananAlimTarihi)}
+          />
+          <DetailInfoRow
+            label="Tahmini teslim"
+            value={formatDateOnly(offer.tahminiTeslimTarihi)}
+          />
+          <DetailInfoRow
             label="Son hareket"
             value={thread?.lastMessageAt ? formatDate(thread.lastMessageAt) : "Henuz yok"}
           />
@@ -462,6 +473,8 @@ function OpenTransportRequestDetailPageContent({
           aracId:
             currentForm.aracId ||
             (vehicleResponse.length === 1 ? vehicleResponse[0].id : ""),
+          planlananAlimTarihi:
+            currentForm.planlananAlimTarihi || requestResponse.tasimaTarihi || "",
         }));
 
         if (requestResponse.hasExistingOffer) {
@@ -625,6 +638,21 @@ function OpenTransportRequestDetailPageContent({
       return;
     }
 
+    if (!form.planlananAlimTarihi.trim()) {
+      setSubmitErrorMessage("Planlanan alim tarihini sec.");
+      return;
+    }
+
+    if (
+      form.tahminiTeslimTarihi.trim() &&
+      isDateOnlyBefore(form.tahminiTeslimTarihi, form.planlananAlimTarihi)
+    ) {
+      setSubmitErrorMessage(
+        "Tahmini teslim tarihi planlanan alim tarihinden once olamaz."
+      );
+      return;
+    }
+
     try {
       setSubmitErrorMessage(null);
       setIsSubmitting(true);
@@ -634,6 +662,8 @@ function OpenTransportRequestDetailPageContent({
           aracId: form.aracId,
           fiyat: Number(form.fiyat),
           not: form.not.trim() || undefined,
+          planlananAlimTarihi: form.planlananAlimTarihi,
+          tahminiTeslimTarihi: form.tahminiTeslimTarihi.trim() || undefined,
         },
         accessToken
       );
@@ -815,7 +845,7 @@ function OpenTransportRequestDetailPageContent({
                   </span>
                   {request.tasimaTarihi ? (
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      {formatPlannedDate(request.tasimaTarihi)}
+                      Tercih: {formatPlannedDate(request.tasimaTarihi)}
                     </span>
                   ) : null}
                   {request.tekTasimaIstiyor ? (
@@ -920,7 +950,7 @@ function OpenTransportRequestDetailPageContent({
                     <DetailInfoRow label="Agirlik" value={formatWeightKg(request.agirlikKg)} />
                     <DetailInfoRow label="Hacim" value={formatVolumeM3(request.hacimM3)} />
                     <DetailInfoRow
-                      label="Tasima tarihi"
+                      label="Tercih edilen tasima tarihi"
                       value={
                         request.tasimaTarihi
                           ? formatPlannedDate(request.tasimaTarihi)
@@ -1158,6 +1188,45 @@ function OpenTransportRequestDetailPageContent({
                           className="app-input block text-sm"
                   required
                 />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <label
+                    className="text-sm font-semibold text-gray-900"
+                    htmlFor="planlananAlimTarihi"
+                  >
+                    Planlanan alim tarihi
+                  </label>
+                  <input
+                    id="planlananAlimTarihi"
+                    name="planlananAlimTarihi"
+                    type="date"
+                    value={form.planlananAlimTarihi}
+                    onChange={handleChange}
+                    disabled={isSubmitting || !request.hasActiveVehicle}
+                    className="app-input block text-sm"
+                    required
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <label
+                    className="text-sm font-semibold text-gray-900"
+                    htmlFor="tahminiTeslimTarihi"
+                  >
+                    Tahmini teslim tarihi
+                  </label>
+                  <input
+                    id="tahminiTeslimTarihi"
+                    name="tahminiTeslimTarihi"
+                    type="date"
+                    value={form.tahminiTeslimTarihi}
+                    onChange={handleChange}
+                    disabled={isSubmitting || !request.hasActiveVehicle}
+                    className="app-input block text-sm"
+                  />
+                </div>
               </div>
 
               <div className="grid gap-2">

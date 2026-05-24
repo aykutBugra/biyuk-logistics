@@ -24,6 +24,7 @@ import { acceptOffer, rejectOffer } from "@/lib/api/offers";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useDashboardAccess } from "@/lib/auth/use-dashboard-access";
 import { useConfirm } from "@/lib/confirm/confirm-context";
+import { formatDateOnly } from "@/lib/date-only";
 import { formatLocationLabel } from "@/lib/logistics";
 import { useToast } from "@/lib/toast/toast-context";
 
@@ -659,6 +660,25 @@ function NegotiationSidePanel({
           </p>
         </div>
 
+        <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+            <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              Planlanan alim
+            </dt>
+            <dd className="mt-1 text-sm font-bold text-slate-800">
+              {formatDateOnly(thread.planlananAlimTarihi)}
+            </dd>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+            <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              Tahmini teslim
+            </dt>
+            <dd className="mt-1 text-sm font-bold text-slate-800">
+              {formatDateOnly(thread.tahminiTeslimTarihi)}
+            </dd>
+          </div>
+        </dl>
+
         {/* Meta info */}
         <dl className="space-y-1.5">
           <div className="flex items-center justify-between">
@@ -707,6 +727,24 @@ function NegotiationSidePanel({
                 {getShipmentStatusLabel(thread.shipment.durum)}
               </p>
             </div>
+            <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  Planlanan alim tarihi
+                </dt>
+                <dd className="mt-1 text-sm font-bold text-slate-800">
+                  {formatDateOnly(thread.shipment.planlananAlimTarihi)}
+                </dd>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  Tahmini teslim tarihi
+                </dt>
+                <dd className="mt-1 text-sm font-bold text-slate-800">
+                  {formatDateOnly(thread.shipment.tahminiTeslimTarihi)}
+                </dd>
+              </div>
+            </dl>
             {thread.canMarkDelivered ? (
               <button
                 type="button"

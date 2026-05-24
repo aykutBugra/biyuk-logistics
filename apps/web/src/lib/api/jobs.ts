@@ -14,6 +14,8 @@ export type JobListItem = {
   baslangicTarihi: string | null;
   teslimBildirimTarihi: string | null;
   teslimTarihi: string | null;
+  planlananAlimTarihi: string | null;
+  tahminiTeslimTarihi: string | null;
   counterpartyId: string;
   counterpartyName: string;
   counterpartyUsername: string;
@@ -29,6 +31,8 @@ export type JobDetail = {
   baslangicTarihi: string | null;
   teslimBildirimTarihi: string | null;
   teslimTarihi: string | null;
+  planlananAlimTarihi: string | null;
+  tahminiTeslimTarihi: string | null;
   baslangicSehri: string;
   varisSehri: string;
   baslangicKonumMetni: string | null;

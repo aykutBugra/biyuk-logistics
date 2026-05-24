@@ -228,6 +228,8 @@ model Teklif {
   arac            Arac?     @relation(fields: [aracId], references: [id])
   fiyat           Decimal   @db.Decimal(12, 2)
   not             String?   @db.VarChar(255)
+  planlananAlimTarihi DateTime?
+  tahminiTeslimTarihi DateTime?
   durumId         Int
   durum           Durum     @relation(fields: [durumId], references: [id])
   offerThread     OfferThread?
@@ -312,6 +314,8 @@ model Nakliye {
   baslangicTarihi DateTime?
   teslimBildirimTarihi DateTime?
   teslimTarihi    DateTime?
+  planlananAlimTarihi DateTime?
+  tahminiTeslimTarihi DateTime?
   durumId         Int
   durum           Durum     @relation(fields: [durumId], references: [id])
 

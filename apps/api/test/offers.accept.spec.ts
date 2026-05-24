@@ -42,6 +42,8 @@ describe("OffersService.acceptById", () => {
     aracDeletedAt: null,
     aracOwnerId: 22,
     fiyat: 12500,
+    planlananAlimTarihi: new Date("2026-06-12T00:00:00.000Z"),
+    tahminiTeslimTarihi: new Date("2026-06-14T00:00:00.000Z"),
   };
 
   const acceptance: Extract<AcceptOfferResult, { ok: true }> = {
@@ -185,6 +187,8 @@ describe("OffersService.acceptById", () => {
         offerId: offerContext.offerId,
         requestId: offerContext.requestId,
         carrierId: offerContext.carrierId,
+        planlananAlimTarihi: offerContext.planlananAlimTarihi,
+        tahminiTeslimTarihi: offerContext.tahminiTeslimTarihi,
       })
     );
     expect(offerThreadsServiceMock.appendAcceptedOfferThread).toHaveBeenCalledWith(
@@ -248,5 +252,28 @@ describe("OffersService.acceptById", () => {
     expect(offersRepositoryMock.acceptOfferInTransaction).not.toHaveBeenCalled();
     expect(offerThreadsServiceMock.appendAcceptedOfferThread).not.toHaveBeenCalled();
     expect(vehicleCapacityServiceMock.createReservationForShipment).not.toHaveBeenCalled();
+  });
+
+  it("allows accepting a legacy offer without structured planned dates", async () => {
+    const legacyOfferContext = {
+      ...offerContext,
+      planlananAlimTarihi: null,
+      tahminiTeslimTarihi: null,
+    };
+    offersRepositoryMock.findOfferDecisionContextById.mockResolvedValueOnce(
+      legacyOfferContext
+    );
+    offersRepositoryMock.acceptOfferInTransaction.mockResolvedValue(acceptance);
+
+    await service.acceptById(currentUser, offerPublicEntityId);
+
+    expect(offersRepositoryMock.acceptOfferInTransaction).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        offerId: legacyOfferContext.offerId,
+        planlananAlimTarihi: null,
+        tahminiTeslimTarihi: null,
+      })
+    );
   });
 });

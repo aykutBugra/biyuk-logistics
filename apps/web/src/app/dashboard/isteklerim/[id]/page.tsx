@@ -26,6 +26,7 @@ import {
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCustomerPageAccess } from "@/lib/auth/use-customer-page-access";
 import { useConfirm } from "@/lib/confirm/confirm-context";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   formatLocationLabel,
   formatVolumeM3,
@@ -50,13 +51,7 @@ function formatCurrency(value: number): string {
 }
 
 function formatTransportDate(value: string | null): string {
-  if (!value) {
-    return "Belirtilmedi";
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-  }).format(new Date(`${value}T00:00:00`));
+  return formatDateOnly(value);
 }
 
 function getRequestStatusLabel(status: string): string {
@@ -573,7 +568,7 @@ export default function TransportRequestDetailPage() {
                     {formatVolumeM3(request.hacimM3)}
                   </span>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                    Tasima {formatTransportDate(request.tasimaTarihi)}
+                    Tercih {formatTransportDate(request.tasimaTarihi)}
                   </span>
                   <span
                     className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -670,7 +665,7 @@ export default function TransportRequestDetailPage() {
                     <DetailInfoRow label="Agirlik" value={formatWeightKg(request.agirlikKg)} />
                     <DetailInfoRow label="Hacim" value={formatVolumeM3(request.hacimM3)} />
                     <DetailInfoRow
-                      label="Tasima tarihi"
+                      label="Tercih edilen tasima tarihi"
                       value={formatTransportDate(request.tasimaTarihi)}
                     />
                     <DetailInfoRow
@@ -775,7 +770,7 @@ export default function TransportRequestDetailPage() {
                     value={getRequestStatusLabel(request.durum)}
                   />
                   <DetailInfoRow
-                    label="Tasima tarihi"
+                    label="Tercih edilen tasima tarihi"
                     value={formatTransportDate(request.tasimaTarihi)}
                   />
                   <DetailInfoRow label="Gelen teklif" value={`${incomingOffers.length}`} />
@@ -842,6 +837,14 @@ export default function TransportRequestDetailPage() {
                     <DetailInfoRow
                       label="Kayit zamani"
                       value={formatDate(request.nakliye.olusturmaTarihi)}
+                    />
+                    <DetailInfoRow
+                      label="Planlanan alim tarihi"
+                      value={formatTransportDate(request.nakliye.planlananAlimTarihi)}
+                    />
+                    <DetailInfoRow
+                      label="Tahmini teslim tarihi"
+                      value={formatTransportDate(request.nakliye.tahminiTeslimTarihi)}
                     />
                     <DetailInfoRow
                       label="Baslangic"

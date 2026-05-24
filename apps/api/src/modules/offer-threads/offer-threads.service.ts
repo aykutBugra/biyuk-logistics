@@ -12,6 +12,7 @@ import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { formatDateOnlyFromDate } from "../../common/utils/date-only";
 import { ImageProcessingService } from "../../infrastructure/media/image-processing.service";
 import { MediaStorageService } from "../../infrastructure/media/media-storage.service";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -569,6 +570,8 @@ export class OfferThreadsService {
           : record.customerProfileImageStorageKey
       ),
       fiyat: record.fiyat,
+      planlananAlimTarihi: formatDateOnlyFromDate(record.planlananAlimTarihi),
+      tahminiTeslimTarihi: formatDateOnlyFromDate(record.tahminiTeslimTarihi),
       durum: record.durum,
       isClosed: record.closedAt !== null,
       closedAt: record.closedAt,
@@ -619,6 +622,8 @@ export class OfferThreadsService {
           : record.customerProfileImageStorageKey
       ),
       fiyat: record.fiyat,
+      planlananAlimTarihi: formatDateOnlyFromDate(record.planlananAlimTarihi),
+      tahminiTeslimTarihi: formatDateOnlyFromDate(record.tahminiTeslimTarihi),
       durum: record.durum,
       isClosed: record.closedAt !== null,
       closedAt: record.closedAt,
@@ -1028,6 +1033,8 @@ export class OfferThreadsService {
       baslangicTarihi: shipment.baslangicTarihi,
       teslimBildirimTarihi: shipment.teslimBildirimTarihi,
       teslimTarihi: shipment.teslimTarihi,
+      planlananAlimTarihi: formatDateOnlyFromDate(shipment.planlananAlimTarihi),
+      tahminiTeslimTarihi: formatDateOnlyFromDate(shipment.tahminiTeslimTarihi),
     };
   }
 

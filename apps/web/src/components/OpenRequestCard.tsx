@@ -5,6 +5,7 @@
 import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
 import type { OpenOfferRequestListItem } from "@/lib/api/offers";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   formatLocationLabel,
   formatRouteDistanceKm,
@@ -232,7 +233,7 @@ export default function OpenRequestCard({
             ) : null}
             {request.tasimaTarihi ? (
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                Tasima {request.tasimaTarihi}
+                Tercih {formatDateOnly(request.tasimaTarihi)}
               </span>
             ) : null}
             {request.tekTasimaIstiyor ? (

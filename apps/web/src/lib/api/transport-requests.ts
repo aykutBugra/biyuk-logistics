@@ -75,6 +75,8 @@ export type TransportRequestDetail = TransportRequestListItem & {
     baslangicTarihi: string | null;
     teslimBildirimTarihi: string | null;
     teslimTarihi: string | null;
+    planlananAlimTarihi: string | null;
+    tahminiTeslimTarihi: string | null;
     canConfirmDelivery: boolean;
     ratingContext: RatingContext;
   } | null;

@@ -62,14 +62,7 @@ const initialFilters: CarrierDiscoveryFilterForm = {
   minHacimM3: "",
   maxHacimM3: "",
   yukTipi: "",
-  tasimaTarihi: "",
 };
-
-function formatPlannedDate(value: string): string {
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-  }).format(new Date(`${value}T00:00:00`));
-}
 
 function parsePublicId(value: string | null): string | null {
   const trimmed = value?.trim() ?? "";
@@ -154,7 +147,6 @@ function toApiFilters(
     minHacimM3: values.minHacimM3 ? Number(values.minHacimM3) : undefined,
     maxHacimM3: values.maxHacimM3 ? Number(values.maxHacimM3) : undefined,
     yukTipi: values.yukTipi || undefined,
-    tasimaTarihi: values.tasimaTarihi || undefined,
   };
 }
 
@@ -195,14 +187,6 @@ function sortRequests(
   hasRouteContext: boolean
 ): OpenOfferRequestListItem[] {
   return [...requests].sort((left, right) => {
-    if (sortMode === "date") {
-      const leftDate = left.tasimaTarihi ? new Date(left.tasimaTarihi).getTime() : Infinity;
-      const rightDate = right.tasimaTarihi
-        ? new Date(right.tasimaTarihi).getTime()
-        : Infinity;
-      return leftDate - rightDate;
-    }
-
     if (sortMode === "newest") {
       return (
         new Date(right.olusturmaTarihi).getTime() -

@@ -426,11 +426,12 @@ export default function CreateTransportRequestPage() {
 
                 <InputField
                   name="tasimaTarihi"
-                  label="Tasima tarihi"
+                  label="Tercih edilen tasima tarihi"
                   type="date"
                   value={form.tasimaTarihi}
                   onChange={handleChange}
                   disabled={isSubmitting}
+                  hint="Kesin alim ve teslim zamani nakliyeci teklifi sirasinda netlesebilir."
                 />
               </div>
             </RequestFormSection>

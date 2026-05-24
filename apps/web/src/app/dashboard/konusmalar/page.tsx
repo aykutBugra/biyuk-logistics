@@ -19,6 +19,7 @@ import {
 } from "@/lib/api/offer-threads";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useDashboardAccess } from "@/lib/auth/use-dashboard-access";
+import { formatDateOnly } from "@/lib/date-only";
 import { formatLocationLabel } from "@/lib/logistics";
 import { useOperationalCardMotion } from "@/lib/motion/useOperationalCardMotion";
 
@@ -292,6 +293,17 @@ function CarrierConversationCard({
               <p className="mt-3 line-clamp-2 max-w-3xl text-sm leading-6 text-slate-500">
                 {getConversationPreview(thread)}
               </p>
+
+              <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                  Planlanan alim: {formatDateOnly(thread.planlananAlimTarihi)}
+                </span>
+                {thread.tahminiTeslimTarihi ? (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    Tahmini teslim: {formatDateOnly(thread.tahminiTeslimTarihi)}
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import type { MyIncomingOfferItem } from "@/lib/api/offers";
+import { formatDateOnly } from "@/lib/date-only";
 
 type CustomerOffersPreviewPanelProps = {
   offers: MyIncomingOfferItem[];
@@ -20,23 +21,6 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-function formatDate(value: string | null): string | null {
-  if (!value) {
-    return null;
-  }
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(parsedDate);
-}
-
 export default function CustomerOffersPreviewPanel({
   offers,
 }: CustomerOffersPreviewPanelProps) {
@@ -44,7 +28,12 @@ export default function CustomerOffersPreviewPanel({
   const previewOffer =
     [...pendingOffers].sort((left, right) => right.id.localeCompare(left.id))[0] ??
     null;
-  const formattedDate = previewOffer ? formatDate(previewOffer.tasimaTarihi) : null;
+  const formattedPickupDate = previewOffer
+    ? formatDateOnly(previewOffer.planlananAlimTarihi, "")
+    : "";
+  const formattedDeliveryDate = previewOffer
+    ? formatDateOnly(previewOffer.tahminiTeslimTarihi, "")
+    : "";
 
   return (
     <section className="app-surface-strong rounded-[1.6rem] border border-slate-200 p-4 shadow-sm md:p-5">
@@ -99,8 +88,15 @@ export default function CustomerOffersPreviewPanel({
               <p className="text-[1.8rem] font-black leading-none tracking-tight text-emerald-600">
                 {formatCurrency(previewOffer.fiyat)}
               </p>
-              {formattedDate ? (
-                <p className="text-sm text-slate-500">Tasima tarihi: {formattedDate}</p>
+              {formattedPickupDate ? (
+                <p className="text-sm text-slate-500">
+                  Planlanan alim: {formattedPickupDate}
+                </p>
+              ) : null}
+              {formattedDeliveryDate ? (
+                <p className="text-sm text-slate-500">
+                  Tahmini teslim: {formattedDeliveryDate}
+                </p>
               ) : null}
               <Link href="/dashboard/gelen_teklifler" className="app-button-primary">
                 Teklifi incele

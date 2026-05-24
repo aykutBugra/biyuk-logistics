@@ -74,6 +74,8 @@ const transportRequestSelect = {
       baslangicTarihi: true,
       teslimBildirimTarihi: true,
       teslimTarihi: true,
+      planlananAlimTarihi: true,
+      tahminiTeslimTarihi: true,
       durum: {
         select: {
           durumTuru: true,
@@ -202,6 +204,8 @@ export type StoredTransportRequestJobRecord = {
   baslangicTarihi: Date | null;
   teslimBildirimTarihi: Date | null;
   teslimTarihi: Date | null;
+  planlananAlimTarihi: Date | null;
+  tahminiTeslimTarihi: Date | null;
   ratings: StoredSubmittedRatingRecord[];
 };
 
@@ -626,6 +630,10 @@ export class TransportRequestsRepository {
             teslimBildirimTarihi:
               transportRequest.nakliye.teslimBildirimTarihi,
             teslimTarihi: transportRequest.nakliye.teslimTarihi,
+            planlananAlimTarihi:
+              transportRequest.nakliye.planlananAlimTarihi,
+            tahminiTeslimTarihi:
+              transportRequest.nakliye.tahminiTeslimTarihi,
             ratings: transportRequest.nakliye.puanlar.map((rating) => ({
               id: rating.id,
               publicId: rating.publicId,

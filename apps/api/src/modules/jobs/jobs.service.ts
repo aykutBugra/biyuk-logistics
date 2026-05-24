@@ -11,6 +11,7 @@ import { Prisma } from "@prisma/client";
 import { ROLE_NAMES } from "../../common/constants/role-names";
 import type { PublicEntityId } from "../../common/public-ids/public-entity-id";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user.type";
+import { formatDateOnlyFromDate } from "../../common/utils/date-only";
 import { unwrapTransactionResult } from "../../common/utils/unwrap-transaction-result";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { NotificationsPublisher } from "../notifications/notifications.publisher";
@@ -584,6 +585,8 @@ export class JobsService {
       baslangicTarihi: job.baslangicTarihi,
       teslimBildirimTarihi: job.teslimBildirimTarihi,
       teslimTarihi: job.teslimTarihi,
+      planlananAlimTarihi: formatDateOnlyFromDate(job.planlananAlimTarihi),
+      tahminiTeslimTarihi: formatDateOnlyFromDate(job.tahminiTeslimTarihi),
       counterpartyId: job.counterpartyPublicId,
       counterpartyName: job.counterpartyName,
       counterpartyUsername: job.counterpartyUsername,
@@ -612,6 +615,8 @@ export class JobsService {
       baslangicTarihi: job.baslangicTarihi,
       teslimBildirimTarihi: job.teslimBildirimTarihi,
       teslimTarihi: job.teslimTarihi,
+      planlananAlimTarihi: formatDateOnlyFromDate(job.planlananAlimTarihi),
+      tahminiTeslimTarihi: formatDateOnlyFromDate(job.tahminiTeslimTarihi),
       baslangicSehri: job.baslangicSehri,
       varisSehri: job.varisSehri,
       baslangicKonumMetni: job.baslangicKonumMetni,

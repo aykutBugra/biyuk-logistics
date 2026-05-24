@@ -6,6 +6,7 @@ import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
 import type { MyIncomingOfferItem } from "@/lib/api/offers";
 import type { TransportRequestListItem } from "@/lib/api/transport-requests";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   formatVolumeM3,
   formatWeightKg,
@@ -56,23 +57,6 @@ function formatRouteMeta(request: TransportRequestListItem): string | null {
   }
 
   return `${baslangicText ?? request.baslangicSehri} -> ${varisText ?? request.varisSehri}`;
-}
-
-function formatDateBadge(value: string | null): string | null {
-  if (!value) {
-    return null;
-  }
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(parsedDate);
 }
 
 function buildOfferCountMap(incomingOffers: MyIncomingOfferItem[]): Map<string, number> {
@@ -141,7 +125,7 @@ export default function CustomerRecentRequestsPanel({
           {recentRequests.map((request) => {
             const offerCount = offerCountMap.get(request.id) ?? 0;
             const routeMeta = formatRouteMeta(request);
-            const formattedDate = formatDateBadge(request.tasimaTarihi);
+            const formattedDate = formatDateOnly(request.tasimaTarihi, "");
 
             return (
               <article
@@ -205,7 +189,7 @@ export default function CustomerRecentRequestsPanel({
                       ) : null}
                       {formattedDate ? (
                         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                          {formattedDate}
+                          Tercih: {formattedDate}
                         </span>
                       ) : null}
                     </div>
