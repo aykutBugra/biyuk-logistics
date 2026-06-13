@@ -56,3 +56,6 @@ next-env.d.ts
 /apps/api/src/generated/prisma
 
 eski_dizin/.git-local-backup/
+
+# local/internal docs
+/docs/
