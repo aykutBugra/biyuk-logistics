@@ -99,7 +99,7 @@ function getJobStatusCopy(status: string): { title: string; description: string 
     default:
       return {
         title: "Nakliye durumu guncel",
-        description: "Bu kayit icin son operasyon bilgileri tek ekranda toplanir.",
+        description: "Bu kayit icin son Nakliye Bilgileri tek ekranda toplanir.",
       };
   }
 }

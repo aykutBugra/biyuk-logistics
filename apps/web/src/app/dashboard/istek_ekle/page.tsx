@@ -374,7 +374,7 @@ export default function CreateTransportRequestPage() {
 
             <RequestFormSection
               eyebrow="Yuk ve tarih"
-              title="Operasyon bilgileri"
+              title="Nakliye Bilgileri"
               description="Yuk sinifini, agirlik ve hacim bilgisini gir. Planlanan tarih teklif kalitesini dogrudan etkiler."
             >
               <div className="grid gap-4 sm:grid-cols-2">

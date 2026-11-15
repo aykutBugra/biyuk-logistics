@@ -1,8 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
-/apps/*/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -12,26 +11,94 @@
 !.yarn/versions
 
 # testing
-/coverage
-/test-results/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.nyc_output/
+*.lcov
 
 # next.js
-/.next/
-/apps/*/.next/
-/out/
+.next/
+out/
 
 # production
-/build
-/apps/api/dist
-/apps/api/coverage
-/apps/api/uploads
+build/
+dist/
+uploads/
 
 # misc
 .DS_Store
+
+# private keys and credential stores
 *.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_rsa.*
+id_dsa
+id_dsa.*
+id_ecdsa
+id_ecdsa.*
+id_ed25519
+id_ed25519.*
+.ssh/
+.aws/
+.azure/
+.config/gcloud/
+.netrc
+_netrc
+.npmrc
+.pypirc
+.htpasswd
+credentials/
+secrets/
+.secrets/
+*credentials*.json
+secrets*.json
+*service-account*.json
+*service_account*.json
+*serviceAccount*.json
+
+# local databases, dumps and backups; keep Prisma migration.sql files trackable
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.dump
+*.backup
+*.bak
+backups/
+dumps/
+database.sql
+dump*.sql
+*-dump.sql
+*_dump.sql
+pg_dump*.sql
+backup*.sql
+*-backup.sql
+*_backup.sql
+*.sql.gz
+*.sql.bz2
+*.sql.xz
+
+# archives and network captures may contain private data or large local artifacts
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+*.har
 
 # debug
 *.log
+*.pid
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -42,8 +109,9 @@ yarn-error.log*
 /tmp/
 /.vscode/
 
-# env files (can opt-in for committing if needed)
+# real env files stay local; only sanitized examples may be committed
 .env*
+!.env.example
 
 # vercel
 .vercel

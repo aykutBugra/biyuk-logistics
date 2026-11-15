@@ -594,7 +594,7 @@ export default function EditTransportRequestPage() {
 
               <RequestFormSection
                 eyebrow="Yuk ve tarih"
-                title="Operasyon bilgilerini guncelle"
+                title="Nakliye Bilgilerini guncelle"
                 description="Yuk tipi, hacim ve tarih bilgileri teklif kalitesini dogrudan etkiler."
               >
                 <div className="grid gap-4 md:grid-cols-2">

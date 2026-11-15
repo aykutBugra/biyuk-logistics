@@ -311,7 +311,7 @@ export default function EditVehiclePage() {
             ) : null}
 
             <section className="app-surface rounded-[1.15rem] border border-slate-200 p-4">
-              <h2 className="text-sm font-black text-slate-950">Operasyon bilgileri</h2>
+              <h2 className="text-sm font-black text-slate-950">Nakliye Bilgileri</h2>
               <dl className="mt-3">
                 <SummaryRow
                   label="Maks. agirlik"
