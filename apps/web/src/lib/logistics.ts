@@ -56,6 +56,25 @@ export function formatLocationLabel(
   return konumMetni?.trim() || sehir;
 }
 
+// Kullaniciya referans kimligi yerine mevcut guzergah veya yuk bilgisi gosterilir.
+export function formatTransportRouteLabel({
+  origin,
+  destination,
+  cargoType,
+}: {
+  origin?: string | null;
+  destination?: string | null;
+  cargoType?: string | null;
+}): string {
+  const pickup = origin?.trim();
+  const dropoff = destination?.trim();
+  if (pickup && dropoff) return `${pickup} → ${dropoff}`;
+  if (pickup) return `Kalkış: ${pickup}`;
+  if (dropoff) return `Varış: ${dropoff}`;
+  const cargo = cargoType?.trim();
+  return cargo ? `${getCargoTypeLabel(cargo)} taşıma talebi` : "Taşıma talebi";
+}
+
 // Agirlik, hacim, mesafe ve sure formatlari tum dashboard kartlarinda ayni gorunsun diye merkezilesir.
 export function formatWeightKg(value: number | null | undefined): string {
   if (value === null || value === undefined) {

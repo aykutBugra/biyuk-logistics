@@ -1,0 +1,293 @@
+.workspace { display: grid; gap: 20px; min-width: 0; }
+.metrics { min-width: 0; }
+.metrics :global([class*="metricValue"]) { font-size: 25px; }
+.metrics > div > div { padding-inline: 18px; }
+.list { padding: 0 22px; }
+.row, .vehicleRow { min-width: 0; padding: 20px 0; position: relative; }
+.list > article + article { border-top: 1px solid #e7ecf3; }
+.rowTop { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; min-width: 0; }
+.routeHeading { flex: 1; min-width: 0; }
+.badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 10px; color: #667a96; }
+.badges > span { font-size: 10px; }
+.badges > span[class] { padding: 3px 8px; }
+.routeHeading h3 { margin: 10px 0 0; color: #1a304e; font-size: 16px; font-weight: 650; line-height: 1.5; letter-spacing: -.025em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.address { margin: 5px 0 0; color: #70819a; font-size: 11px; line-height: 1.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.price { color: #203b60; font-size: 21px; font-weight: 650; white-space: nowrap; flex-shrink: 0; letter-spacing: -.035em; padding-top: 28px; font-variant-numeric: tabular-nums; }
+.offerContent { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; }
+.identity { display: flex; min-width: 0; align-items: center; gap: 9px; }
+.identity > div:first-child { flex-shrink: 0; }
+.identity > div:last-child { min-width: 0; }
+.identity strong { display: block; color: #3c526e; font-size: 12px; font-weight: 550; overflow-wrap: anywhere; }
+.identity span { display: block; margin-top: 3px; color: #72839a; font-size: 10px; overflow-wrap: anywhere; }
+.dates { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 0; min-width: 0; }
+.dates dt { color: #70829c; font-size: 10px; }
+.dates dd { margin: 4px 0 0; color: #3c526e; font-size: 12px; font-weight: 550; overflow-wrap: anywhere; }
+.facts { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; margin-top: 11px; color: #637995; font-size: 11px; line-height: 1.7; }
+.facts > span + span::before { content: '·'; margin-right: 10px; color: #a0afc3; }
+.note { margin: 12px 0 0; color: #697d99; font-size: 12px; line-height: 1.85; overflow-wrap: anywhere; }
+.rowFooter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 15px; }
+.updated { color: #73859e; font-size: 10px; line-height: 1.7; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-left: auto; }
+.actions > a, .actions > button { min-height: 36px; font-size: 11px; padding: 8px 11px; }
+.unreadRow::before { content: ''; position: absolute; top: 20px; bottom: 20px; left: -22px; width: 3px; border-radius: 0 4px 4px 0; background: #4381e9; }
+.sort { display: flex; align-items: center; gap: 9px; color: #6e8099; font-size: 10px; }
+.sort select { min-width: 0; max-width: 210px; min-height: 36px; padding: 7px 10px; border: 1px solid var(--b-border); border-radius: 7px; background: #fff; color: #526b8c; font-size: 11px; cursor: pointer; }
+.listMeta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 22px; color: #74859c; font-size: 10px; }
+.listMeta > span[class] { font-size: 9px; padding: 3px 7px; }
+.todayStrip { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 2px; }
+.todayStrip > strong { display: flex; align-items: center; gap: 8px; color: #4c6588; font-size: 11px; font-weight: 550; }
+.todayStrip > div { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.todayStrip a { display: flex; align-items: center; gap: 6px; max-width: 280px; color: #416db2; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todayStrip a i { flex-shrink: 0; font-size: 9px; }
+.shipmentPlanning { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 20px; margin-top: 16px; align-items: start; }
+.timeline { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; list-style: none; padding: 0; margin: 0; }
+.timeline li { display: flex; align-items: flex-start; gap: 6px; min-width: 0; color: #71839e; font-size: 10px; line-height: 1.6; }
+.timeline li > i { margin-top: 3px; font-size: 10px; flex-shrink: 0; color: #a1afc4; }
+.timeline li[data-state="complete"] > i { color: #479a8c; }
+.timeline li[data-state="current"] { color: #326cc9; font-weight: 550; }
+.timeline li[data-state="current"] > i { color: #326cc9; }
+.timeline small { display: block; color: #7b8ba2; font-size: 9px; font-weight: 400; margin-top: 3px; }
+.routeIcon { display: grid; flex: 0 0 38px; height: 38px; place-items: center; color: #6482b0; background: #f3f7fd; border: 1px solid #e4ebf6; border-radius: 9px; }
+.routeFacts { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; margin-top: 17px; color: #5e7392; font-size: 12px; }
+.routeFacts > div { display: flex; align-items: center; gap: 7px; }
+.routeFacts i { color: #7e95b7; font-size: 12px; }
+.vehicleTop { display: flex; align-items: center; gap: 16px; }
+.vehicleImage { display: grid; flex: 0 0 94px; width: 94px; height: 76px; overflow: hidden; place-items: center; border: 1px solid #e5eaf2; border-radius: 9px; background: #f7f9fc; color: #93a6c4; font-size: 26px; }
+.vehicleImage img { width: 100%; height: 100%; object-fit: contain; }
+.vehicleIdentity { flex: 1; min-width: 0; }
+.plate { color: #2e4a70; font-weight: 650; letter-spacing: .02em; padding-left: 0 !important; }
+.vehicleIdentity h3 { margin: 8px 0 0; color: #233c60; font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+.vehicleIdentity .facts { margin-top: 6px; }
+.usage { flex: 0 1 190px; min-width: 130px; }
+.usage > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #6b7e98; font-size: 10px; }
+.usage strong { color: #45678e; font-size: 13px; font-weight: 650; }
+.usageTrack { width: 100%; height: 5px; overflow: hidden; border-radius: 99px; background: #e8eef7; margin-top: 9px; }
+.usageTrack > span { display: block; height: 100%; border-radius: inherit; background: #6694dd; }
+.vehicleCapacity { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(180px, .8fr); gap: 24px; padding: 16px 0 0; margin-top: 18px; border-top: 1px solid #edf0f5; }
+.vehicleCapacity dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.vehicleCapacity dt { font-size: 10px; color: #70839f; }
+.vehicleCapacity dd { margin: 6px 0 0; color: #334f72; font-size: 12px; font-weight: 550; overflow-wrap: anywhere; }
+.reservations { border-left: 1px solid #e7edf5; padding-left: 24px; }
+.reservations p { display: flex; justify-content: space-between; gap: 12px; color: #71839c; font-size: 10px; margin: 0; }
+.reservations p + p { margin-top: 8px; }
+.reservations strong { font-size: 11px; color: #526b8c; font-weight: 550; }
+.warning { display: flex; align-items: flex-start; gap: 7px; margin: 14px 0 0; font-size: 11px; line-height: 1.8; color: #946c31; }
+.warning i { margin-top: 4px; flex-shrink: 0; }
+.overviewGrid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr); gap: 22px; align-items: start; }
+.overviewMain, .overviewAside { display: grid; gap: 20px; min-width: 0; }
+.overviewRows, .activities { padding: 0 22px; }
+.overviewJob { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 18px 0; }
+.overviewJob + .overviewJob, .activity + .activity { border-top: 1px solid #edf0f5; }
+.overviewJobIcon { display: grid; flex: 0 0 32px; height: 32px; place-items: center; border: 1px solid #e6edf7; border-radius: 8px; color: #8198ba; background: #f8faff; font-size: 13px; }
+.overviewJob > div:nth-child(2) { flex: 1; min-width: 0; }
+.overviewJob strong { display: block; color: #284365; font-size: 13px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.overviewJob > div:nth-child(2) > span { display: block; margin-top: 5px; color: #74869f; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.overviewJobStatus { text-align: right; flex-shrink: 0; }
+.overviewJobStatus > span { font-size: 9px; padding: 3px 7px; }
+.overviewJobStatus small { display: block; font-size: 11px; color: #5d7493; margin-top: 5px; }
+.activity { display: flex; align-items: flex-start; gap: 12px; padding: 16px 0; min-width: 0; }
+.activityDot { flex: 0 0 6px; width: 6px; height: 6px; background: #78a0dd; border-radius: 50%; margin-top: 7px; }
+.activity > div:nth-child(2) { flex: 1; min-width: 0; }
+.activity strong { color: #365170; font-size: 12px; font-weight: 550; overflow-wrap: anywhere; }
+.activity p { margin: 5px 0 0; color: #6b809e; font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; }
+.activityMeta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; flex-shrink: 0; }
+.activityMeta > span { font-size: 9px; padding: 3px 6px; }
+.activity time { color: #7488a3; font-size: 9px; }
+.quietEmpty { margin: 0; padding: 24px 22px; color: #7486a0; font-size: 12px; line-height: 1.8; }
+.previewContent { padding: 18px 22px 22px; min-width: 0; }
+.previewRoute { display: block; color: #24466f; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.previewContent > p { color: #6b809d; font-size: 11px; line-height: 1.8; margin: 12px 0; }
+.previewContent > a:last-child:not(.previewRoute) { min-height: 36px; padding: 8px 11px; font-size: 11px; margin-top: 2px; }
+.previewBlock { min-width: 0; }
+.previewBlock + .previewBlock { border-top: 1px solid #edf0f5; padding-top: 17px; margin-top: 17px; }
+.previewBlock > span { display: block; color: #7187a5; font-size: 10px; }
+.previewBlock a { display: block; color: #41658f; font-size: 12px; font-weight: 550; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.previewBlock small { display: block; color: #7b8ca5; font-size: 10px; margin-top: 6px; }
+.quickLinks { padding: 0 8px; }
+.quickLinks > p { font-size: 9px; color: #7e91ad; font-weight: 650; letter-spacing: .1em; margin: 0 0 10px; }
+.quickLinks a { display: flex; align-items: center; gap: 9px; padding: 9px 0; color: #5d7699; font-size: 12px; }
+.quickLinks a > i:first-child { color: #8199bb; font-size: 13px; }
+.quickLinks a > i:last-child { margin-left: auto; font-size: 10px; }
+.quickLinks a > span { padding: 2px 6px; font-size: 9px; }
+.workspace a:focus-visible, .sort select:focus-visible { outline: 3px solid #b8cef5; outline-offset: 3px; border-radius: 5px; }
+@media (max-width: 1199px) {
+ .overviewGrid { grid-template-columns: minmax(0, 1fr); }
+ .overviewAside { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+ .metrics > div > div { padding-inline: 14px; }
+ .shipmentPlanning { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+ .timeline { justify-content: flex-start; gap: 28px; }
+ .vehicleCapacity { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+ .reservations { border-left: 0; border-top: 1px solid #edf0f5; padding: 12px 0 0; display: flex; flex-wrap: wrap; gap: 8px 30px; }
+ .reservations p + p { margin: 0; }
+}
+@media (max-width: 767px) {
+ .metrics > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+ .metrics > div > div { border: 0; border-bottom: 1px solid var(--b-border); }
+ .metrics > div > div:nth-child(even) { border-left: 1px solid var(--b-border); }
+ .metrics > div > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
+ .metrics > div > div:last-child, .metrics > div > div:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
+ .overviewAside { grid-template-columns: minmax(0, 1fr); }
+ .vehicleTop { flex-wrap: wrap; }
+ .usage { flex-basis: 100%; padding-left: 110px; }
+}
+@media (max-width: 639px) {
+ .workspace { gap: 16px; }
+ .metrics :global([class*="metricValue"]) { font-size: 22px; }
+ .metrics :global([class*="metricDescription"]) { display: none; }
+ .listPanel :global([class*="panelHeader"]) { padding-block: 16px; align-items: center; }
+ .listPanel :global([class*="panelHeader"]) p { display: none; }
+ .listPanel :global([class*="panelAction"]) { width: auto; }
+ .listPanel .sort > span { display: none; }
+ .listPanel .sort select { max-width: 150px; min-height: 38px; }
+ .list, .overviewRows, .activities { padding-inline: 16px; }
+ .listMeta { padding-inline: 16px; }
+ .row, .vehicleRow { padding-block: 18px; }
+ .rowTop { gap: 10px; flex-wrap: wrap; }
+ .routeHeading { flex: 1 1 190px; }
+ .routeHeading h3 { font-size: 15px; }
+ .price { padding-top: 0; margin-left: auto; font-size: 20px; }
+ .offerContent { gap: 15px; }
+ .offerContent .dates { width: 100%; gap: 12px 20px; }
+ .actions > a, .actions > button { min-height: 42px; }
+ .rowFooter { align-items: flex-start; }
+ .unreadRow::before { left: -16px; }
+ .sort select { min-height: 42px; max-width: 220px; font-size: 12px; }
+ .timeline { flex-wrap: wrap; gap: 12px 24px; }
+ .timeline li { flex: 1 1 40%; }
+ .timeline small { font-size: 10px; }
+ .todayStrip > div { flex-direction: column; max-width: 100%; }
+ .todayStrip a { max-width: 100%; }
+ .routeFacts { gap: 10px 18px; font-size: 11px; }
+ .vehicleTop { gap: 12px; }
+ .vehicleImage { flex-basis: 72px; width: 72px; height: 68px; }
+ .vehicleIdentity h3 { font-size: 14px; }
+ .vehicleIdentity .facts { font-size: 10px; }
+ .usage { padding-left: 0; margin-top: 2px; }
+ .vehicleCapacity dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+ .overviewJob { gap: 9px; flex-wrap: wrap; }
+ .overviewJob > div:nth-child(2) { flex-basis: calc(100% - 43px); }
+ .overviewJobStatus { margin-left: 41px; display: flex; align-items: center; gap: 10px; text-align: left; }
+ .overviewJobStatus small { margin: 0; }
+ .activity { gap: 10px; flex-wrap: wrap; }
+ .activity > div:nth-child(2) { flex-basis: calc(100% - 18px); }
+ .activityMeta { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; text-align: left; margin-left: 16px; }
+ .activity time { font-size: 10px; }
+ .previewContent { padding: 18px 16px; }
+ .quietEmpty { padding: 22px 16px; }
+}
+
+
+/* Premium carrier workspace: shared surfaces and compact operational rows. */
+.workspace { gap: 24px; }
+.metrics :global([class*="metricValue"]) { font-size: 29px; font-weight: 750; }
+.metrics :global([class*="metricDescription"]) { display: block; color: #475569; font-size: 11px; }
+.metrics > div { gap: 14px; border: 0; background: transparent; overflow: visible; }
+.metrics > div > div { padding: 20px 16px 20px 76px; border: 1px solid #e5eae8; border-radius: 16px; background: #fff; }
+.list { padding-inline: 24px; }
+.row, .vehicleRow { padding-block: 24px; }
+.address, .facts, .note, .updated { color: #475569; }
+.routeHeading h3 { font-size: 18px; font-weight: 700; }
+.badges { gap: 7px 10px; }
+.price { padding-top: 25px; max-width: 100%; color: #0f172a; font-size: 26px; font-weight: 750; white-space: normal; overflow-wrap: anywhere; text-align: right; }
+.identity strong { color: #0f172a; font-size: 13px; font-weight: 600; }
+.identity > :global(div[aria-hidden="true"]) { background: #0f766e; border-color: transparent; box-shadow: none; }
+.dates dt { font-size: 11px; color: #64748b; }
+.dates dd { font-size: 13px; color: #0f172a; }
+.offerContent { margin-top: 19px; gap: 20px; }
+.rowFooter { margin-top: 18px; padding-top: 16px; border-top: 1px solid #edf1ef; }
+.actions { gap: 7px; }
+.actions > a, .actions > button { min-height: 38px; font-size: 12px; padding: 8px 12px; }
+.listMeta { padding: 13px 24px; background: #fafcfb; border-bottom: 1px solid #edf1ef; font-size: 11px; }
+.sort { color: #475569; font-size: 11px; }
+.sort select { min-height: 40px; border-radius: 9px; color: #334155; font-size: 12px; }
+.todayStrip { padding: 16px 18px; border: 1px solid #d3e7df; border-radius: 12px; background: #f1f9f5; }
+.todayStrip > strong { color: #0f766e; font-size: 12px; font-weight: 600; }
+.todayStrip a { color: #0f766e; font-size: 11px; }
+.shipmentPlanning { grid-template-columns: minmax(0,1fr) minmax(0,1.3fr); gap: 24px; margin-top: 20px; padding: 18px; border-radius: 12px; background: #f8fbf9; }
+.timeline { gap: 14px; }
+.timeline li { font-size: 11px; }
+.timeline li[data-state="current"], .timeline li[data-state="current"] > i { color: #0f766e; }
+.timeline li[data-state="complete"] > i { color: #168263; }
+.timeline small { color: #64748b; font-size: 10px; }
+.routeIcon { height: 42px; flex-basis: 42px; border: 0; border-radius: 50%; color: #0f766e; background: #ddf3f0; font-size: 18px; }
+.routeFacts { gap: 14px 26px; margin-top: 20px; padding: 14px 16px; border-radius: 10px; background: #f8fbf9; color: #475569; }
+.routeFacts i { color: #0f766e; }
+.vehicleImage { width: 100px; height: 82px; flex-basis: 100px; border-color: #e5eae8; border-radius: 12px; background: #f4f8f6; color: #0f766e; }
+.vehicleIdentity h3 { color: #0f172a; font-size: 17px; font-weight: 700; }
+.plate { color: #0f172a; font-size: 13px !important; font-weight: 700; letter-spacing: .04em; }
+.usage strong { color: #0f766e; }
+.usageTrack { background: #e5eeea; height: 6px; }
+.usageTrack > span { background: #0f766e; }
+.vehicleCapacity { margin-top: 20px; padding-top: 20px; }
+.vehicleCapacity dt { font-size: 11px; color: #64748b; }
+.vehicleCapacity dd { font-size: 13px; color: #0f172a; font-weight: 600; }
+.reservations { border-color: #e5eae8; }
+.reservations strong { color: #334155; }
+.overviewGrid { grid-template-columns: minmax(0,1.6fr) minmax(300px,1fr); gap: 22px; }
+.overviewMain, .overviewAside { gap: 22px; }
+.overviewRows, .activities { padding-inline: 24px; }
+.overviewJob { padding-block: 21px; }
+.overviewJobIcon { width: 38px; height: 38px; flex-basis: 38px; border: 0; border-radius: 50%; background: #ddf3f0; color: #0f766e; font-size: 16px; }
+.overviewJob strong { color: #0f172a; font-size: 14px; font-weight: 650; }
+.overviewJob > div:nth-child(2) > span { color: #475569; font-size: 11px; }
+.overviewJobStatus small { color: #0f172a; font-size: 12px; font-weight: 600; }
+.activityDot { background: #0f766e; }
+.activity { padding-block: 19px; }
+.activity strong { color: #0f172a; font-size: 13px; font-weight: 600; }
+.activity p { color: #475569; }
+.activity time { color: #64748b; font-size: 10px; }
+.previewContent { padding: 22px 24px; }
+.previewRoute { color: #0f172a; font-size: 16px; font-weight: 700; }
+.previewBlock a { color: #0f172a; font-size: 13px; font-weight: 600; }
+.previewBlock > span { color: #64748b; font-size: 11px; }
+.previewBlock small { font-size: 11px; color: #475569; }
+.quickLinks { padding: 22px 24px 12px; border: 1px solid #e5eae8; border-radius: 17px; background: #fff; box-shadow: 0 3px 12px rgb(15 23 42 / 3%); }
+.quickLinks > h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; color: #0f172a; font-size: 17px; font-weight: 700; }
+.quickLinks > h2 i { color: #0f766e; font-size: 20px; }
+.quickLinks a { min-height: 45px; padding-block: 12px; border-top: 1px solid #e5eae8; color: #334155; font-size: 12px; }
+.quickLinks a > i:first-child { color: #64748b; font-size: 16px; }
+.quickLinks a:hover { color: #0f766e; }
+.workspace a:focus-visible, .sort select:focus-visible { outline-color: #88c9bf; }
+@media(min-width:1024px) {
+ .metrics > div:has(> div:nth-child(5)) > div { padding: 17px 14px 17px 64px; }
+ .metrics > div:has(> div:nth-child(5)) :global([class*="metricValue"]) { font-size: 27px; }
+ .metrics > div:has(> div:nth-child(5)) :global([class*="metricIcon"]) { width: 36px; height: 36px; left: 16px; font-size: 16px; }
+}
+@media(min-width:1024px) and (max-width:1279px) {
+ .metrics > div:has(> div:nth-child(5)) { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@media(max-width:1199px) {
+ .overviewGrid { grid-template-columns: minmax(0,1fr); }
+ .overviewAside { grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; }
+ .shipmentPlanning { grid-template-columns: minmax(0,1fr); }
+}
+@media(max-width:767px) {
+ .metrics > div > div, .metrics > div > div:nth-child(even) { border: 1px solid #e5eae8; }
+ .overviewAside { grid-template-columns: minmax(0,1fr); }
+}
+@media(max-width:639px) {
+ .workspace { gap: 18px; }
+ .metrics > div { gap: 12px; }
+ .metrics > div > div { padding: 17px 14px; }
+ .metrics :global([class*="metricValue"]) { font-size: 26px; }
+ .metrics :global([class*="metricDescription"]) { display: block; font-size: 10px; }
+ .list, .overviewRows, .activities { padding-inline: 17px; }
+ .listMeta { padding-inline: 17px; }
+ .row, .vehicleRow { padding-block: 21px; }
+ .routeHeading h3 { font-size: 16px; }
+ .price { padding-top: 0; font-size: 23px; }
+ .rowFooter { gap: 12px; }
+ .actions > a, .actions > button { min-height: 44px; font-size: 11px; }
+ .shipmentPlanning { padding: 15px; gap: 22px; }
+ .timeline li { flex-basis: 40%; }
+ .routeFacts { padding: 13px; gap: 12px 18px; font-size: 11px; }
+ .vehicleImage { width: 76px; height: 72px; flex-basis: 76px; }
+ .vehicleIdentity h3 { font-size: 15px; }
+ .usage { padding: 0; }
+ .vehicleCapacity dl { gap: 20px 16px; }
+ .overviewJobStatus { margin-left: 47px; }
+ .overviewJob > div:nth-child(2) { flex-basis: calc(100% - 48px); }
+ .activityMeta { margin-left: 16px; max-width: calc(100% - 16px); }
+ .previewContent { padding: 21px 17px; }
+ .quickLinks { padding: 21px 17px 12px; }
+}

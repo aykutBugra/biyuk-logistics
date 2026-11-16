@@ -1,18 +1,13 @@
 "use client";
 
-import type { ChangeEvent, ReactNode } from "react";
+import OffersWorkspace from "@/features/carrier-workspace/OffersWorkspace";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
-import CustomerMetricCard from "@/components/CustomerMetricCard";
-import DashboardActionCard from "@/components/DashboardActionCard";
-import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
-import EmptyStateCard from "@/components/EmptyStateCard";
+
 import InlineHelpTrigger from "@/components/InlineHelpTrigger";
-import MyOfferCard, {
-  type MyOfferCardChip,
-  type MyOfferCardModel,
-} from "@/components/MyOfferCard";
+import { type MyOfferCardChip, type MyOfferCardModel } from "@/components/MyOfferCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   getMyOfferThreads,
@@ -44,17 +39,6 @@ type OfferViewModel = MyOfferCardModel & {
   sortPrice: number;
   lastActivityAt: string | null;
 };
-
-const FILTER_TABS: Array<{
-  key: OfferFilterTab;
-  label: string;
-}> = [
-  { key: "all", label: "Tumu" },
-  { key: "open", label: "Bekleyen" },
-  { key: "accepted", label: "Kabul edilen" },
-  { key: "rejected", label: "Reddedilen" },
-  { key: "negotiation", label: "Muzakere" },
-];
 
 function normalizeStatus(value: string): string {
   return value.trim().toUpperCase();
@@ -190,93 +174,6 @@ function buildOfferSignal(
   };
 }
 
-function OfferToolbar(props: {
-  searchQuery: string;
-  activeTab: OfferFilterTab;
-  sortMode: OfferSortMode;
-  totalCount: number;
-  isRefreshingDetails: boolean;
-  onSearchChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onTabChange: (tab: OfferFilterTab) => void;
-  onSortChange: (event: ChangeEvent<HTMLSelectElement>) => void;
-}) {
-  return (
-    <section className="app-surface rounded-[1.15rem] border border-slate-200 p-4">
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-        <div className="relative">
-          <i className="pi pi-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400" />
-          <input
-            type="search"
-            value={props.searchQuery}
-            onChange={props.onSearchChange}
-            placeholder="Rota, musteri veya yuk ara"
-            className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={props.sortMode}
-            onChange={props.onSortChange}
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-300"
-          >
-            <option value="newest">En yeni</option>
-            <option value="oldest">En eski</option>
-            <option value="price-desc">Tutar yuksek</option>
-            <option value="price-asc">Tutar dusuk</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {FILTER_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => props.onTabChange(tab.key)}
-              className={`rounded-xl border px-3.5 py-2 text-sm font-semibold transition ${
-                props.activeTab === tab.key
-                  ? "border-blue-200 bg-blue-50 text-blue-700"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <span>{props.totalCount} teklif goruntuleniyor</span>
-          {props.isRefreshingDetails ? (
-            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-              Ek detaylar yenileniyor
-            </span>
-          ) : null}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function SidebarSection(props: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
-      <h2 className="text-[1.45rem] font-black tracking-tight text-slate-950">
-        {props.title}
-      </h2>
-      {props.description ? (
-        <p className="mt-2 text-sm leading-6 text-slate-500">{props.description}</p>
-      ) : null}
-      <div className="mt-5">{props.children}</div>
-    </section>
-  );
-}
-
 export default function MyOffersPage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
@@ -290,13 +187,15 @@ export default function MyOffersPage() {
   const [sortMode, setSortMode] = useState<OfferSortMode>("newest");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEnriching, setIsEnriching] = useState(false);
+  const [isEnrichmentPending, setIsEnriching] = useState(false);
+  const isEnriching =
+    status === "ready" &&
+    Boolean(accessToken) &&
+    offers.length > 0 &&
+    isEnrichmentPending;
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
@@ -382,7 +281,6 @@ export default function MyOffersPage() {
 
   useEffect(() => {
     if (status !== "ready" || !accessToken || offers.length === 0) {
-      setIsEnriching(false);
       return;
     }
 
@@ -602,172 +500,18 @@ export default function MyOffersPage() {
   };
 
   return (
-    <CarrierVehiclesShell
-      title="Tekliflerim"
-      description="Verdigin teklifleri, her birinin mevcut durumunu ve musteri yanitlarini buradan takip et."
-      headerVariant="compact"
-      motionPreset="operational"
-      cardMotionLimit={6}
-      headerActions={<InlineHelpTrigger helpKey="my-offers" />}
-    >
-      {isLoading ? <DashboardPageSkeleton /> : null}
-
-      {!isLoading && errorMessage ? (
-        <div
-          data-dashboard-primary
-          className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700"
-        >
-          {errorMessage}
-        </div>
-      ) : null}
-
-      {!isLoading && !errorMessage ? (
-        <div className="space-y-4">
-          <div
-            data-dashboard-stats
-            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-          >
-            <CustomerMetricCard
-              label="Toplam teklif"
-              value={offers.length}
-              hint="Tum teklif kayitlarin"
-              tone="blue"
-              icon={<i className="pi pi-send text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Yanit bekleyen"
-              value={openOfferCount}
-              hint="Musteri karari bekleniyor"
-              tone="amber"
-              icon={<i className="pi pi-clock text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Kabul edilen"
-              value={acceptedOfferCount}
-              hint="Nakliyeye donusen teklifler"
-              tone="emerald"
-              icon={<i className="pi pi-check-circle text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Reddedilen"
-              value={rejectedOfferCount}
-              hint="Reddedilen veya iptal edilen"
-              tone="violet"
-              icon={<i className="pi pi-times-circle text-lg" />}
-            />
-          </div>
-
-          {offers.length === 0 ? (
-            <div data-dashboard-primary>
-              <EmptyStateCard
-                title="Henuz teklif yok"
-                description="Acik istekleri inceleyip ilk teklifini verdiginde burada goreceksin."
-                actionHref="/dashboard/acik_istekler"
-                actionLabel="Acik istekleri incele"
-              />
-            </div>
-          ) : (
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="space-y-4">
-                <OfferToolbar
-                  searchQuery={searchQuery}
-                  activeTab={activeTab}
-                  sortMode={sortMode}
-                  totalCount={sortedOffers.length}
-                  isRefreshingDetails={isEnriching}
-                  onSearchChange={(event) => setSearchQuery(event.target.value)}
-                  onTabChange={setActiveTab}
-                  onSortChange={(event) =>
-                    setSortMode(event.target.value as OfferSortMode)
-                  }
-                />
-
-                <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 shadow-sm">
-                  <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 md:px-6">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-[1.55rem] font-black tracking-tight text-slate-950">
-                            Tum teklifler
-                          </h2>
-                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                            {sortedOffers.length}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm leading-6 text-slate-500">
-                          Tekliflerini rota, musteri ve son hareket baglamiyla tek listede takip et.
-                        </p>
-                      </div>
-
-                      {negotiationCount > 0 ? (
-                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                          {negotiationCount} muzakere acik
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="p-5 md:p-6">
-                    {sortedOffers.length === 0 ? (
-                      <div className="rounded-[1.1rem] border border-dashed border-slate-200 bg-slate-50/70 p-6">
-                        <p className="text-base font-semibold text-slate-900">
-                          Bu filtrelerle eslesen teklif bulunamadi
-                        </p>
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                          Arama metnini, durum sekmesini veya siralamayi degistirerek listeyi genisletebilirsin.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={handleResetLocalFilters}
-                          className="app-button-secondary mt-5"
-                        >
-                          Filtreleri temizle
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="grid gap-4">
-                        {sortedOffers.map((offer) => (
-                          <MyOfferCard key={offer.id} offer={offer} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </section>
-              </div>
-
-              <div className="space-y-4">
-                <SidebarSection
-                  title="Hizli islemler"
-                  description="Mevcut nakliyeci akislarini kisa yoldan ac."
-                >
-                  <div className="grid gap-3">
-                    <DashboardActionCard
-                      href="/dashboard/acik_istekler"
-                      title="Acik istekleri incele"
-                      variant="quiet"
-                    />
-                    <DashboardActionCard
-                      href="/dashboard/rotalarim"
-                      title="Rotalarimi gor"
-                      variant="quiet"
-                    />
-                    <DashboardActionCard
-                      href="/dashboard/araclarim"
-                      title="Araclarimi yonet"
-                      variant="quiet"
-                    />
-                    <DashboardActionCard
-                      href="/dashboard/konusmalar"
-                      title="Konusmalari ac"
-                      variant="quiet"
-                    />
-                  </div>
-                </SidebarSection>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : null}
+    <CarrierVehiclesShell title="Tekliflerim" description="Tekliflerinizi, müşteri yanıtlarını ve görüşmelerinizi takip edin."
+      headerVariant="compact" motionPreset="operational" cardMotionLimit={6}
+      headerActions={<div className="flex flex-wrap items-center gap-3"><InlineHelpTrigger helpKey="my-offers" /></div>}>
+      <OffersWorkspace items={sortedOffers} totalCount={offers.length} isEnriching={isEnriching}
+        isLoading={isLoading} errorMessage={errorMessage} query={searchQuery} filter={activeTab} sort={sortMode}
+        onQueryChange={setSearchQuery} onFilterChange={setActiveTab} onSortChange={setSortMode} onReset={handleResetLocalFilters}
+        metrics={[
+          { label: "Toplam teklif", value: offers.length, description: negotiationCount + " görüşülen teklif" },
+          { label: "Yanıt bekleyen", value: openOfferCount, description: "Müşteri kararını bekleyenler" },
+          { label: "Kabul edilen", value: acceptedOfferCount, description: "Anlaşmaya varılan teklifler" },
+          { label: "Reddedilen / iptal", value: rejectedOfferCount, description: "Olumsuz sonuçlanan teklifler" },
+        ]} />
     </CarrierVehiclesShell>
   );
 }

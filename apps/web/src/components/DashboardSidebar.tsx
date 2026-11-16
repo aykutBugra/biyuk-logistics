@@ -1,333 +1,93 @@
 "use client";
-
 import type { ReactNode } from "react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { gsap, useGSAP } from "@/lib/motion/gsap-client";
-import { MOTION_DISTANCES, MOTION_DURATIONS, MOTION_EASES } from "@/lib/motion/motion-tokens";
-import { useReducedMotion } from "@/lib/motion/useReducedMotion";
 import type { DashboardRenderedNavGroup } from "@/lib/dashboard/navigation";
 import type { StoredDashboardWorkspaceMode } from "@/lib/auth/auth-storage";
+import styles from "./control-center.module.css";
 
 type DashboardSidebarProps = {
-  panelEyebrow?: string;
-  panelTitle: string;
-  panelDescription?: string;
+  panelEyebrow?: string; panelTitle: string; panelDescription?: string;
   navGroups: DashboardRenderedNavGroup[];
-  workspaceMode: StoredDashboardWorkspaceMode | null;
-  dualBusinessRoles: boolean;
+  workspaceMode: StoredDashboardWorkspaceMode | null; dualBusinessRoles: boolean;
   onWorkspaceChange: (mode: StoredDashboardWorkspaceMode) => void;
-  isOpen?: boolean;
-  onClose?: () => void;
-  extraPanelContent?: ReactNode;
-  variant?: "default" | "icon-rail";
-  isDesktopExpanded?: boolean;
-  onDesktopToggle?: () => void;
+  isOpen?: boolean; onClose?: () => void; extraPanelContent?: ReactNode;
+  variant?: "default" | "icon-rail"; isDesktopExpanded?: boolean; onDesktopToggle?: () => void;
 };
-
 export default function DashboardSidebar({
-  panelEyebrow,
-  panelTitle,
-  panelDescription,
-  navGroups,
-  workspaceMode,
-  dualBusinessRoles,
-  onWorkspaceChange,
-  isOpen = false,
-  onClose,
-  extraPanelContent,
-  variant = "default",
-  isDesktopExpanded = true,
-  onDesktopToggle,
+  panelTitle, navGroups, workspaceMode, dualBusinessRoles, onWorkspaceChange,
+  isOpen = false, onClose, extraPanelContent, variant = "default",
+  isDesktopExpanded = true, onDesktopToggle,
 }: DashboardSidebarProps) {
-  const reducedMotion = useReducedMotion();
   const asideRef = useRef<HTMLElement | null>(null);
-  const isIconRailCollapsed = variant === "icon-rail" && !isDesktopExpanded;
-
-  useGSAP(
-    () => {
-      const textNodes =
-        asideRef.current?.querySelectorAll<HTMLElement>("[data-sidebar-text]");
-
-      if (!textNodes?.length) {
-        return;
-      }
-
-      gsap.killTweensOf(textNodes);
-
-      const nextAutoAlpha = isIconRailCollapsed ? 0 : 1;
-      const nextX = isIconRailCollapsed ? MOTION_DISTANCES.sidebarTextX : 0;
-
-      if (reducedMotion) {
-        gsap.set(textNodes, {
-          autoAlpha: nextAutoAlpha,
-          x: nextX,
-        });
-        return;
-      }
-
-      gsap.to(textNodes, {
-        autoAlpha: nextAutoAlpha,
-        x: nextX,
-        duration: MOTION_DURATIONS.quick,
-        ease: MOTION_EASES.standard,
-        overwrite: "auto",
-        stagger: isIconRailCollapsed ? 0 : 0.01,
-      });
-    },
-    {
-      scope: asideRef,
-      dependencies: [isIconRailCollapsed, reducedMotion],
-    }
-  );
-
+  const collapsed = variant === "icon-rail" && !isDesktopExpanded;
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const update = () => { if (asideRef.current) asideRef.current.inert = !isOpen && !media.matches; };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [isOpen]);
+  useEffect(() => {
+    if (!isOpen || window.matchMedia("(min-width: 1024px)").matches) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    asideRef.current?.querySelector<HTMLElement>("button, a")?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (window.matchMedia("(min-width: 1024px)").matches) return;
+      if (event.key === "Escape") onClose?.();
+      if (event.key !== "Tab") return;
+      const items = Array.from(asideRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled), a[href]") ?? []).filter((item) => item.getClientRects().length > 0);
+      if (!items?.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => { document.removeEventListener("keydown", handleKey); previous?.focus(); };
+  }, [isOpen, onClose]);
   return (
     <>
-      {isOpen ? (
-        <div
-          className="fixed inset-0 z-30 bg-slate-900/32 lg:hidden"
-          onClick={onClose}
-          aria-hidden="true"
-        />
-      ) : null}
-
-      <aside
-        ref={asideRef}
-        className={`fixed bottom-0 left-0 top-[var(--topbar-height)] z-30 flex w-[var(--sidebar-width)] flex-col overflow-y-auto border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)] transition-transform duration-200 ${
-          variant === "icon-rail"
-            ? "lg:w-[var(--dashboard-sidebar-width-current)]"
-            : "lg:w-[var(--sidebar-width)]"
-        } ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
-      >
-        <div
-          className={`border-b border-slate-100/80 ${
-            isIconRailCollapsed ? "px-5 py-5 lg:px-3 lg:py-4" : "px-5 py-5"
-          }`}
-        >
-          {variant === "icon-rail" && onDesktopToggle ? (
-            <div
-              className={`flex ${
-                isIconRailCollapsed ? "justify-center" : "justify-end"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={onDesktopToggle}
-                className="hidden h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 lg:inline-flex"
-                aria-label={
-                  isIconRailCollapsed ? "Menüyü genişlet" : "Menüyü daralt"
-                }
-                title={
-                  isIconRailCollapsed ? "Menüyü genişlet" : "Menüyü daralt"
-                }
-              >
-                <i
-                  className={`pi ${
-                    isIconRailCollapsed ? "pi-angle-right" : "pi-angle-left"
-                  } text-sm`}
-                />
-              </button>
+      {isOpen ? <div className={styles.backdrop} onClick={onClose} aria-hidden="true" /> : null}
+      <aside id="dashboard-navigation" ref={asideRef} aria-label={panelTitle}
+        className={[styles.sidebar, collapsed ? styles.collapsed : "", isOpen ? styles.sidebarOpen : ""].join(" ")}>
+        <div className={styles.workspaceBar}>
+          {dualBusinessRoles ? (
+            <div className={styles.roleSwitch} role="group" aria-label="İş alanı seçimi">
+              {(["customer", "carrier"] as const).map((mode) => (
+                <button key={mode} type="button" onClick={() => onWorkspaceChange(mode)}
+                  aria-pressed={workspaceMode === mode} aria-label={mode === "customer" ? "Müşteri alanı" : "Nakliyeci alanı"}
+                  title={mode === "customer" ? "Müşteri alanı" : "Nakliyeci alanı"}>
+                  <i className={"pi " + (mode === "customer" ? "pi-user" : "pi-truck")} aria-hidden="true" />
+                  <span className={styles.navLabel}>{mode === "customer" ? "Müşteri" : "Nakliyeci"}</span>
+                </button>
+              ))}
             </div>
-          ) : null}
-
-          <div
-            className={`overflow-hidden transition-[max-height] duration-200 ${
-              isIconRailCollapsed ? "lg:max-h-0" : "lg:max-h-40"
-            }`}
-          >
-            <div data-sidebar-text>
-              {panelEyebrow ? (
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-blue-600">
-                  {panelEyebrow}
-                </p>
-              ) : null}
-              <p className="text-lg font-black tracking-tight text-slate-950">
-                {panelTitle}
-              </p>
-              {panelDescription ? (
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  {panelDescription}
-                </p>
-              ) : null}
-            </div>
-          </div>
+          ) : <p className={styles.singleWorkspace}><i className="pi pi-briefcase" aria-hidden="true" /><span className={styles.navLabel}>{workspaceMode === "carrier" ? "Nakliyeci" : workspaceMode === "customer" ? "Müşteri" : panelTitle}</span></p>}
+          <button type="button" onClick={onClose} className={styles.mobileClose} aria-label="Menüyü kapat"><i className="pi pi-times" aria-hidden="true" /></button>
         </div>
-
-        {dualBusinessRoles ? (
-          <div
-            className={`border-b border-slate-100/80 ${
-              isIconRailCollapsed ? "px-4 py-4 lg:px-3" : "px-4 py-4"
-            }`}
-          >
-            {isIconRailCollapsed ? (
-              <>
-                <div className="hidden flex-col gap-2 lg:flex">
-                  <button
-                    type="button"
-                    onClick={() => onWorkspaceChange("customer")}
-                    className={`inline-flex h-10 items-center justify-center rounded-xl border text-xs font-semibold transition ${
-                      workspaceMode === "customer"
-                        ? "border-amber-200 bg-amber-50 text-amber-700"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                    }`}
-                    aria-label="Müşteri alanına geç"
-                    title="Müşteri alanına geç"
-                  >
-                    M
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onWorkspaceChange("carrier")}
-                    className={`inline-flex h-10 items-center justify-center rounded-xl border text-xs font-semibold transition ${
-                      workspaceMode === "carrier"
-                        ? "border-blue-200 bg-blue-50 text-blue-700"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                    }`}
-                    aria-label="Nakliyeci alanına geç"
-                    title="Nakliyeci alanına geç"
-                  >
-                    N
-                  </button>
-                </div>
-
-                <div className="space-y-3 lg:hidden">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    İş alanı
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onWorkspaceChange("customer")}
-                      className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${
-                        workspaceMode === "customer"
-                          ? "border-amber-200 bg-amber-50 text-amber-700"
-                          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Müşteri
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onWorkspaceChange("carrier")}
-                      className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${
-                        workspaceMode === "carrier"
-                          ? "border-blue-200 bg-blue-50 text-blue-700"
-                          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Nakliyeci
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  İş alanı
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onWorkspaceChange("customer")}
-                    className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${
-                      workspaceMode === "customer"
-                        ? "border-amber-200 bg-amber-50 text-amber-700"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    Müşteri
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onWorkspaceChange("carrier")}
-                    className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${
-                      workspaceMode === "carrier"
-                        ? "border-blue-200 bg-blue-50 text-blue-700"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    Nakliyeci
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        ) : null}
-
-        <nav className={`flex-1 ${isIconRailCollapsed ? "px-3 py-4 lg:px-2" : "px-3 py-4"}`}>
-          {navGroups.map((group, groupIndex) => (
-            <div
-              key={group.id}
-              className={
-                groupIndex > 0
-                  ? isIconRailCollapsed
-                    ? "mt-5 lg:mt-4 lg:border-t lg:border-slate-100/70 lg:pt-4"
-                    : "mt-5"
-                  : ""
-              }
-            >
-              {group.title ? (
-                <div
-                  className={`overflow-hidden transition-[max-height,margin] duration-200 ${
-                    isIconRailCollapsed ? "lg:mb-0 lg:max-h-0" : "lg:max-h-8"
-                  }`}
-                >
-                  <p
-                    data-sidebar-text
-                    className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400"
-                  >
-                    {group.title}
-                  </p>
-                </div>
-              ) : null}
-
-              <div className="flex flex-col gap-1">
-                {group.items.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    aria-label={item.label}
-                    title={isIconRailCollapsed ? item.label : undefined}
-                    className={`flex items-center rounded-xl border text-sm font-semibold transition-colors ${
-                      isIconRailCollapsed
-                        ? "gap-0 px-3 py-3 lg:justify-center lg:px-2"
-                        : "gap-3 px-3 py-3"
-                    } ${
-                      item.isActive
-                        ? "border-blue-600 bg-blue-600 text-white"
-                        : "border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-900"
-                    }`}
-                  >
-                    {item.icon ? (
-                      <i
-                        className={`${item.icon} w-4 shrink-0 text-center text-base ${
-                          item.isActive ? "text-white" : "text-slate-400"
-                        }`}
-                      />
-                    ) : null}
-                    <span
-                      data-sidebar-text
-                      className={`block overflow-hidden whitespace-nowrap transition-[max-width] duration-200 ${
-                        isIconRailCollapsed ? "lg:max-w-0" : "lg:max-w-[11rem]"
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  </Link>
-                ))}
-              </div>
+        <nav className={styles.navigation} aria-label="Ana menü">
+          {navGroups.map((group, index) => (
+            <div key={group.id} className={styles.navGroup}>
+              {index > 0 && group.title ? <p className={styles.groupTitle + " " + styles.navLabel}>{group.title}</p> : null}
+              {group.items.map((item) => (
+                <Link key={item.id} href={item.href} onClick={onClose} aria-label={item.label}
+                  aria-current={item.isActive ? "page" : undefined} title={collapsed ? item.label : undefined}
+                  className={styles.navItem + " " + (item.isActive ? styles.navActive : "")}>
+                  {item.icon ? <i className={item.icon} aria-hidden="true" /> : null}
+                  <span className={styles.navLabel}>{item.label}</span>
+                  {item.isActive ? <span className={styles.activeDot} aria-hidden="true" /> : null}
+                </Link>
+              ))}
             </div>
           ))}
         </nav>
-
-        {extraPanelContent ? (
-          <div
-            className={`border-t border-slate-100/80 px-4 py-4 ${
-              isIconRailCollapsed ? "lg:hidden" : ""
-            }`}
-          >
-            {extraPanelContent}
-          </div>
+        {extraPanelContent ? <div className={styles.extraPanel + " " + styles.navLabel}>{extraPanelContent}</div> : null}
+        {variant === "icon-rail" && onDesktopToggle ? (
+          <button type="button" onClick={onDesktopToggle} className={styles.collapseControl}
+            aria-label={collapsed ? "Menüyü genişlet" : "Menüyü daralt"} title={collapsed ? "Menüyü genişlet" : "Menüyü daralt"}>
+            <i className={"pi " + (collapsed ? "pi-angle-double-right" : "pi-angle-double-left")} aria-hidden="true" />
+            <span className={styles.navLabel}>Menüyü daralt</span>
+          </button>
         ) : null}
       </aside>
     </>

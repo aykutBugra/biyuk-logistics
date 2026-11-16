@@ -26,6 +26,7 @@ type VolumeEstimateAssistantProps = {
   action: (value: string) => void;
   disabled: boolean;
   yukTipi: string;
+  embedded?: boolean;
 };
 
 const volumeFormatter = new Intl.NumberFormat("tr-TR", {
@@ -121,8 +122,9 @@ export default function VolumeEstimateAssistant({
   action,
   disabled,
   yukTipi,
+  embedded = false,
 }: VolumeEstimateAssistantProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(embedded);
   const [description, setDescription] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
@@ -131,20 +133,12 @@ export default function VolumeEstimateAssistant({
   const [isEstimating, setIsEstimating] = useState(false);
 
   useEffect(() => {
-    const nextPreviewImages = selectedFiles.map((file) => ({
-      fileName: file.name,
-      fileSizeLabel: formatFileSize(file.size),
-      url: URL.createObjectURL(file),
-    }));
-
-    setPreviewImages(nextPreviewImages);
-
     return () => {
-      for (const previewImage of nextPreviewImages) {
+      for (const previewImage of previewImages) {
         URL.revokeObjectURL(previewImage.url);
       }
     };
-  }, [selectedFiles]);
+  }, [previewImages]);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextFiles = Array.from(event.target.files ?? []);
@@ -152,6 +146,7 @@ export default function VolumeEstimateAssistant({
 
     if (nextFiles.length === 0) {
       setSelectedFiles([]);
+      setPreviewImages([]);
       setEstimate(null);
       setErrorMessage(null);
       return;
@@ -175,6 +170,13 @@ export default function VolumeEstimateAssistant({
     }
 
     setSelectedFiles(nextFiles);
+    setPreviewImages(
+      nextFiles.map((file) => ({
+        fileName: file.name,
+        fileSizeLabel: formatFileSize(file.size),
+        url: URL.createObjectURL(file),
+      }))
+    );
     setEstimate(null);
     setErrorMessage(null);
   };
@@ -221,7 +223,8 @@ export default function VolumeEstimateAssistant({
 };
 
   return (
-    <div className="app-surface-muted rounded-[1.1rem] border border-slate-200 p-4 sm:p-5">
+    <div className={embedded ? "min-w-0" : "app-surface-muted rounded-[1.1rem] border border-slate-200 p-4 sm:p-5"}>
+      {!embedded ? (
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="max-w-lg space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
@@ -249,10 +252,11 @@ export default function VolumeEstimateAssistant({
         </button>
       </div>
 
-      <MotionCollapse isOpen={isOpen} className="mt-4">
+      ) : null}
+      <MotionCollapse isOpen={isOpen} className={embedded ? undefined : "mt-4"}>
         <div
           data-dashboard-form-conditional
-          className="space-y-4 border-t border-slate-200 pt-4"
+          className={embedded ? "space-y-4" : "space-y-4 border-t border-slate-200 pt-4"}
         >
           <div className="rounded-[1rem] border border-dashed border-slate-300 bg-white p-4">
             <div className="space-y-2">

@@ -19,7 +19,9 @@ import {
 } from "@/lib/api/transport-requests";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useCustomerPageAccess } from "@/lib/auth/use-customer-page-access";
-import { CARGO_TYPE_OPTIONS } from "@/lib/logistics";
+import { CARGO_TYPE_OPTIONS, getCargoTypeLabel } from "@/lib/logistics";
+import { PageHeader, Button } from "@/components/ui";
+import styles from "@/features/transport-requests/components/request-form.module.css";
 
 type CreateTransportRequestForm = {
   tekTasimaIstiyor: boolean;
@@ -49,39 +51,21 @@ const initialForm: CreateTransportRequestForm = {
 };
 
 function RequestFormSection({
-  eyebrow,
-  title,
-  description,
-  children,
-  className = "",
-  contentClassName = "space-y-5",
+  eyebrow, title, description, children, className = "", contentClassName = "space-y-5",
 }: RequestFormSectionProps) {
   return (
-    <section
-      data-dashboard-form-section
-      className={`app-surface-strong rounded-[1.85rem] border border-slate-200/80 px-5 py-5 shadow-sm md:px-6 md:py-6 ${className}`.trim()}
-    >
-      <div className="mb-5 space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
-          {eyebrow}
-        </p>
-        <div className="space-y-1">
-          <h2 className="text-xl font-black tracking-tight text-slate-950">{title}</h2>
-          <p className="max-w-2xl text-sm leading-6 text-slate-600">{description}</p>
-        </div>
-      </div>
-
+    <section data-dashboard-form-section className={[styles.section, className].join(" ")}>
+      <header className={styles.sectionHeader}>
+        <span className={styles.sectionNumber} aria-hidden="true">{eyebrow}</span>
+        <div><h2>{title}</h2><p>{description}</p></div>
+      </header>
       <div className={contentClassName}>{children}</div>
     </section>
   );
 }
 
 function CreateRequestSummaryCard({
-  baslangicKonum,
-  varisKonum,
-  form,
-  selectedImages,
-  isSubmitting,
+  baslangicKonum, varisKonum, form, selectedImages, isSubmitting,
 }: {
   baslangicKonum: SelectedLocation | null;
   varisKonum: SelectedLocation | null;
@@ -89,84 +73,32 @@ function CreateRequestSummaryCard({
   selectedImages: RequestImageDraft[];
   isSubmitting: boolean;
 }) {
-  const routeSummary =
-    baslangicKonum && varisKonum
-      ? `${baslangicKonum.sehir ?? baslangicKonum.konumMetni} -> ${
-          varisKonum.sehir ?? varisKonum.konumMetni
-        }`
-      : "Konum secimi bekleniyor";
-
-  const transportPreference = form.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir";
+  const origin = baslangicKonum?.sehir ?? baslangicKonum?.konumMetni;
+  const destination = varisKonum?.sehir ?? varisKonum?.konumMetni;
 
   return (
-    <section className="app-surface-strong rounded-[1.85rem] border border-slate-200/80 p-5 shadow-sm md:p-6">
-      <div className="space-y-5">
-        <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
-            Kayit ozeti
-          </p>
-          <h2 className="text-xl font-black tracking-tight text-slate-950">
-            Istek kaydini yayinlamaya hazirsin
-          </h2>
-          <p className="text-sm leading-6 text-slate-600">
-            Kayit tamamlandiginda teklifleri Isteklerim ve Gelen Teklifler ekranindan
-            takip edersin.
-          </p>
-        </div>
-
-        <div className="grid gap-3">
-          <div className="rounded-[1.15rem] border border-slate-200 bg-slate-50/80 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Rota
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">{routeSummary}</p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <div className="rounded-[1.15rem] border border-slate-200 bg-slate-50/80 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Yuk tipi
-              </p>
-              <p className="mt-2 text-sm font-semibold text-slate-900">{form.yukTipi}</p>
-            </div>
-
-            <div className="rounded-[1.15rem] border border-slate-200 bg-slate-50/80 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Fotograf
-              </p>
-              <p className="mt-2 text-sm font-semibold text-slate-900">
-                {selectedImages.length > 0
-                  ? `${selectedImages.length} fotograf secildi`
-                  : "Fotograf secimi opsiyonel"}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Ilk secilen fotograf otomatik ana fotograf olur.
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-[1.15rem] border border-blue-200 bg-blue-50/70 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
-              Tasima tercihi
-            </p>
-            <p className="mt-2 text-sm font-semibold text-blue-950">{transportPreference}</p>
-          </div>
-        </div>
-
-        <div
-          data-dashboard-form-submit
-          className="border-t border-slate-100 pt-4"
-        >
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="app-button-primary app-form-submit-button app-pressable w-full justify-center text-sm disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting ? "Istek olusturuluyor..." : "Istek olustur"}
-          </button>
-        </div>
+    <aside className={styles.summary}>
+      <header><span className="pi pi-file" aria-hidden="true" /><h2>Talep özeti</h2></header>
+      <div className={styles.route}>
+        <div><span className={styles.originDot} /><div><small>Kalkış</small><strong>{origin || "Konum seçilmedi"}</strong></div></div>
+        <div><span className={styles.destinationDot} /><div><small>Varış</small><strong>{destination || "Konum seçilmedi"}</strong></div></div>
       </div>
-    </section>
+      <dl className={styles.summaryDetails}>
+        <div><dt>Yük tipi</dt><dd>{getCargoTypeLabel(form.yukTipi)}</dd></div>
+        <div><dt>Ağırlık</dt><dd>{form.agirlikKg ? form.agirlikKg + " kg" : "—"}</dd></div>
+        <div><dt>Hacim</dt><dd>{form.hacimM3 ? form.hacimM3 + " m³" : "—"}</dd></div>
+        <div><dt>Tercih edilen tarih</dt><dd>{form.tasimaTarihi ? form.tasimaTarihi.split("-").reverse().join(".") : "—"}</dd></div>
+        <div><dt>Taşıma tercihi</dt><dd>{form.tekTasimaIstiyor ? "Tek taşıma" : "Paylaşımlı olabilir"}</dd></div>
+        <div><dt>Görseller</dt><dd>{selectedImages.length > 0 ? selectedImages.length + " fotoğraf" : "Eklenmedi"}</dd></div>
+      </dl>
+      <div data-dashboard-form-submit className={styles.submit}>
+        <Button type="submit" variant="primary" loading={isSubmitting} className={styles.submitButton}>
+          {isSubmitting ? "İstek oluşturuluyor…" : "İstek oluştur"}
+          {!isSubmitting ? <span className="pi pi-arrow-right" aria-hidden="true" /> : null}
+        </Button>
+        <p>Oluşturduğunuz talebi İsteklerim ekranından takip edebilirsiniz.</p>
+      </div>
+    </aside>
   );
 }
 
@@ -310,7 +242,8 @@ export default function CreateTransportRequestPage() {
 
   return (
     <CustomerTransportRequestsShell
-      title="Yeni tasima istegi olustur"
+      title="Yeni istek"
+      pageHeader={<PageHeader title="Yeni istek oluştur" description="Taşıma ihtiyacınızı paylaşın, nakliyecilerden teklif alın." />}
       description="Konum, yuk ve tercih bilgilerini tek kayitta toparla."
       headerVariant="compact"
       motionPreset="form"
@@ -318,26 +251,26 @@ export default function CreateTransportRequestPage() {
       <form
         onSubmit={handleSubmit}
         data-dashboard-form-surface
-        className="mx-auto max-w-7xl space-y-6"
+        className={styles.form}
       >
         {formErrorMessage ? (
           <div data-dashboard-form-error className="app-form-error-banner" role="alert">
-            <p className="text-sm font-semibold">Form gonderilemedi</p>
+            <p className="text-sm font-semibold">İstek oluşturulamadı</p>
             <p className="mt-1 text-sm">{formErrorMessage}</p>
           </div>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_360px] xl:items-start">
-          <div className="space-y-6">
+        <div className={styles.layout}>
+          <div className={styles.formSheet}>
             <RequestFormSection
-              eyebrow="Konum"
-              title="Yukleme ve teslim noktasi"
-              description="Tasimanin baslangic ve varis noktasini dogru secerek tekliflerin daha hizli toplanmasini sagla."
+              eyebrow="01"
+              title="Kalkış ve varış"
+              description="Yükün alınacağı ve teslim edileceği konumları listeden seçin."
             >
               <div className="grid gap-4 lg:grid-cols-2">
                 <LocationAutocompleteField
-                  label="Baslangic konumu"
-                  placeholder="Yukleme noktasini ara"
+                  label="Kalkış konumu"
+                  placeholder="Yükleme noktasını ara"
                   accessToken={accessToken ?? ""}
                   value={baslangicKonum}
                   onSelect={(value) => {
@@ -353,8 +286,8 @@ export default function CreateTransportRequestPage() {
                   }
                 />
                 <LocationAutocompleteField
-                  label="Varis konumu"
-                  placeholder="Teslim noktasini ara"
+                  label="Varış konumu"
+                  placeholder="Teslim noktasını ara"
                   accessToken={accessToken ?? ""}
                   value={varisKonum}
                   onSelect={(value) => {
@@ -373,40 +306,58 @@ export default function CreateTransportRequestPage() {
             </RequestFormSection>
 
             <RequestFormSection
-              eyebrow="Yuk ve tarih"
-              title="Nakliye Bilgileri"
-              description="Yuk sinifini, agirlik ve hacim bilgisini gir. Planlanan tarih teklif kalitesini dogrudan etkiler."
+              eyebrow="02"
+              title="Yük ve tarih"
+              description="Yükün türünü, ölçülerini ve tercih ettiğiniz tarihi belirtin."
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <InputField
                   name="agirlikKg"
-                  label="Agirlik (kg)"
+                  label="Ağırlık (kg)"
                   type="number"
                   min="0.01"
                   step="0.01"
-                  placeholder="Orn: 1250"
+                  placeholder="Örn. 1250"
                   value={form.agirlikKg}
                   onChange={handleChange}
                   disabled={isSubmitting}
                 />
-                <InputField
-                  name="hacimM3"
-                  label="Hacim (m3)"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Orn: 12.5"
-                  value={form.hacimM3}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                />
+                <div className={styles.volumeField}>
+                  <InputField
+                    name="hacimM3"
+                    label="Hacim (m³)"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="Örn. 12.5"
+                    value={form.hacimM3}
+                    onChange={handleChange}
+                    disabled={isSubmitting}
+                  />
+                  <details className={styles.aiHelper}>
+                    <summary>
+                      <span className="pi pi-sparkles" aria-hidden="true" />
+                      AI ile hacim tahmini <span>İsteğe bağlı</span>
+                      <i className="pi pi-angle-down" aria-hidden="true" />
+                    </summary>
+                    <div className={styles.aiContent}>
+                      <VolumeEstimateAssistant
+                        embedded
+                        accessToken={accessToken ?? ""}
+                        action={(value) => setForm((currentForm) => ({ ...currentForm, hacimM3: value }))}
+                        disabled={isSubmitting}
+                        yukTipi={form.yukTipi}
+                      />
+                    </div>
+                  </details>
+                </div>
 
                 <div className="space-y-2">
                   <label
                     className="block text-sm font-semibold text-slate-700"
                     htmlFor="yukTipi"
                   >
-                    Yuk tipi
+                    Yük tipi
                   </label>
                   <select
                     id="yukTipi"
@@ -426,23 +377,23 @@ export default function CreateTransportRequestPage() {
 
                 <InputField
                   name="tasimaTarihi"
-                  label="Tercih edilen tasima tarihi"
+                  label="Tercih edilen taşıma tarihi"
                   type="date"
                   value={form.tasimaTarihi}
                   onChange={handleChange}
                   disabled={isSubmitting}
-                  hint="Kesin alim ve teslim zamani nakliyeci teklifi sirasinda netlesebilir."
+                  hint="Kesin alım ve teslim zamanı nakliyeci teklifi sırasında netleşebilir."
                 />
               </div>
             </RequestFormSection>
 
             <RequestFormSection
-              eyebrow="Tercihler ve notlar"
-              title="Tasima tercihlerini netlestir"
-              description="Tek tasima istegi ve operasyon notlari teklif veren taraf icin beklentiyi daha net hale getirir."
+              eyebrow="03"
+              title="Tercihler ve notlar"
+              description="Taşıma koşullarını ve yükle ilgili ayrıntıları ekleyin."
             >
-              <label className="group flex items-start gap-4 rounded-[1.45rem] border border-slate-200/80 bg-slate-50/80 px-4 py-4 md:items-center">
-                <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm md:mt-0">
+              <label className={styles.preference}>
+                <span className={styles.checkbox}>
                   <input
                     type="checkbox"
                     name="tekTasimaIstiyor"
@@ -454,10 +405,10 @@ export default function CreateTransportRequestPage() {
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-slate-900">
-                    Tek tasima istiyorum
+                    Tek taşıma istiyorum
                   </span>
                   <span className="mt-1 block text-xs leading-5 text-slate-500">
-                    Bu yuk baska yuklerle birlestirilmeden, tek tasima olarak planlansin.
+                    Bu yük başka yüklerle birleştirilmeden, tek taşıma olarak planlansın.
                   </span>
                 </span>
               </label>
@@ -467,38 +418,31 @@ export default function CreateTransportRequestPage() {
                   htmlFor="yukDetay"
                   className="block text-sm font-semibold text-slate-700"
                 >
-                  Yuk detayi
+                  Yük detayı
                 </label>
                 <textarea
                   id="yukDetay"
                   name="yukDetay"
                   required
-                  rows={5}
+                  rows={3}
                   value={form.yukDetay}
                   onChange={handleChange}
                   disabled={isSubmitting}
-                  placeholder="Tasima ihtiyacini, paketleme seklini veya ozel notlari acikla."
-                  className="app-input block min-h-[9rem] resize-y text-sm"
+                  placeholder="Taşıma ihtiyacını, paketleme şeklini veya özel notları açıklayın."
+                  className="app-input block min-h-[6rem] resize-y text-sm"
                 />
               </div>
             </RequestFormSection>
+            <RequestFormSection
+              eyebrow="04"
+              title="Görseller"
+              description="Fotoğraflar yükün daha iyi anlaşılmasına yardımcı olur. Eklemek isteğe bağlıdır."
+            >
+              <RequestImageUploader embedded disabled={isSubmitting} onChange={setSelectedImages} />
+            </RequestFormSection>
           </div>
 
-          <div className="space-y-6">
-            <VolumeEstimateAssistant
-              accessToken={accessToken ?? ""}
-              action={(value) =>
-                setForm((currentForm) => ({
-                  ...currentForm,
-                  hacimM3: value,
-                }))
-              }
-              disabled={isSubmitting}
-              yukTipi={form.yukTipi}
-            />
-
-            <RequestImageUploader disabled={isSubmitting} onChange={setSelectedImages} />
-
+          <div className={styles.summaryColumn}>
             <CreateRequestSummaryCard
               baslangicKonum={baslangicKonum}
               varisKonum={varisKonum}

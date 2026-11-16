@@ -1,16 +1,15 @@
 "use client";
 
-import type { ChangeEvent } from "react";
-import Link from "next/link";
+import RoutesWorkspace from "@/features/carrier-workspace/RoutesWorkspace";
+import { LinkButton } from "@/components/ui";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import CarrierMetricCard from "@/components/CarrierMetricCard";
-import CarrierQuickActionsPanel from "@/components/CarrierQuickActionsPanel";
+
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
-import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
-import EmptyStateCard from "@/components/EmptyStateCard";
+
 import InlineHelpTrigger from "@/components/InlineHelpTrigger";
-import RouteCard, { type RouteCardModel } from "@/components/RouteCard";
+import { type RouteCardModel } from "@/components/RouteCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   getCarrierRouteDetail,
@@ -44,15 +43,6 @@ type RouteViewModel = RouteCardModel & {
 };
 
 const DEFAULT_ROUTE_MATCH_DEVIATION_KM = 50;
-const FILTER_TABS: Array<{
-  key: RouteFilterTab;
-  label: string;
-}> = [
-  { key: "all", label: "Tumu" },
-  { key: "distance-ready", label: "Mesafe hazir" },
-  { key: "coordinate-ready", label: "Koordinat hazir" },
-  { key: "incomplete", label: "Veri eksik" },
-];
 
 function formatDateTime(value: string): string {
   const parsedDate = new Date(value);
@@ -146,74 +136,6 @@ function compareNullableNumbers(
   return direction === "asc" ? left - right : right - left;
 }
 
-function Toolbar(props: {
-  searchQuery: string;
-  activeTab: RouteFilterTab;
-  sortMode: RouteSortMode;
-  totalCount: number;
-  isRefreshingInsights: boolean;
-  onSearchChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onTabChange: (tab: RouteFilterTab) => void;
-  onSortChange: (event: ChangeEvent<HTMLSelectElement>) => void;
-}) {
-  return (
-    <section className="app-surface rounded-[1.15rem] border border-slate-200 p-4">
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-        <div className="relative">
-          <i className="pi pi-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400" />
-          <input
-            type="search"
-            value={props.searchQuery}
-            onChange={props.onSearchChange}
-            placeholder="Sehir, konum veya rota etiketi ara"
-            className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300"
-          />
-        </div>
-
-        <select
-          value={props.sortMode}
-          onChange={props.onSortChange}
-          className="rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-300"
-        >
-          <option value="newest">En yeni</option>
-          <option value="oldest">En eski</option>
-          <option value="distance-desc">Mesafe uzun</option>
-          <option value="distance-asc">Mesafe kisa</option>
-        </select>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {FILTER_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => props.onTabChange(tab.key)}
-              className={`rounded-xl border px-3.5 py-2 text-sm font-semibold transition ${
-                props.activeTab === tab.key
-                  ? "border-blue-200 bg-blue-50 text-blue-700"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <span>{props.totalCount} rota goruntuleniyor</span>
-          {props.isRefreshingInsights ? (
-            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-              Kesif ozeti yenileniyor
-            </span>
-          ) : null}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-
 export default function CarrierRoutesPage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
@@ -229,13 +151,15 @@ export default function CarrierRoutesPage() {
   const [sortMode, setSortMode] = useState<RouteSortMode>("newest");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEnriching, setIsEnriching] = useState(false);
+  const [isEnrichmentPending, setIsEnriching] = useState(false);
+  const isEnriching =
+    status === "ready" &&
+    Boolean(accessToken) &&
+    routes.length > 0 &&
+    isEnrichmentPending;
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
@@ -293,7 +217,6 @@ export default function CarrierRoutesPage() {
 
   useEffect(() => {
     if (status !== "ready" || !accessToken || routes.length === 0) {
-      setIsEnriching(false);
       return;
     }
 
@@ -570,163 +493,18 @@ export default function CarrierRoutesPage() {
   };
 
   return (
-    <CarrierVehiclesShell
-      title="Rotalarim"
-      description="Planladigin ana hat rotalarini kaydet, takip et ve acik isteklerde kullan."
-      headerVariant="compact"
-      motionPreset="operational"
-      cardMotionLimit={6}
-      headerActions={
-        <div className="flex items-center gap-3">
-          <InlineHelpTrigger helpKey="routes" />
-          <Link
-            href="/dashboard/rotalarim/yeni"
-            className="app-pressable inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
-            <i className="pi pi-plus text-xs" />
-            Yeni rota tanimla
-          </Link>
-        </div>
-      }
-    >
-      {isLoading ? <DashboardPageSkeleton /> : null}
-
-      {!isLoading && errorMessage ? (
-        <div
-          data-dashboard-primary
-          className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700"
-        >
-          {errorMessage}
-        </div>
-      ) : null}
-
-      {!isLoading && !errorMessage ? (
-        <div className="space-y-4">
-          <div
-            data-dashboard-stats
-            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-          >
-            <CarrierMetricCard
-              label="Toplam rota"
-              value={totalRoutes}
-              hint="Kayitli ana hat"
-              tone="blue"
-              icon={<i className="pi pi-map-marker text-lg" />}
-            />
-            <CarrierMetricCard
-              label="Mesafe hazir"
-              value={distanceReadyCount}
-              hint="Mesafe ve sure hesapli"
-              tone="violet"
-              icon={<i className="pi pi-compass text-lg" />}
-            />
-            <CarrierMetricCard
-              label="Koordinat hazir"
-              value={coordinateReadyCount}
-              hint="Konum butunlugu tamam"
-              tone="emerald"
-              icon={<i className="pi pi-map text-lg" />}
-            />
-            <CarrierMetricCard
-              label="Uygun acik istek"
-              value={suitableOpenRequestCount}
-              hint={
-                isEnriching
-                  ? "Kesif ozeti guncelleniyor"
-                  : "Rotalara gore benzersiz acik istek"
-              }
-              tone="amber"
-              icon={<i className="pi pi-briefcase text-lg" />}
-            />
-          </div>
-
-          {routes.length === 0 ? (
-            <div data-dashboard-primary>
-              <EmptyStateCard
-                title="Henuz kayitli rota yok"
-                description="Planladigin ana hatti bir kez tanimladiginda burada goreceksin. Acik istekleri tararken ayni rotayi tekrar tekrar kurmana gerek kalmayacak."
-                actionHref="/dashboard/rotalarim/yeni"
-                actionLabel="Ilk rotayi tanimla"
-              />
-            </div>
-          ) : (
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="space-y-4">
-                <Toolbar
-                  searchQuery={searchQuery}
-                  activeTab={activeTab}
-                  sortMode={sortMode}
-                  totalCount={sortedRoutes.length}
-                  isRefreshingInsights={isEnriching}
-                  onSearchChange={(event) => setSearchQuery(event.target.value)}
-                  onTabChange={setActiveTab}
-                  onSortChange={(event) =>
-                    setSortMode(event.target.value as RouteSortMode)
-                  }
-                />
-
-                <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 shadow-sm">
-                  <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 md:px-6">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-[1.55rem] font-black tracking-tight text-slate-950">
-                            Kayitli rotalar
-                          </h2>
-                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                            {sortedRoutes.length}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm leading-6 text-slate-500">
-                          Ana hatlarini tek listede oku, veri hazirlik seviyesini gor ve
-                          kesfe hizli gecis yap.
-                        </p>
-                      </div>
-
-                      {coordinateReadyCount > 0 ? (
-                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                          {coordinateReadyCount} koordinat hazir rota
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="p-5 md:p-6">
-                    {sortedRoutes.length === 0 ? (
-                      <div className="rounded-[1.1rem] border border-dashed border-slate-200 bg-slate-50/70 p-6">
-                        <p className="text-base font-semibold text-slate-900">
-                          Bu filtrelerle eslesen rota bulunamadi
-                        </p>
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                          Arama alanini temizleyerek veya hazirlik durumunu degistirerek tum
-                          rota kayitlarini tekrar goruntule.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={handleResetLocalFilters}
-                          className="app-button-secondary mt-5"
-                        >
-                          Filtreleri temizle
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="grid gap-4">
-                        {sortedRoutes.map((route) => (
-                          <RouteCard key={route.id} route={route} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </section>
-              </div>
-
-              <div className="space-y-4">
-                <CarrierQuickActionsPanel />
-              </div>
-            </div>
-          )}
-        </div>
-      ) : null}
+    <CarrierVehiclesShell title="Rotalarım" description="Kayıtlı ana hatlarınızı ve yük eşleşmelerini yönetin."
+      headerVariant="compact" motionPreset="operational" cardMotionLimit={6}
+      headerActions={<div className="flex flex-wrap items-center gap-3"><InlineHelpTrigger helpKey="routes" /><LinkButton href="/dashboard/rotalarim/yeni" variant="primary"><i className="pi pi-plus" aria-hidden="true" />Yeni rota</LinkButton></div>}>
+      <RoutesWorkspace items={sortedRoutes} totalCount={totalRoutes} isEnriching={isEnriching}
+        isLoading={isLoading} errorMessage={errorMessage} query={searchQuery} filter={activeTab} sort={sortMode}
+        onQueryChange={setSearchQuery} onFilterChange={setActiveTab} onSortChange={setSortMode} onReset={handleResetLocalFilters}
+        metrics={[
+          { label: "Toplam rota", value: totalRoutes, description: "Kayıtlı ana hatlar" },
+          { label: "Mesafe / süre bilgili", value: distanceReadyCount, description: "Mesafe ve süresi bulunan rota" },
+          { label: "Koordinatlı", value: coordinateReadyCount, description: "Konum bilgileri bulunan rota" },
+          { label: "Eşleşen açık istek", value: isEnriching || (totalRoutes > 0 && !Object.values(routeMatchesById).some(Array.isArray)) ? "—" : suitableOpenRequestCount, description: isEnriching ? "Yük eşleşmeleri yükleniyor" : "Alınabilen özetlerde benzersiz talep" },
+        ]} />
     </CarrierVehiclesShell>
   );
 }

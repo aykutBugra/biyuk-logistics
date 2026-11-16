@@ -1,15 +1,16 @@
 "use client";
 
-import Link from "next/link";
+import IncomingOffersWorkspace from "@/features/customer-workspace/IncomingOffersWorkspace";
+import { PageHeader } from "@/components/ui";
+
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import CustomerMetricCard from "@/components/CustomerMetricCard";
-import CustomerSectionSurface from "@/components/CustomerSectionSurface";
+
+
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
-import CustomerWorkspaceSignalPill from "@/components/CustomerWorkspaceSignalPill";
-import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
-import EmptyStateCard from "@/components/EmptyStateCard";
-import IncomingOfferCard from "@/components/IncomingOfferCard";
+
+
 import InlineHelpTrigger from "@/components/InlineHelpTrigger";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
@@ -27,13 +28,6 @@ function normalizeStatus(value: string): string {
   return value.trim().toUpperCase();
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("tr-TR", {
-    style: "currency",
-    currency: "TRY",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function getStatusPriority(status: string): number {
   switch (normalizeStatus(status)) {
@@ -65,9 +59,6 @@ export default function MyIncomingOffersPage() {
   useEffect(() => {
     // Musteri guard hazir olmadan gelen teklifler endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
@@ -234,16 +225,9 @@ export default function MyIncomingOffersPage() {
   }
 
   const pendingOffers = offers.filter((offer) => normalizeStatus(offer.durum) === "OLUSTURULDU");
-  const acceptedOffers = offers.filter(
-    (offer) => normalizeStatus(offer.durum) === "KABUL_EDILDI"
-  );
-  const rejectedOffers = offers.filter(
-    (offer) => normalizeStatus(offer.durum) === "REDDEDILDI"
-  );
-  const bestPrice = offers.reduce(
-    (currentMin, offer) => Math.min(currentMin, offer.fiyat),
-    offers.length > 0 ? offers[0].fiyat : 0
-  );
+
+
+
   const featuredPendingOffer =
     [...pendingOffers].sort(
       (left, right) => left.fiyat - right.fiyat || left.id.localeCompare(right.id)
@@ -275,106 +259,14 @@ export default function MyIncomingOffersPage() {
 
   return (
     <CustomerTransportRequestsShell
-      title="Gelen Teklifler"
-      description="Nakliyecilerden gelen teklifleri inceleyin, karsilastirin ve en uygun karari verin."
-      pageEyebrow="Calisma alani"
+      title="Gelen teklifler"
+      pageHeader={<PageHeader title="Gelen teklifler" description="Nakliyecilerin tekliflerini ve taşıma koşullarını değerlendirin." actions={<InlineHelpTrigger helpKey="incoming-offers" />} />}
       headerVariant="compact"
       motionPreset="operational"
       cardMotionLimit={6}
-      headerActions={<InlineHelpTrigger helpKey="incoming-offers" />}
     >
-      {isLoading ? <DashboardPageSkeleton /> : null}
-
-      {!isLoading && errorMessage ? (
-        <div
-          data-dashboard-primary
-          className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700"
-        >
-          {errorMessage}
-        </div>
-      ) : null}
-
-      {!isLoading && !errorMessage ? (
-        <div data-dashboard-stats className="grid gap-3 md:grid-cols-3">
-          <CustomerMetricCard
-            label="Karar Bekleyen"
-            value={pendingOffers.length}
-            hint="Teklifinizin yanitini bekleyen kayitlar"
-            tone="amber"
-            icon={<i className="pi pi-clock text-lg" />}
-          />
-          <CustomerMetricCard
-            label="Toplam Teklif"
-            value={offers.length}
-            hint="Tum talepleriniz icin gelen teklifler"
-            tone="emerald"
-            icon={<i className="pi pi-wallet text-lg" />}
-          />
-          <CustomerMetricCard
-            label="En Iyi Fiyat"
-            value={formatCurrency(bestPrice)}
-            hint="En dusuk gelen teklif"
-            tone="violet"
-            icon={<i className="pi pi-tag text-lg" />}
-          />
-        </div>
-      ) : null}
-
-      {!isLoading && !errorMessage ? (
-        <div className="mt-4">
-          <CustomerSectionSurface
-            title="Tum teklifler"
-            count={offers.length}
-            description="Mevcut teklifleri talep baglami, tasima ozeti ve karar aksiyonlariyla birlikte goruntuleyin."
-            action={
-              offers.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  <CustomerWorkspaceSignalPill
-                    tone="amber"
-                    label={`${pendingOffers.length} bekleyen`}
-                  />
-                  <CustomerWorkspaceSignalPill
-                    tone="emerald"
-                    label={`${acceptedOffers.length} cevaplanan`}
-                  />
-                  <CustomerWorkspaceSignalPill
-                    tone="slate"
-                    label={`${rejectedOffers.length} reddedilen`}
-                  />
-                </div>
-              ) : (
-                <Link href="/dashboard/isteklerim" className="app-button-secondary">
-                  Isteklerime git
-                </Link>
-              )
-            }
-            contentClassName={offers.length > 0 ? "p-4 md:p-5" : "p-4 md:p-5"}
-          >
-            {offers.length === 0 ? (
-              <EmptyStateCard
-                title="Bekleyen teklif yok"
-                description="Nakliyecilerden teklif geldiginde burada goruntuleyeceksin. Teklif almak icin once tasima istegi olusturman gerekiyor."
-                actionHref="/dashboard/isteklerim"
-                actionLabel="Isteklerime git"
-              />
-            ) : (
-              <div className="grid gap-4">
-                {sortedOffers.map((offer) => (
-                  <IncomingOfferCard
-                    key={offer.id}
-                    offer={offer}
-                    isFeatured={offer.id === featuredOfferId}
-                    isProcessingThis={actingOfferId === offer.id}
-                    isAnyProcessing={actingOfferId !== null}
-                    onAccept={(currentOffer) => void handleOfferDecision(currentOffer, "accept")}
-                    onReject={(currentOffer) => void handleOfferDecision(currentOffer, "reject")}
-                  />
-                ))}
-              </div>
-            )}
-          </CustomerSectionSurface>
-        </div>
-      ) : null}
+      <IncomingOffersWorkspace offers={sortedOffers} isLoading={isLoading} errorMessage={errorMessage} actingOfferId={actingOfferId}
+        onDecision={(offer, action) => void handleOfferDecision(offer, action)} />
     </CustomerTransportRequestsShell>
   );
 }

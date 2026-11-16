@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { LinkButton } from "@/components/ui";
+import { CarrierFeedback } from "@/features/carrier-workspace/shared";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import CarrierDashboardOverview from "@/components/CarrierDashboardOverview";
 import CustomerDashboardOverview from "@/components/CustomerDashboardOverview";
+import CustomerOverviewHero from "@/components/CustomerOverviewHero";
 import DashboardIntroPanel from "@/components/DashboardIntroPanel";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import DashboardShell from "@/components/DashboardShell";
@@ -171,13 +174,13 @@ export default function DashboardLandingPage() {
     ) : carrierHome ? (
       <div className="flex items-center gap-3">
         <InlineHelpTrigger helpKey="dashboard-home-carrier" />
-        <Link
+        <LinkButton
           href="/dashboard/acik_istekler"
-          className="app-button-primary inline-flex items-center gap-2"
+          variant="primary"
         >
           <i className="pi pi-search text-xs" />
-          Acik istekleri kesfet
-        </Link>
+          Yükleri keşfet
+        </LinkButton>
       </div>
     ) : (
       <InlineHelpTrigger helpKey="dashboard-home" />
@@ -195,6 +198,9 @@ export default function DashboardLandingPage() {
       workspaceHint={workspaceMode ?? undefined}
       headerActions={headerActions}
       headerVariant="compact"
+      visualTheme={!pendingIntroRole ? activeWorkspaceMode === "customer" ? "customer-overview" : "petrol" : undefined}
+      unreadNotificationCount={customerHome?.unreadNotificationCount ?? carrierHome?.unreadNotificationCount}
+      pageHeader={!pendingIntroRole ? <CustomerOverviewHero workspace={activeWorkspaceMode === "carrier" ? "carrier" : "customer"} /> : undefined}
     >
       {pendingIntroRole ? (
         <DashboardIntroPanel
@@ -214,9 +220,10 @@ export default function DashboardLandingPage() {
 
       {!pendingIntroRole ? (
         <>
-          {homeState.isLoading ? <DashboardPageSkeleton /> : null}
+          {homeState.isLoading ? activeWorkspaceMode === "carrier" ? <CarrierFeedback isLoading errorMessage={null} label="Operasyon özeti yükleniyor…" /> : <DashboardPageSkeleton /> : null}
 
           {!homeState.isLoading && homeState.errorMessage ? (
+            activeWorkspaceMode === "carrier" ? <CarrierFeedback isLoading={false} errorMessage={homeState.errorMessage} label="Operasyon özeti" /> :
             <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
               {homeState.errorMessage}
             </div>

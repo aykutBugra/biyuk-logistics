@@ -1,18 +1,13 @@
 "use client";
 
-import type { ChangeEvent, ReactNode } from "react";
-import Link from "next/link";
+import ShipmentsWorkspace from "@/features/carrier-workspace/ShipmentsWorkspace";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
-import CustomerMetricCard from "@/components/CustomerMetricCard";
-import DashboardActionCard from "@/components/DashboardActionCard";
-import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
-import EmptyStateCard from "@/components/EmptyStateCard";
+
 import InlineHelpTrigger from "@/components/InlineHelpTrigger";
-import MyShipmentCard, {
-  type MyShipmentCardModel,
-} from "@/components/MyShipmentCard";
+import { type MyShipmentCardModel } from "@/components/MyShipmentCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   getJobDetail,
@@ -46,16 +41,6 @@ type ShipmentViewModel = MyShipmentCardModel & {
   isOnRoad: boolean;
   isCompleted: boolean;
 };
-
-const FILTER_TABS: Array<{
-  key: ShipmentFilterTab;
-  label: string;
-}> = [
-  { key: "all", label: "Tumu" },
-  { key: "active", label: "Aktif" },
-  { key: "on-road", label: "Yolda" },
-  { key: "completed", label: "Tamamlanan" },
-];
 
 function normalizeStatus(value: string): string {
   return value.trim().toUpperCase();
@@ -258,132 +243,6 @@ function buildShipmentNote(status: string, isDelayed: boolean): string {
   }
 }
 
-function Toolbar(props: {
-  searchQuery: string;
-  activeTab: ShipmentFilterTab;
-  sortMode: ShipmentSortMode;
-  totalCount: number;
-  isRefreshingDetails: boolean;
-  onSearchChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onTabChange: (tab: ShipmentFilterTab) => void;
-  onSortChange: (event: ChangeEvent<HTMLSelectElement>) => void;
-}) {
-  return (
-    <section className="app-surface rounded-[1.15rem] border border-slate-200 p-4">
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-        <div className="relative">
-          <i className="pi pi-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400" />
-          <input
-            type="search"
-            value={props.searchQuery}
-            onChange={props.onSearchChange}
-            placeholder="Rota, musteri veya yuk ara"
-            className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300"
-          />
-        </div>
-
-        <select
-          value={props.sortMode}
-          onChange={props.onSortChange}
-          className="rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-300"
-        >
-          <option value="newest">En yeni</option>
-          <option value="oldest">En eski</option>
-          <option value="delivery-soon">Teslim tarihi yakin</option>
-        </select>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {FILTER_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => props.onTabChange(tab.key)}
-              className={`rounded-xl border px-3.5 py-2 text-sm font-semibold transition ${
-                props.activeTab === tab.key
-                  ? "border-blue-200 bg-blue-50 text-blue-700"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <span>{props.totalCount} nakliye goruntuleniyor</span>
-          {props.isRefreshingDetails ? (
-            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-              Operasyon detaylari yenileniyor
-            </span>
-          ) : null}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function SidebarSection(props: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
-      <h2 className="text-[1.45rem] font-black tracking-tight text-slate-950">
-        {props.title}
-      </h2>
-      {props.description ? (
-        <p className="mt-2 text-sm leading-6 text-slate-500">{props.description}</p>
-      ) : null}
-      <div className="mt-5">{props.children}</div>
-    </section>
-  );
-}
-
-function TodayTasksPanel(props: { tasks: ShipmentViewModel[] }) {
-  return (
-    <SidebarSection
-      title="Bugunku gorevler"
-      description="Bugun teslimati planlanan operasyonlari hizli ac."
-    >
-      {props.tasks.length === 0 ? (
-        <div className="rounded-[1.1rem] border border-dashed border-slate-200 bg-slate-50/70 p-4">
-          <p className="text-sm font-semibold text-slate-900">
-            Bugun icin planli teslimat yok
-          </p>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Planlanan tarihli kayitlar detail enrichment geldikce burada listelenecek.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {props.tasks.map((task) => (
-            <Link
-              key={task.id}
-              href={task.detailHref}
-              className="block rounded-[1rem] border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:border-blue-200"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-950">{task.rotaBaslik}</p>
-                  <p className="mt-1 text-sm text-slate-500">
-      {task.tahminiTeslimTarihi ?? task.planlananAlimTarihi ?? "Tarih bekleniyor"}
-                  </p>
-                </div>
-                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-                  {task.sinyalEtiketi}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-    </SidebarSection>
-  );
-}
-
 export default function MyJobsPage() {
   const router = useRouter();
   const { accessToken, status } = useCarrierPageAccess();
@@ -397,13 +256,15 @@ export default function MyJobsPage() {
   const [sortMode, setSortMode] = useState<ShipmentSortMode>("newest");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEnriching, setIsEnriching] = useState(false);
+  const [isEnrichmentPending, setIsEnriching] = useState(false);
+  const isEnriching =
+    status === "ready" &&
+    Boolean(accessToken) &&
+    jobs.length > 0 &&
+    isEnrichmentPending;
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
@@ -489,7 +350,6 @@ export default function MyJobsPage() {
 
   useEffect(() => {
     if (status !== "ready" || !accessToken || jobs.length === 0) {
-      setIsEnriching(false);
       return;
     }
 
@@ -724,174 +584,18 @@ export default function MyJobsPage() {
   };
 
   return (
-    <CarrierVehiclesShell
-      title="Nakliyelerim"
-      description="Yuruttugun aktif tasimalari, teslimat adimlarini ve tamamlanan isleri buradan yonet."
-      headerVariant="compact"
-      motionPreset="operational"
-      cardMotionLimit={6}
-      headerActions={<InlineHelpTrigger helpKey="my-shipments" />}
-    >
-      {isLoading ? <DashboardPageSkeleton /> : null}
-
-      {!isLoading && errorMessage ? (
-        <div
-          data-dashboard-primary
-          className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700"
-        >
-          {errorMessage}
-        </div>
-      ) : null}
-
-      {!isLoading && !errorMessage ? (
-        <div className="space-y-4">
-          <div
-            data-dashboard-stats
-            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-          >
-            <CustomerMetricCard
-              label="Aktif nakliye"
-              value={activeJobCount}
-              hint="Devam eden operasyon"
-              tone="blue"
-              icon={<i className="pi pi-truck text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Bugun teslimat"
-              value={todayDeliveryCount}
-              hint="Planlanan teslimat sayisi"
-              tone="amber"
-              icon={<i className="pi pi-calendar text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Tamamlanan"
-              value={completedJobCount}
-              hint="Basariyla kapanan isler"
-              tone="emerald"
-              icon={<i className="pi pi-check-circle text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Sorun / gecikme"
-              value={delayedShipmentCount}
-              hint="Takip gerektiren kayitlar"
-              tone="violet"
-              icon={<i className="pi pi-exclamation-triangle text-lg" />}
-            />
-          </div>
-
-          {jobs.length === 0 ? (
-            <div data-dashboard-primary>
-              <EmptyStateCard
-                title="Henuz aktif nakliye yok"
-                description="Teklifin kabul edildiginde burada goreceksin."
-                actionHref="/dashboard/acik_istekler"
-                actionLabel="Acik istekleri incele"
-              />
-            </div>
-          ) : (
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="space-y-4">
-                <Toolbar
-                  searchQuery={searchQuery}
-                  activeTab={activeTab}
-                  sortMode={sortMode}
-                  totalCount={sortedShipments.length}
-                  isRefreshingDetails={isEnriching}
-                  onSearchChange={(event) => setSearchQuery(event.target.value)}
-                  onTabChange={setActiveTab}
-                  onSortChange={(event) =>
-                    setSortMode(event.target.value as ShipmentSortMode)
-                  }
-                />
-
-                <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 shadow-sm">
-                  <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 md:px-6">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-[1.55rem] font-black tracking-tight text-slate-950">
-                            Tum nakliyeler
-                          </h2>
-                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                            {sortedShipments.length}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm leading-6 text-slate-500">
-                          Aktif ve tamamlanan operasyonlari teslim akisiyla birlikte tek listede oku.
-                        </p>
-                      </div>
-
-                      {todayDeliveryCount > 0 ? (
-                        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                          {todayDeliveryCount} bugun teslimat
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="p-5 md:p-6">
-                    {sortedShipments.length === 0 ? (
-                      <div className="rounded-[1.1rem] border border-dashed border-slate-200 bg-slate-50/70 p-6">
-                        <p className="text-base font-semibold text-slate-900">
-                          Bu filtrelerle eslesen nakliye bulunamadi
-                        </p>
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                          Aramayi, durum sekmesini veya siralamayi degistirerek operasyon gorunumunu genisletebilirsin.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={handleResetLocalFilters}
-                          className="app-button-secondary mt-5"
-                        >
-                          Filtreleri temizle
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="grid gap-4">
-                        {sortedShipments.map((shipment) => (
-                          <MyShipmentCard key={shipment.id} shipment={shipment} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </section>
-              </div>
-
-              <div className="space-y-4">
-                <TodayTasksPanel tasks={todayTasks} />
-
-                <SidebarSection
-                  title="Hizli islemler"
-                  description="Mevcut nakliyeci akislarini kisa yoldan ac."
-                >
-                  <div className="grid gap-3">
-                    <DashboardActionCard
-                      href="/dashboard/acik_istekler"
-                      title="Acik istekleri incele"
-                      variant="quiet"
-                    />
-                    <DashboardActionCard
-                      href="/dashboard/rotalarim"
-                      title="Rotalarimi gor"
-                      variant="quiet"
-                    />
-                    <DashboardActionCard
-                      href="/dashboard/araclarim"
-                      title="Araclarimi yonet"
-                      variant="quiet"
-                    />
-                    <DashboardActionCard
-                      href="/dashboard/konusmalar"
-                      title="Konusmalari ac"
-                      variant="quiet"
-                    />
-                  </div>
-                </SidebarSection>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : null}
+    <CarrierVehiclesShell title="Nakliyelerim" description="Taşıma durumlarını, tarihleri ve teslimat adımlarını yönetin."
+      headerVariant="compact" motionPreset="operational" cardMotionLimit={6}
+      headerActions={<div className="flex flex-wrap items-center gap-3"><InlineHelpTrigger helpKey="my-shipments" /></div>}>
+      <ShipmentsWorkspace items={sortedShipments} totalCount={jobs.length} isEnriching={isEnriching} todayTasks={todayTasks}
+        isLoading={isLoading} errorMessage={errorMessage} query={searchQuery} filter={activeTab} sort={sortMode}
+        onQueryChange={setSearchQuery} onFilterChange={setActiveTab} onSortChange={setSortMode} onReset={handleResetLocalFilters}
+        metrics={[
+          { label: "Aktif nakliye", value: activeJobCount, description: "Devam eden operasyonlar" },
+          { label: "Bugün planlı teslim", value: todayDeliveryCount, description: "Planlanan teslim tarihi bugün" },
+          { label: "Gecikme riski", value: delayedShipmentCount, description: "Teslim tarihi geçen açık işler" },
+          { label: "Tamamlanan", value: completedJobCount, description: "Tamamlanan taşımalar" },
+        ]} />
     </CarrierVehiclesShell>
   );
 }

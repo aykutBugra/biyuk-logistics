@@ -39,6 +39,6 @@ export const MOTION_STAGGERS = {
 
 // Sidebar acik/kapali genislikleri animasyon ve layout tarafinda ayni degeri kullanir.
 export const MOTION_LAYOUT = {
-  sidebarExpandedWidth: 288,
-  sidebarCollapsedWidth: 80,
+  sidebarExpandedWidth: 232,
+  sidebarCollapsedWidth: 72,
 } as const;

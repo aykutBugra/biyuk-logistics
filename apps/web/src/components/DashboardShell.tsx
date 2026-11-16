@@ -27,6 +27,9 @@ type DashboardShellProps = {
   pageEyebrow?: string;
   workspaceHint?: StoredDashboardWorkspaceMode;
   headerActions?: ReactNode;
+  pageHeader?: ReactNode;
+  visualTheme?: "customer-overview" | "petrol";
+  unreadNotificationCount?: number;
   headerVariant?: "default" | "compact";
   sidebarVariant?: "default" | "icon-rail";
   motionPreset?: "default" | "operational" | "form";
@@ -34,6 +37,13 @@ type DashboardShellProps = {
 };
 
 type DashboardSidebarBehaviorScope = "home" | "child" | "other";
+
+const PREMIUM_WORKSPACE_PATHS = new Set([
+  "/dashboard/isteklerim", "/dashboard/gelen_teklifler", "/dashboard/konusmalar",
+  "/dashboard/puanlarim", "/dashboard/bildirimler", "/dashboard/profil", "/dashboard/istek_ekle",
+  "/dashboard/acik_istekler", "/dashboard/tekliflerim", "/dashboard/nakliyelerim",
+  "/dashboard/rotalarim", "/dashboard/araclarim",
+]);
 
 function normalizePathname(pathname: string): string {
   return pathname !== "/" && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
@@ -93,6 +103,9 @@ export default function DashboardShell({
   pageEyebrow,
   workspaceHint,
   headerActions,
+  pageHeader,
+  visualTheme,
+  unreadNotificationCount,
   headerVariant,
   sidebarVariant,
   motionPreset = "default",
@@ -179,6 +192,9 @@ export default function DashboardShell({
       description={description}
       pageEyebrow={pageEyebrow}
       headerActions={headerActions}
+      pageHeader={pageHeader}
+      visualTheme={visualTheme ?? (PREMIUM_WORKSPACE_PATHS.has(normalizePathname(pathname)) ? "petrol" : undefined)}
+      unreadNotificationCount={unreadNotificationCount}
       headerVariant={headerVariant}
       sidebarVariant={resolvedSidebarVariant}
       sidebarBehaviorScope={sidebarBehaviorScope}

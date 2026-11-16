@@ -1,13 +1,15 @@
 "use client";
 
+import VehiclesWorkspace from "@/features/carrier-workspace/VehiclesWorkspace";
+import { LinkButton } from "@/components/ui";
+
 import { useEffect, useState } from "react";
-import Link from "next/link";
+
 import { useRouter } from "next/navigation";
-import CarrierMetricCard from "@/components/CarrierMetricCard";
+
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
-import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
-import EmptyStateCard from "@/components/EmptyStateCard";
-import VehicleCard, { type VehicleCardModel } from "@/components/VehicleCard";
+
+import { type VehicleCardModel } from "@/components/VehicleCard";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   deleteVehicle,
@@ -105,9 +107,6 @@ export default function MyVehiclesPage() {
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
@@ -122,7 +121,7 @@ export default function MyVehiclesPage() {
         if (!isMounted) {
           return;
         }
-          
+
         setVehicles(response);
       } catch (error) {
         if (!isMounted) {
@@ -359,125 +358,18 @@ export default function MyVehiclesPage() {
   );
 
   return (
-    <CarrierVehiclesShell
-      title="Araclarim"
-      description="Filondaki araclari, kapasite durumlarini ve aktif rezervasyonlari buradan takip et."
-      headerVariant="compact"
-      motionPreset="operational"
-      cardMotionLimit={6}
-      headerActions={
-        <Link
-          href="/dashboard/arac_ekle"
-          className="app-pressable inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-        >
-          <i className="pi pi-plus text-xs" />
-          Yeni arac ekle
-        </Link>
-      }
-    >
-      {isLoading ? <DashboardPageSkeleton /> : null}
-
-      {!isLoading && errorMessage ? (
-        <div
-          data-dashboard-primary
-          className="rounded-2xl border border-red-200 bg-red-50/60 p-6 text-sm text-red-700"
-        >
-          {errorMessage}
-        </div>
-      ) : null}
-
-      {!isLoading && !errorMessage ? (
-        <div className="space-y-4">
-          <div
-            data-dashboard-stats
-            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
-          >
-            <CarrierMetricCard
-              label="Toplam arac"
-              value={vehicles.length}
-              hint="Kayitli filo"
-              tone="blue"
-              icon={<i className="pi pi-truck text-lg" />}
-            />
-            <CarrierMetricCard
-              label="Toplam agirlik"
-              value={formatWeightKg(totalWeightCapacity)}
-              hint="Tanimli yuk kapasitesi"
-              tone="violet"
-              icon={<i className="pi pi-box text-lg" />}
-            />
-            <CarrierMetricCard
-              label="Rezerve agirlik"
-              value={formatWeightKg(totalReservedWeight)}
-              hint="Mevcut rezervasyon kullanimi"
-              tone="amber"
-              icon={<i className="pi pi-lock text-lg" />}
-            />
-            <CarrierMetricCard
-              label="Toplam hacim"
-              value={formatVolumeM3(totalVolumeCapacity)}
-              hint="Kullanilabilir hacim kapasitesi"
-              tone="emerald"
-              icon={<i className="pi pi-clone text-lg" />}
-            />
-            <CarrierMetricCard
-              label="Aktif rezervasyon"
-              value={totalActiveReservations}
-              hint="Takip edilen acik kayitlar"
-              tone="blue"
-              icon={<i className="pi pi-calendar text-lg" />}
-            />
-          </div>
-
-          {vehicles.length === 0 ? (
-            <div data-dashboard-primary>
-              <EmptyStateCard
-                title="Filonda henuz arac yok"
-                description="Ilk aracini eklediginde kapasite ozetlerini ve aktif rezervasyon durumunu burada goreceksin."
-                actionHref="/dashboard/arac_ekle"
-                actionLabel="Ilk araci ekle"
-              />
-            </div>
-          ) : (
-            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 shadow-sm">
-              <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 md:px-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-[1.55rem] font-black tracking-tight text-slate-950">
-                      Filo kayitlari
-                    </h2>
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                      {vehicleCards.length}
-                    </span>
-                  </div>
-
-                  {totalActiveReservations > 0 ? (
-                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                      {totalActiveReservations} aktif rezervasyon
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-sm leading-6 text-slate-500">
-                  Tum araclarini kapasite kullanimi ve rezervasyon sinyalleriyle birlikte tek listede oku.
-                </p>
-              </div>
-
-              <div className="p-4 md:p-5">
-                <div className="grid gap-4">
-                  {vehicleCards.map((vehicle) => (
-                    <VehicleCard
-                      key={vehicle.id}
-                      vehicle={vehicle}
-                      isDeleting={deletingVehicleId === vehicle.id}
-                      onDelete={() => void handleDelete(vehicle.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </section>
-          )}
-        </div>
-      ) : null}
+    <CarrierVehiclesShell title="Araçlarım" description="Filonuzu, kapasite durumunu ve rezervasyonları takip edin."
+      headerVariant="compact" motionPreset="operational" cardMotionLimit={6}
+      headerActions={<div className="flex flex-wrap items-center gap-3"><LinkButton href="/dashboard/arac_ekle" variant="primary"><i className="pi pi-plus" aria-hidden="true" />Araç ekle</LinkButton></div>}>
+      <VehiclesWorkspace vehicles={vehicleCards} deletingVehicleId={deletingVehicleId} onDelete={(id) => void handleDelete(id)}
+        isLoading={isLoading} errorMessage={errorMessage}
+        metrics={[
+          { label: "Toplam araç", value: vehicles.length, description: "Kayıtlı filo" },
+          { label: "Tanımlı ağırlık", value: formatWeightKg(totalWeightCapacity), description: "Toplam yük kapasitesi" },
+          { label: "Rezerve ağırlık", value: formatWeightKg(totalReservedWeight), description: "Mevcut rezervasyon kullanımı" },
+          { label: "Tanımlı hacim", value: formatVolumeM3(totalVolumeCapacity), description: "Bilinen kapasitelerin toplamı" },
+          { label: "Aktif rezervasyon", value: totalActiveReservations, description: "Araçlardaki açık rezervasyonlar" },
+        ]} />
     </CarrierVehiclesShell>
   );
 }

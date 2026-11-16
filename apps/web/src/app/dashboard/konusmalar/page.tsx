@@ -1,9 +1,12 @@
 "use client";
 
+import ConversationsWorkspace from "@/features/customer-workspace/ConversationsWorkspace";
+import { PageHeader } from "@/components/ui";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import CustomerConversationCard from "@/components/CustomerConversationCard";
+
 import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
 import CustomerMetricCard from "@/components/CustomerMetricCard";
 import CustomerSectionSurface from "@/components/CustomerSectionSurface";
@@ -254,12 +257,6 @@ function CarrierConversationCard({
               status={resolveCarrierConversationStatusValue(thread)}
               label={resolveCarrierConversationStatusLabel(thread)}
             />
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-              Teklif #{thread.offerId}
-            </span>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-              Istek #{thread.requestId}
-            </span>
             {thread.hasUnread ? (
               <CustomerWorkspaceSignalPill
                 tone="blue"
@@ -277,7 +274,7 @@ function CarrierConversationCard({
             />
 
             <div className="min-w-0 flex-1">
-              <h3 className="text-[1.65rem] font-black tracking-tight text-slate-950">
+              <h3 className="break-words text-[1.65rem] font-black tracking-tight text-slate-950 [overflow-wrap:anywhere]">
                 {getThreadRouteTitle(thread)}
               </h3>
 
@@ -343,9 +340,21 @@ function CarrierConversationCard({
 
 // Musteri ve nakliyeci konusmalarini aktif workspace'e gore tek ekranda listeler.
 export default function OfferThreadsPage() {
+  const access = useDashboardAccess("shared-business");
+
+  return (
+    <OfferThreadsPageContent key={access.primaryRole ?? "checking"} access={access} />
+  );
+}
+
+function OfferThreadsPageContent({
+  access,
+}: {
+  access: ReturnType<typeof useDashboardAccess>;
+}) {
   const router = useRouter();
   const { accessToken, isCarrierWorkspace, isCustomerWorkspace, primaryRole, status } =
-    useDashboardAccess("shared-business");
+    access;
   const [threads, setThreads] = useState<OfferThreadSummary[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -358,9 +367,6 @@ export default function OfferThreadsPage() {
   useEffect(() => {
     // Dashboard guard hazir olmadan thread listesi cagrilmaz.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
@@ -415,13 +421,6 @@ export default function OfferThreadsPage() {
     };
   }, [accessToken, primaryRole, router, status]);
 
-  useEffect(() => {
-    // Workspace degisince onceki rolun arama/filtre state'i tasinmaz.
-    setSearchQuery("");
-    setCustomerSelectedFilter("all");
-    setCarrierSelectedFilter("all");
-  }, [primaryRole]);
-
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
@@ -448,6 +447,18 @@ export default function OfferThreadsPage() {
     )
     .sort(sortCarrierThreads);
 
+  if (isCustomerWorkspace || isCarrierWorkspace) {
+    return (
+      <DashboardShell title="Konuşmalar" headerVariant="compact" motionPreset="operational" cardMotionLimit={6}
+        pageHeader={<PageHeader title="Konuşmalar" description="Tekliflerle ilgili mesajlarınızı ve görüşmelerinizi takip edin." />}>
+        <ConversationsWorkspace threads={threads} visibleThreads={isCarrierWorkspace ? filteredCarrierThreads : filteredCustomerThreads} query={searchQuery}
+          workspace={isCarrierWorkspace ? "carrier" : "customer"} filter={isCarrierWorkspace ? carrierSelectedFilter : customerSelectedFilter}
+          onQueryChange={setSearchQuery} onFilterChange={(value) => isCarrierWorkspace ? setCarrierSelectedFilter(value as CarrierConversationFilter) : setCustomerSelectedFilter(value as CustomerConversationFilter)}
+          isLoading={isLoading} errorMessage={errorMessage} />
+      </DashboardShell>
+    );
+  }
+
   return (
     <DashboardShell
       title="Konusmalar"
@@ -469,135 +480,7 @@ export default function OfferThreadsPage() {
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && isCustomerWorkspace ? (
-        <>
-          <div data-dashboard-stats className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <CustomerMetricCard
-              label="Toplam thread"
-              value={threads.length}
-              hint="Tum teklif konusmalarin"
-              tone="blue"
-              icon={<i className="pi pi-comments text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Okunmamis"
-              value={unreadThreadCount}
-              hint="Incelemen bekleyen akislari gosterir"
-              tone="violet"
-              icon={<i className="pi pi-envelope text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Aktif pazarlik"
-              value={threads.filter((thread) => !thread.isClosed).length}
-              hint="Devam eden gorusmeler"
-              tone="emerald"
-              icon={<i className="pi pi-refresh text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Kapali"
-              value={closedCount}
-              hint="Tamamlanan veya kapanan akislar"
-              tone="amber"
-              icon={<i className="pi pi-lock text-lg" />}
-            />
-          </div>
 
-          {threads.length === 0 ? (
-            <div data-dashboard-primary className="mt-6">
-              <EmptyStateCard
-                eyebrow="Konusma kutusu"
-                title="Henuz konusma yok"
-                description="Teklif akisi olustugunda teklif gorusmelerin burada listelenecek. Gelen teklifleri veya aktif isteklerini acarak sonraki adima gecebilirsin."
-                actionHref="/dashboard/gelen_teklifler"
-                actionLabel="Gelen teklifleri gor"
-              />
-            </div>
-          ) : (
-            <div data-dashboard-primary className="mt-6">
-              <CustomerSectionSurface
-                title="Tum konusmalar"
-                count={filteredCustomerThreads.length}
-                description="Teklif konusmalarini rota, durum ve mevcut aksiyonlariyla birlikte tek listede yonet."
-                action={
-                  <div className="flex flex-wrap gap-2">
-                    <CustomerWorkspaceSignalPill
-                      tone="blue"
-                      label={`${unreadThreadCount} okunmamis`}
-                    />
-                    <CustomerWorkspaceSignalPill
-                      tone="emerald"
-                      label={`${threads.filter((thread) => !thread.isClosed).length} acik`}
-                    />
-                    <CustomerWorkspaceSignalPill
-                      tone="slate"
-                      label={`${closedCount} kapali`}
-                    />
-                  </div>
-                }
-              >
-                <div className="space-y-4">
-                  <div className="app-surface-muted rounded-[1.35rem] p-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <label className="relative block w-full lg:max-w-md">
-                        <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-                          <i className="pi pi-search text-sm" />
-                        </span>
-                        <input
-                          type="search"
-                          value={searchQuery}
-                          onChange={(event) => setSearchQuery(event.target.value)}
-                          placeholder="Konusma, rota veya taraf ara"
-                          className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                        />
-                      </label>
-
-                      <div className="flex flex-wrap gap-2">
-                        {CUSTOMER_FILTERS.map((filter) => {
-                          const isActive = customerSelectedFilter === filter.id;
-
-                          return (
-                            <button
-                              key={filter.id}
-                              type="button"
-                              onClick={() => setCustomerSelectedFilter(filter.id)}
-                              className={`app-pressable inline-flex items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-                                isActive
-                                  ? "border-blue-600 bg-blue-600 text-white"
-                                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                              }`}
-                            >
-                              {filter.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {filteredCustomerThreads.length === 0 ? (
-                    <EmptyStateCard
-                      eyebrow="Filtre sonucu"
-                      title="Filtreye uyan konusma bulunamadi"
-                      description="Arama metnini veya secili durumu temizleyerek tum thread'leri tekrar goruntuleyebilirsin."
-                    />
-                  ) : (
-                    <div className="grid gap-4">
-                      {filteredCustomerThreads.map((thread) => (
-                        <CustomerConversationCard
-                          key={thread.id}
-                          thread={thread}
-                          conversationHref={`/dashboard/konusmalar/teklif/${thread.offerId}`}
-                          requestHref={`/dashboard/isteklerim/${thread.requestId}`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CustomerSectionSurface>
-            </div>
-          )}
-        </>
-      ) : null}
 
       {!isLoading && !errorMessage && !isCustomerWorkspace ? (
         threads.length === 0 ? (

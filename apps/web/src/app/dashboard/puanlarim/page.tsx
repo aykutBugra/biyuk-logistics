@@ -1,5 +1,8 @@
 "use client";
 
+import RatingsWorkspace from "@/features/customer-workspace/RatingsWorkspace";
+import { PageHeader } from "@/components/ui";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
@@ -152,6 +155,16 @@ function resolveLatestRatingDate(ratings: RatingListItem[]): string | null {
 
 // Puanlarim sayfasi verilen, alinan ve ozet puanlari tek ekranda toplar.
 export default function RatingsPage() {
+  const access = useDashboardAccess("shared-business");
+
+  return <RatingsPageContent key={access.primaryRole ?? "checking"} access={access} />;
+}
+
+function RatingsPageContent({
+  access,
+}: {
+  access: ReturnType<typeof useDashboardAccess>;
+}) {
   const {
     accessToken,
     auth,
@@ -159,9 +172,8 @@ export default function RatingsPage() {
     isCarrier,
     isCustomer,
     isCustomerWorkspace,
-    primaryRole,
     status,
-  } = useDashboardAccess("shared-business");
+  } = access;
   const [givenRatings, setGivenRatings] = useState<RatingListItem[]>([]);
   const [receivedRatings, setReceivedRatings] = useState<RatingListItem[]>([]);
   const [summary, setSummary] = useState<MyRatingSummary | null>(null);
@@ -172,9 +184,6 @@ export default function RatingsPage() {
   useEffect(() => {
     // Dashboard guard hazir olmadan rating endpoint'leri cagrilmaz.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
@@ -234,11 +243,6 @@ export default function RatingsPage() {
     };
   }, [accessToken, status]);
 
-  useEffect(() => {
-    // Aktif workspace degisince onceki filtre yeni rol ekranina tasinmaz.
-    setSelectedFilter("all");
-  }, [primaryRole]);
-
   if (status !== "ready") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
@@ -278,6 +282,18 @@ export default function RatingsPage() {
   const latestReceivedRatingDate = resolveLatestRatingDate(receivedRatings);
   const ratingSummary = summary ?? EMPTY_RATING_SUMMARY;
 
+  if (isCustomerWorkspace || access.isCarrierWorkspace) {
+    return (
+      <DashboardShell title="Puanlarım" headerVariant="compact" motionPreset="operational" cardMotionLimit={8}
+        pageHeader={<PageHeader title="Puanlarım" description="Verdiğiniz ve aldığınız değerlendirmeleri inceleyin." />}>
+        <RatingsWorkspace givenCount={givenRatings.length} receivedCount={receivedRatings.length} summary={ratingSummary}
+          items={filteredRatings.map((rating) => ({ ...rating, detail: resolveRatingDetailModel(rating.item, rating.direction) }))}
+          emptyHref={access.isCarrierWorkspace ? "/dashboard/nakliyelerim" : "/dashboard/isteklerim"}
+          filter={selectedFilter} onFilterChange={setSelectedFilter} isLoading={isLoading} errorMessage={errorMessage} />
+      </DashboardShell>
+    );
+  }
+
   return (
     <DashboardShell
       title="Puanlarim"
@@ -295,248 +311,7 @@ export default function RatingsPage() {
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && isCustomerWorkspace ? (
-        <>
-          <div data-dashboard-stats className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <CustomerMetricCard
-              label="Verdigim puan"
-              value={givenRatings.length}
-              hint="Gonderdigin degerlendirme kaydi"
-              tone="blue"
-              icon={<i className="pi pi-star text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Aldigim puan"
-              value={receivedRatings.length}
-              hint="Sana ulasan degerlendirmeler"
-              tone="emerald"
-              icon={<i className="pi pi-inbox text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Nakliyeci ortalamam"
-              value={formatMetricAverage(ratingSummary.asCarrier.averageRating)}
-              hint={`${ratingSummary.asCarrier.ratingCount} degerlendirme`}
-              tone="violet"
-              icon={<i className="pi pi-truck text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Musteri ortalamam"
-              value={formatMetricAverage(ratingSummary.asCustomer.averageRating)}
-              hint={`${ratingSummary.asCustomer.ratingCount} degerlendirme`}
-              tone="amber"
-              icon={<i className="pi pi-user text-lg" />}
-            />
-          </div>
 
-          <div data-dashboard-primary className="mt-6">
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.95fr)]">
-              <CustomerSectionSurface
-                title="Puan ozeti"
-                count={receivedRatings.length}
-                description="Aldigin degerlendirmeleri genel seviye ve rol baglamina gore tek bakista incele."
-              >
-                {receivedRatings.length === 0 ? (
-                  <EmptyStateCard
-                    eyebrow="Ozet"
-                    title="Henuz yeterli degerlendirme yok"
-                    description="Sana puan geldikce genel ortalama ve rol bazli ozet kartlari burada dolacak."
-                  />
-                ) : (
-                  <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                    <div className="rounded-[1.45rem] border border-emerald-200 bg-emerald-50/70 p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                        Genel ortalama
-                      </p>
-                      <p className="mt-3 text-[3.2rem] font-black leading-none tracking-tight text-emerald-900">
-                        {formatMetricAverage(overallReceivedAverage)}
-                      </p>
-                      <div className="mt-3 flex items-center gap-1 text-sm text-amber-500">
-                        {renderStars(overallReceivedAverage)}
-                      </div>
-                      <p className="mt-4 text-sm leading-6 text-emerald-900">
-                        Toplam {receivedRatings.length} degerlendirme aldin. Ozet mevcut
-                        rating verisi geldikce kendini gunceller.
-                      </p>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                      <div className="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4">
-                        <p className="text-sm font-semibold text-slate-500">
-                          Musteri rolundeki ortalama
-                        </p>
-                        <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-                          {formatMetricAverage(ratingSummary.asCustomer.averageRating)}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-500">
-                          {ratingSummary.asCustomer.ratingCount} degerlendirme
-                        </p>
-                      </div>
-
-                      <div className="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4">
-                        <p className="text-sm font-semibold text-slate-500">
-                          Nakliyeci rolundeki ortalama
-                        </p>
-                        <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-                          {formatMetricAverage(ratingSummary.asCarrier.averageRating)}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-500">
-                          {ratingSummary.asCarrier.ratingCount} degerlendirme
-                        </p>
-                      </div>
-
-                      <div className="rounded-[1.2rem] border border-slate-200 bg-white p-4 sm:col-span-2 lg:col-span-1">
-                        <p className="text-sm font-semibold text-slate-500">
-                          Yorumlu geri bildirim
-                        </p>
-                        <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-                          {commentedReceivedCount}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-500">
-                          Yorum iceren aldigin degerlendirme kaydi
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CustomerSectionSurface>
-
-              <CustomerSectionSurface
-                title="Hesap ozeti"
-                description="Profil ve rol bilgilerin puan akisiyla birlikte burada gorunur."
-              >
-                {auth?.user ? (
-                  <div className="space-y-5">
-                    <div className="flex items-center gap-4">
-                      <CustomerInitialsAvatar
-                        name={`${auth.user.ad} ${auth.user.soyad}`}
-                        fallback={auth.user.kullaniciAdi}
-                        imageUrl={auth.user.profileImageUrl}
-                        size="lg"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-[1.45rem] font-black tracking-tight text-slate-950">
-                          {auth.user.ad} {auth.user.soyad}
-                        </p>
-                        <p className="text-sm text-slate-500">@{auth.user.kullaniciAdi}</p>
-                      </div>
-                    </div>
-
-                    <dl className="grid gap-3 text-sm text-slate-600">
-                      <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
-                        <dt className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          E-posta
-                        </dt>
-                        <dd className="mt-1 font-medium text-slate-900">{auth.user.mail}</dd>
-                      </div>
-                      <div className="rounded-[1.1rem] border border-slate-200 bg-slate-50/80 px-4 py-3">
-                        <dt className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          Telefon
-                        </dt>
-                        <dd className="mt-1 font-medium text-slate-900">
-                          {auth.user.telefonNumarasi ?? "Telefon eklenmedi"}
-                        </dd>
-                      </div>
-                    </dl>
-
-                    <div className="flex flex-wrap gap-2">
-                      {isCustomer ? (
-                        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                          Musteri
-                        </span>
-                      ) : null}
-                      {isCarrier ? (
-                        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                          Nakliyeci
-                        </span>
-                      ) : null}
-                      {isAdmin ? (
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                          Admin
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <Link href="/dashboard/profil" className="app-button-secondary">
-                      Profili ac
-                    </Link>
-                  </div>
-                ) : (
-                  <EmptyStateCard
-                    eyebrow="Profil"
-                    title="Hesap bilgisi gorunemedi"
-                    description="Profil bilgileri tekrar yuklendiginde bu alanda rol ve hesap ozetin gorunecek."
-                  />
-                )}
-              </CustomerSectionSurface>
-            </div>
-
-            <div className="mt-6">
-              <CustomerSectionSurface
-                title="Son degerlendirmeler"
-                count={filteredRatings.length}
-                description="Verdigin ve aldigin rating kayitlarini tarih sirasiyla incele."
-                action={
-                  <div className="flex flex-wrap gap-2">
-                    {RATING_FILTERS.map((filter) => {
-                      const isActive = selectedFilter === filter.id;
-
-                      return (
-                        <button
-                          key={filter.id}
-                          type="button"
-                          onClick={() => setSelectedFilter(filter.id)}
-                          className={`app-pressable inline-flex items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-                            isActive
-                              ? "border-blue-600 bg-blue-600 text-white"
-                              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                          }`}
-                        >
-                          {filter.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                }
-              >
-                {combinedRatings.length === 0 ? (
-                  <EmptyStateCard
-                    eyebrow="Degerlendirme"
-                    title="Henuz puan kaydi yok"
-                    description="Tamamlanan isler sonrasinda verdigin ve aldigin tum degerlendirmeler burada listelenecek."
-                    actionHref="/dashboard/isteklerim"
-                    actionLabel="Isteklerime git"
-                  />
-                ) : filteredRatings.length === 0 ? (
-                  <EmptyStateCard
-                    eyebrow="Filtre sonucu"
-                    title="Filtreye uyan degerlendirme bulunamadi"
-                    description="Secili gorunumu degistirerek verdigin ve aldigin kayitlari tekrar inceleyebilirsin."
-                  />
-                ) : (
-                  <div className="grid gap-4">
-                    {filteredRatings.map((rating) => {
-                      const detailModel = resolveRatingDetailModel(
-                        rating.item,
-                        rating.direction
-                      );
-
-                      return (
-                        <CustomerRatingActivityCard
-                          key={`${rating.direction}-${rating.item.id}`}
-                          item={rating.item}
-                          direction={rating.direction}
-                          detailHref={detailModel.href}
-                          detailLabel={detailModel.label}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </CustomerSectionSurface>
-            </div>
-          </div>
-        </>
-      ) : null}
 
       {!isLoading && !errorMessage && !isCustomerWorkspace ? (
         totalRatingCount === 0 ? (

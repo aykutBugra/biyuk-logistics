@@ -3,6 +3,9 @@
 import type { ChangeEvent } from "react";
 import { useRef, useState } from "react";
 import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
+import { Button, InlineNotice } from "@/components/ui";
+import { displayText } from "@/features/customer-workspace/shared";
+import styles from "@/features/customer-workspace/workspace.module.css";
 import { ApiClientError } from "@/lib/api/api-client";
 import {
   deleteMyProfileImage,
@@ -21,6 +24,7 @@ const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 type ProfileImageUploaderProps = {
   accessToken: string;
   user: StoredAuthUser;
+  compact?: boolean;
 };
 
 function validateImageFile(file: File): string | null {
@@ -42,6 +46,7 @@ function syncProfileUser(user: UserProfile) {
 export default function ProfileImageUploader({
   accessToken,
   user,
+  compact = false,
 }: ProfileImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -124,6 +129,28 @@ export default function ProfileImageUploader({
       setIsBusy(false);
     }
   };
+
+  if (compact) {
+    return (
+      <div className={styles.profilePhoto}>
+        <div className={styles.identity}>
+          <CustomerInitialsAvatar name={displayName} fallback={user.kullaniciAdi} imageUrl={user.profileImageUrl} size="md" tone="blue" />
+          <div className={styles.identityText}><h3>Profil fotoğrafı</h3><span>JPEG, PNG veya WEBP · En fazla 5 MB</span></div>
+        </div>
+        <div className={styles.photoActions}>
+          <Button onClick={handlePickClick} disabled={isBusy} loading={isBusy}>{hasImage ? "Fotoğrafı değiştir" : "Fotoğraf seç"}</Button>
+          {hasImage ? <Button variant="danger" onClick={() => void handleRemove()} disabled={isBusy}>Kaldır</Button> : null}
+        </div>
+        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Profil fotoğrafı seç" className="sr-only"
+          onChange={(event) => void handleFileChange(event)} />
+        {errorMessage ? <div className={styles.photoError}><InlineNotice tone="red" title="Fotoğraf güncellenemedi">{displayText(errorMessage)
+          .replace("Yalnizca JPEG, PNG veya WEBP fotograf yukleyebilirsin.", "Yalnızca JPEG, PNG veya WEBP fotoğraf yükleyebilirsiniz.")
+          .replace("Fotograf boyutu en fazla 5 MB olabilir.", "Fotoğraf boyutu en fazla 5 MB olabilir.")
+          .replace("Profil fotografi yuklenirken beklenmeyen bir hata olustu.", "Profil fotoğrafı yüklenirken beklenmeyen bir hata oluştu.")
+          .replace("Profil fotografi kaldirilirken beklenmeyen bir hata olustu.", "Profil fotoğrafı kaldırılırken beklenmeyen bir hata oluştu.")}</InlineNotice></div> : null}
+      </div>
+    );
+  }
 
   return (
     <section className="rounded-[1.35rem] border border-slate-200 bg-slate-50/70 p-4 mb-6">

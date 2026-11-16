@@ -1,0 +1,103 @@
+.form { min-width: 0; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+.formSheet { min-width: 0; background: #fff; border: 1px solid #e2e7ef; border-radius: 12px; }
+.section { padding: 24px; }
+.section + .section { border-top: 1px solid #edf0f5; }
+.sectionHeader { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px; }
+.sectionNumber { display: grid; place-items: center; flex: 0 0 28px; height: 28px; border: 1px solid #dce5f4; border-radius: 7px; color: #486794; font-size: 10px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.sectionHeader h2 { margin: 0; color: #15253f; font-size: 15px; font-weight: 650; line-height: 1.7; }
+.sectionHeader p { margin: 3px 0 0; color: #788598; font-size: 12px; line-height: 1.6; }
+.formSheet :global(.app-input) { border-radius: 8px; min-height: 42px; box-shadow: none; font-size: 13px; }
+.formSheet label { font-size: 12px; }
+.volumeField { min-width: 0; }
+.volumeField:has(details[open]) { grid-column: 1 / -1; }
+.aiHelper { margin-top: 8px; border: 1px solid #e0e8fb; border-radius: 8px; background: #f8faff; }
+.aiHelper summary { display: flex; align-items: center; gap: 7px; padding: 9px 10px; color: #365db1; font-size: 11px; font-weight: 600; cursor: pointer; list-style: none; }
+.aiHelper summary::-webkit-details-marker { display: none; }
+.aiHelper summary > span:last-of-type { margin-left: auto; color: #7c8aab; font-size: 9px; font-weight: 400; }
+.aiHelper summary i { font-size: 10px; }
+.aiHelper[open] { grid-column: 1 / -1; }
+.aiContent { padding: 6px 10px 12px; }
+.aiContent :global(.app-input) { min-width: 0; }
+.preference { display: flex; align-items: flex-start; gap: 10px; padding: 12px 0; }
+.checkbox { padding-top: 3px; flex-shrink: 0; }
+.summaryColumn { position: sticky; top: 88px; min-width: 0; }
+.summary { background: #fff; border: 1px solid #e2e7ef; border-radius: 12px; padding: 20px; }
+.summary > header { display: flex; align-items: center; gap: 9px; padding-bottom: 18px; color: #7e8ca0; border-bottom: 1px solid #edf0f5; }
+.summary h2 { margin: 0; font-size: 14px; color: #15253f; font-weight: 650; }
+.route { display: grid; gap: 20px; margin: 22px 0; position: relative; }
+.route::before { content: ''; position: absolute; top: 19px; bottom: 21px; left: 4px; border-left: 1px dashed #cad6e7; }
+.route > div { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.route > div > div { min-width: 0; }
+.route small { display: block; color: #8290a4; font-size: 10px; }
+.route strong { display: block; color: #233652; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; margin-top: 3px; }
+.originDot, .destinationDot { width: 9px; height: 9px; margin-top: 6px; flex: 0 0 9px; border: 2px solid #4176d7; border-radius: 50%; position: relative; background: #fff; }
+.destinationDot { border-radius: 2px; background: #4176d7; }
+.summaryDetails { padding: 18px 0; border-block: 1px solid #edf0f5; display: grid; gap: 13px; margin: 0; }
+.summaryDetails > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 11px; }
+.summaryDetails dt { color: #8290a4; }
+.summaryDetails dd { margin: 0; color: #374861; font-weight: 550; text-align: right; overflow-wrap: anywhere; }
+.submit { padding-top: 20px; }
+.submitButton { width: 100%; justify-content: center; min-height: 44px; }
+.submit p { margin: 12px 0 0; font-size: 10px; line-height: 1.7; color: #8994a5; text-align: center; }
+@media (max-width: 1199px) { .layout { grid-template-columns: minmax(0, 1fr) 270px; gap: 16px; } .section { padding: 20px; } }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } .summaryColumn { position: static; } }
+@media (max-width: 639px) { .section { padding: 18px 16px; } .sectionHeader { gap: 10px; } .sectionHeader p { font-size: 11px; } .summary { padding: 18px; } .aiHelper summary { flex-wrap: wrap; } }
+
+
+/* Premium form styles are local to this single-page create flow. */
+:global([data-dashboard-theme="petrol"]) .layout { gap: 24px; grid-template-columns: minmax(0,1fr) 320px; }
+:global([data-dashboard-theme="petrol"]) .formSheet { border-color: #e5eae8; border-radius: 17px; box-shadow: 0 3px 12px rgb(15 23 42 / 3%); overflow: hidden; }
+:global([data-dashboard-theme="petrol"]) .section { padding: 28px; }
+:global([data-dashboard-theme="petrol"]) .section + .section { border-color: #e5eae8; }
+:global([data-dashboard-theme="petrol"]) .sectionHeader { margin-bottom: 24px; gap: 14px; }
+:global([data-dashboard-theme="petrol"]) .sectionNumber { flex-basis: 32px; height: 32px; border: 0; border-radius: 9px; background: #ddf3f0; color: #0f766e; font-size: 11px; }
+:global([data-dashboard-theme="petrol"]) .sectionHeader h2 { color: #0f172a; font-size: 17px; line-height: 1.5; font-weight: 700; }
+:global([data-dashboard-theme="petrol"]) .sectionHeader p { color: #475569; font-size: 12px; }
+:global([data-dashboard-theme="petrol"]) .formSheet :global(.app-input) { min-height: 44px; border-color: #dbe4df; border-radius: 9px; background: #fff; font-size: 14px; }
+:global([data-dashboard-theme="petrol"]) .formSheet :global(.app-input):focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgb(15 118 110 / 12%); }
+:global([data-dashboard-theme="petrol"]) .formSheet :global(.app-input)[aria-invalid="true"] { border-color: #e11d48; }
+:global([data-dashboard-theme="petrol"]) .formSheet :global(.app-input)[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px rgb(225 29 72 / 10%); }
+:global([data-dashboard-theme="petrol"]) .formSheet label { color: #334155; font-size: 12px; }
+:global([data-dashboard-theme="petrol"]) .formSheet :global(.bg-blue-50) { background: #ddf3f0; }
+:global([data-dashboard-theme="petrol"]) .formSheet :global(.border-blue-100), :global([data-dashboard-theme="petrol"]) .formSheet :global(.border-blue-200) { border-color: #d4e7de; }
+:global([data-dashboard-theme="petrol"]) .formSheet :global(.border-dashed) { border-color: #cfe4db; background: #f7fbf9; }
+:global([data-dashboard-theme="petrol"]) .formSheet :global(.text-blue-600), :global([data-dashboard-theme="petrol"]) .formSheet :global(.text-blue-700) { color: #0f766e; }
+:global([data-dashboard-theme="petrol"]) .form :global(.app-button-primary) { border-color: #0f766e; background: #0f766e; box-shadow: 0 2px 6px rgb(15 118 110 / 10%); }
+:global([data-dashboard-theme="petrol"]) .form :global(.app-button-primary):hover:not(:disabled) { background: #0b5e58; }
+:global([data-dashboard-theme="petrol"]) .form :global(.app-button-secondary) { border-color: #e5eae8; border-radius: 9px; }
+:global([data-dashboard-theme="petrol"]) .form button:focus-visible, :global([data-dashboard-theme="petrol"]) .form summary:focus-visible { outline: 3px solid #88c9bf; outline-offset: 3px; }
+:global([data-dashboard-theme="petrol"]) .aiHelper { border-color: #cfe7de; border-radius: 10px; background: #f3faf7; }
+:global([data-dashboard-theme="petrol"]) .aiHelper summary { padding: 12px; color: #0f766e; font-size: 12px; }
+:global([data-dashboard-theme="petrol"]) .aiHelper summary > span:last-of-type { color: #526f66; font-size: 10px; }
+:global([data-dashboard-theme="petrol"]) .aiContent { padding: 5px 12px 14px; }
+:global([data-dashboard-theme="petrol"]) .preference { padding: 16px; border: 1px solid #e5eae8; border-radius: 11px; background: #fafcfb; }
+:global([data-dashboard-theme="petrol"]) .checkbox input { accent-color: #0f766e; color: #0f766e; }
+:global([data-dashboard-theme="petrol"]) .summary { padding: 23px; border-color: #d4e6de; border-radius: 17px; box-shadow: 0 4px 14px rgb(15 23 42 / 3%); }
+:global([data-dashboard-theme="petrol"]) .summary > header { border-color: #e5eae8; color: #0f766e; }
+:global([data-dashboard-theme="petrol"]) .summary h2 { color: #0f172a; font-size: 16px; font-weight: 700; }
+:global([data-dashboard-theme="petrol"]) .route { gap: 24px; margin-block: 24px; }
+:global([data-dashboard-theme="petrol"]) .route::before { border-color: #b9d9ce; }
+:global([data-dashboard-theme="petrol"]) .route small { color: #64748b; font-size: 11px; }
+:global([data-dashboard-theme="petrol"]) .route strong { color: #0f172a; font-size: 14px; line-height: 1.6; }
+:global([data-dashboard-theme="petrol"]) .originDot, :global([data-dashboard-theme="petrol"]) .destinationDot { border-color: #0f766e; }
+:global([data-dashboard-theme="petrol"]) .destinationDot { background: #0f766e; }
+:global([data-dashboard-theme="petrol"]) .summaryDetails { padding-block: 22px; border-color: #e5eae8; gap: 16px; }
+:global([data-dashboard-theme="petrol"]) .summaryDetails > div { font-size: 12px; }
+:global([data-dashboard-theme="petrol"]) .summaryDetails dt { color: #64748b; }
+:global([data-dashboard-theme="petrol"]) .summaryDetails dd { color: #0f172a; }
+:global([data-dashboard-theme="petrol"]) .submit { padding-top: 22px; }
+:global([data-dashboard-theme="petrol"]) .submitButton { min-height: 46px; }
+:global([data-dashboard-theme="petrol"]) .submit p { color: #64748b; font-size: 11px; }
+@media(max-width:1199px) { :global([data-dashboard-theme="petrol"]) .layout { grid-template-columns: minmax(0,1fr) 280px; gap: 18px; } :global([data-dashboard-theme="petrol"]) .section { padding: 23px; } :global([data-dashboard-theme="petrol"]) .summary { padding: 20px; } }
+@media(max-width:900px) { :global([data-dashboard-theme="petrol"]) .layout { grid-template-columns: minmax(0,1fr); } :global([data-dashboard-theme="petrol"]) .summaryColumn { position: static; } }
+@media(max-width:639px) {
+  :global([data-dashboard-theme="petrol"]) .section { padding: 22px 17px; }
+  :global([data-dashboard-theme="petrol"]) .sectionHeader { gap: 11px; margin-bottom: 22px; }
+  :global([data-dashboard-theme="petrol"]) .sectionHeader h2 { font-size: 16px; }
+  :global([data-dashboard-theme="petrol"]) .formSheet :global(.app-input) { font-size: 16px; }
+  :global([data-dashboard-theme="petrol"]) .sectionHeader p { font-size: 12px; }
+  :global([data-dashboard-theme="petrol"]) .aiHelper summary { flex-wrap: wrap; font-size: 11px; }
+  :global([data-dashboard-theme="petrol"]) .summary { padding: 22px 20px; }
+  :global([data-dashboard-theme="petrol"]) .preference { padding: 13px; }
+}

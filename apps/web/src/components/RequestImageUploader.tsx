@@ -17,6 +17,7 @@ export type RequestImageDraft = {
 
 type Props = {
   disabled?: boolean;
+  embedded?: boolean;
   onChange: (images: RequestImageDraft[]) => void;
 };
 
@@ -31,7 +32,7 @@ function fingerprint(file: File): string {
   return `${file.name}|${file.size}|${file.lastModified}`;
 }
 
-export default function RequestImageUploader({ disabled = false, onChange }: Props) {
+export default function RequestImageUploader({ disabled = false, embedded = false, onChange }: Props) {
   const [images, setImages] = useState<RequestImageDraft[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -138,7 +139,8 @@ export default function RequestImageUploader({ disabled = false, onChange }: Pro
   const isAtMax = images.length >= MAX_IMAGE_COUNT;
 
   return (
-    <section className="app-surface-strong rounded-[1.85rem] border border-slate-200/80 px-5 py-5 md:px-6 md:py-6">
+    <section aria-label="Yük fotoğrafları" className={embedded ? "min-w-0" : "app-surface-strong rounded-[1.85rem] border border-slate-200/80 px-5 py-5 md:px-6 md:py-6"}>
+      {!embedded ? (
       <div className="mb-4 space-y-1">
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
           Fotograf
@@ -151,6 +153,7 @@ export default function RequestImageUploader({ disabled = false, onChange }: Pro
         </p>
       </div>
 
+      ) : null}
       <div className="space-y-4">
         <label
           className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[1.35rem] border border-dashed px-5 py-6 text-center transition ${

@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import {
   type ReadonlyURLSearchParams,
@@ -19,8 +20,10 @@ import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
 import CarrierDiscoveryFilters, {
   type CarrierDiscoveryFilterForm,
 } from "@/components/CarrierDiscoveryFilters";
-import CarrierDiscoverySummaryCard from "@/components/CarrierDiscoverySummaryCard";
+import { Button, MetricCard } from "@/components/ui";
+import styles from "@/components/discovery.module.css";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
+import { CarrierFeedback } from "@/features/carrier-workspace/shared";
 import DiscoveryResultsToolbar, {
   type DiscoverySortMode,
 } from "@/components/DiscoveryResultsToolbar";
@@ -220,6 +223,20 @@ function sortRequests(
   });
 }
 
+function subscribeToDesktopViewport(onChange: () => void) {
+  const mediaQuery = window.matchMedia("(min-width: 1024px)");
+  mediaQuery.addEventListener("change", onChange);
+  return () => mediaQuery.removeEventListener("change", onChange);
+}
+
+function getDesktopViewportSnapshot() {
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
+function getServerViewportSnapshot() {
+  return false;
+}
+
 function OpenTransportRequestsPageFallback() {
   return <DashboardPageSkeleton />;
 }
@@ -243,31 +260,38 @@ function OpenTransportRequestsPageContent() {
     useState<CarrierDiscoveryFilterForm>(initialFilters);
   const [requests, setRequests] = useState<OpenOfferRequestListItem[]>([]);
   const [routes, setRoutes] = useState<CarrierRouteListItem[]>([]);
-  const [selectedCarrierRouteDetail, setSelectedCarrierRouteDetail] =
+  const [loadedCarrierRouteDetail, setSelectedCarrierRouteDetail] =
     useState<CarrierRouteDetail | null>(null);
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const selectedCarrierRouteDetail =
+    status === "ready" &&
+    accessToken &&
+    loadedCarrierRouteDetail?.id === selectedCarrierRouteId
+      ? loadedCarrierRouteDetail
+      : null;
+  const [preferredRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [routeErrorMessage, setRouteErrorMessage] = useState<string | null>(null);
   const [isRequestsLoading, setIsRequestsLoading] = useState(true);
   const [isRoutesLoading, setIsRoutesLoading] = useState(true);
 
   // Ekran genisligine gore harita paneli acik gelir; kullanici kapatabilir veya acabilir.
-  const [isMapVisible, setIsMapVisible] = useState(false);
+  const isDesktopViewport = useSyncExternalStore(
+    subscribeToDesktopViewport,
+    getDesktopViewportSnapshot,
+    getServerViewportSnapshot
+  );
+  const [mapVisibilityPreference, setMapVisibilityPreference] =
+    useState<boolean | null>(null);
+  const isMapVisible = mapVisibilityPreference ?? isDesktopViewport;
   const [hasMountedMap, setHasMountedMap] = useState(false);
   const [mapResizeSignal, setMapResizeSignal] = useState(0);
   const [hasLoadedRequestsOnce, setHasLoadedRequestsOnce] = useState(false);
   const [sortMode, setSortMode] = useState<DiscoverySortMode>("recommended");
 
-  useEffect(() => {
-    // Ilk acilista ekran genisligine gore harita paneli otomatik acilir.
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const shouldOpenMap = window.matchMedia("(min-width: 1024px)").matches;
-    setIsMapVisible(shouldOpenMap);
-    setHasMountedMap(shouldOpenMap);
-  }, []);
+  // Ilk acilistan sonra haritayi kapatmak mevcut harita instance'ini kaldirmaz.
+  if (isMapVisible && !hasMountedMap) {
+    setHasMountedMap(true);
+  }
 
   useEffect(() => {
     // Rota id varsa ama sapma yoksa URL varsayilan sapma degeriyle tamamlanir.
@@ -305,9 +329,6 @@ function OpenTransportRequestsPageContent() {
   useEffect(() => {
     // Nakliyeci guard hazir olmadan rota secenekleri cekilmez.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsRoutesLoading(true);
-      }
       return;
     }
 
@@ -364,7 +385,6 @@ function OpenTransportRequestsPageContent() {
   useEffect(() => {
     // Secili rota degisince rota detayi da yenilenir; rota silinmis ise query temizlenir.
     if (status !== "ready" || !accessToken || selectedCarrierRouteId === null) {
-      setSelectedCarrierRouteDetail(null);
       return;
     }
 
@@ -428,9 +448,6 @@ function OpenTransportRequestsPageContent() {
       selectedCarrierRouteId !== null && selectedMaxSapmaKm === null;
 
     if (status !== "ready" || !accessToken || hasPendingRouteContext) {
-      if (status === "checking") {
-        setIsRequestsLoading(true);
-      }
       return;
     }
 
@@ -537,29 +554,10 @@ function OpenTransportRequestsPageContent() {
     return sortRequests(requests, sortMode, hasRouteContext);
   }, [hasRouteContext, requests, sortMode]);
 
-  useEffect(() => {
-    // Filtre sonrasi secili istek listede kalmiyorsa secim temizlenir.
-    if (selectedRequestId === null) {
-      return;
-    }
-
-    const requestStillVisible = refinedRequests.some(
-      (request) => request.id === selectedRequestId
-    );
-
-    if (!requestStillVisible) {
-      setSelectedRequestId(null);
-    }
-  }, [refinedRequests, selectedRequestId]);
-
-  useEffect(() => {
-    // Harita acildiginda hic secim yoksa ilk gorunur istek otomatik secilir.
-    if (!isMapVisible || selectedRequestId !== null || refinedRequests.length === 0) {
-      return;
-    }
-
-    setSelectedRequestId(refinedRequests[0].id);
-  }, [isMapVisible, refinedRequests, selectedRequestId]);
+  // Gecersiz secimi gosterme; harita aciksa ilk gorunur istegi kullan.
+  const selectedRequestId =
+    refinedRequests.find((request) => request.id === preferredRequestId)?.id ??
+    (isMapVisible ? refinedRequests[0]?.id ?? null : null);
 
   // Form alanlarindan gelen filtre degerleri local filtre state'ine yazilir.
   const handleFilterChange = (
@@ -659,19 +657,23 @@ function OpenTransportRequestsPageContent() {
 
   // Mobilde harita ve liste gorunumleri ayni state uzerinden acilip kapanir.
   const handleMapToggle = () => {
-    setIsMapVisible((currentValue) => {
-      const nextValue = !currentValue;
+    const nextValue = !isMapVisible;
+    setMapVisibilityPreference(nextValue);
+    setSelectedRequestId(selectedRequestId);
 
-      if (nextValue) {
-        setHasMountedMap(true);
-      }
-
-      return nextValue;
-    });
+    if (nextValue) {
+      setHasMountedMap(true);
+    }
   };
 
-  if (status !== "ready" || (isRequestsLoading && !hasLoadedRequestsOnce)) {
+  if (status !== "ready") {
     return <DashboardPageSkeleton />;
+  }
+
+  if (isRequestsLoading && !hasLoadedRequestsOnce) {
+    return <CarrierVehiclesShell title="Açık istekler" description="Rotanıza uygun yükleri keşfedin." headerVariant="compact">
+      <CarrierFeedback isLoading errorMessage={null} label="Açık istekler yükleniyor…" />
+    </CarrierVehiclesShell>;
   }
 
   const alreadyOfferedCount = refinedRequests.filter(
@@ -710,16 +712,16 @@ function OpenTransportRequestsPageContent() {
   const summaryCards = hasRouteContext
     ? [
         {
-          label: "Acik talep",
+          label: "Açık talep",
           value: refinedRequests.length,
-          subtext: "Guncel gorunum",
+          subtext: "Güncel görünüm",
           icon: "pi pi-briefcase",
           tone: "blue" as const,
         },
         {
-          label: "Rotana uygun",
+          label: "Rotaya uygun",
           value: routeAlignedCount,
-          subtext: "Dogrudan eslesen",
+          subtext: "Doğrudan eşleşen",
           icon: "pi pi-directions",
           tone: "emerald" as const,
         },
@@ -740,16 +742,16 @@ function OpenTransportRequestsPageContent() {
       ]
     : [
         {
-          label: "Acik talep",
+          label: "Açık talep",
           value: refinedRequests.length,
-          subtext: "Teklife acik",
+          subtext: "Teklife açık",
           icon: "pi pi-briefcase",
           tone: "blue" as const,
         },
         {
           label: "Haritada",
           value: renderableRequestCount,
-          subtext: "Koordinatli talepler",
+          subtext: "Koordinatlı talepler",
           icon: "pi pi-map-marker",
           tone: "emerald" as const,
         },
@@ -761,9 +763,9 @@ function OpenTransportRequestsPageContent() {
           tone: "slate" as const,
         },
         {
-          label: "Tek tasima",
+          label: "Tek taşıma",
           value: singleTransportCount,
-          subtext: "Paylasimsiz istekler",
+          subtext: "Paylaşımsız talepler",
           icon: "pi pi-inbox",
           tone: "amber" as const,
         },
@@ -789,30 +791,31 @@ function OpenTransportRequestsPageContent() {
 
   return (
     <CarrierVehiclesShell
-      title="Acik Istekler"
-      description="Rotana uygun talepleri kesfet."
+      title="Açık istekler"
+      description="Rotanıza uygun yükleri keşfedin, yeni taşıma fırsatlarını değerlendirin."
       headerActions={headerActions}
       headerVariant="compact"
       motionPreset="operational"
       cardMotionLimit={4}
     >
-      <div className="space-y-4">
-        <div data-dashboard-stats className="grid gap-3 xl:grid-cols-4">
+      <div className={styles.workspace}>
+        <div data-dashboard-stats className={styles.summaryBand}>
           {summaryCards.map((card) => (
-            <CarrierDiscoverySummaryCard
+            <MetricCard
               key={card.label}
               label={card.label}
               value={card.value}
-              subtext={card.subtext}
-              icon={card.icon}
-              tone={card.tone}
+              description={card.subtext}
+              icon={<i className={card.icon} aria-hidden="true" />}
+              tone={card.tone === "emerald" ? "green" : card.tone === "slate" ? "neutral" : card.tone}
             />
           ))}
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[18.5rem_minmax(0,1fr)] lg:items-start">
+        <div className={styles.discovery}>
           <CarrierDiscoveryFilters
             resultsCount={refinedRequests.length}
+            mapAction={<Button onClick={handleMapToggle} aria-expanded={isMapVisible} aria-controls="open-requests-map"><i className="pi pi-map" aria-hidden="true" />{isMapVisible ? "Haritayı gizle" : "Haritayı göster"}</Button>}
             selectedCarrierRouteId={selectedCarrierRouteId}
             selectedCarrierRoute={selectedCarrierRoute}
             routes={routes}
@@ -834,8 +837,8 @@ function OpenTransportRequestsPageContent() {
             onMaxSapmaChange={handleMaxSapmaKmChange}
           />
 
-          <div data-dashboard-primary className="space-y-3">
-            {hasMountedMap ? (
+            <div id="open-requests-map" className={styles.mapColumn} hidden={!isMapVisible}>
+{hasMountedMap ? (
               <MotionCollapse
                 isOpen={isMapVisible}
                 onExpandComplete={handleMapExpandComplete}
@@ -851,25 +854,29 @@ function OpenTransportRequestsPageContent() {
                 />
               </MotionCollapse>
             ) : null}
+            </div>
 
+          <div data-dashboard-primary className={styles.primary}>
             <DiscoveryResultsToolbar
               resultsCount={refinedRequests.length}
               sortMode={sortMode}
               onSortModeChange={setSortMode}
               isMapVisible={isMapVisible}
               onMapToggle={handleMapToggle}
+              showMapToggle={false}
               hasRouteContext={hasRouteContext}
               activeFilterLabel={activeRouteFilterLabel}
             />
 
-            <div className={isRefreshingRequests ? "opacity-70 transition" : undefined}>
+
+            <div className={[styles.results, isRefreshingRequests ? "opacity-70 transition" : ""].join(" ")}>
               {errorMessage ? (
-                <section className="app-surface rounded-[1.2rem] border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
+                <section role="alert" className="app-surface rounded-[1.2rem] border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-rose-600">
-                    Kesif hatasi
+                    Keşif hatası
                   </p>
                   <h2 className="mt-2 text-lg font-black tracking-tight text-rose-900">
-                    Acik istekler su anda guncellenemiyor
+                    Açık istekler şu anda güncellenemiyor
                   </h2>
                   <p className="mt-2 leading-6">{errorMessage}</p>
                 </section>
@@ -884,7 +891,7 @@ function OpenTransportRequestsPageContent() {
                   }
                 />
               ) : (
-                <div className="grid gap-3 xl:auto-rows-fr xl:grid-cols-2">
+                <div className={styles.resultList}>
                   {refinedRequests.map((request) => (
                     <OpenRequestCard
                       key={request.id}
@@ -909,6 +916,7 @@ function OpenTransportRequestsPageContent() {
                 </div>
               )}
             </div>
+
           </div>
         </div>
       </div>

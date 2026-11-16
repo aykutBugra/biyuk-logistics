@@ -1,9 +1,12 @@
 "use client";
 
+import NotificationsWorkspace from "@/features/customer-workspace/NotificationsWorkspace";
+import { PageHeader } from "@/components/ui";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CustomerMetricCard from "@/components/CustomerMetricCard";
-import CustomerNotificationCard from "@/components/CustomerNotificationCard";
+
 import CustomerSectionSurface from "@/components/CustomerSectionSurface";
 import CustomerWorkspaceSignalPill from "@/components/CustomerWorkspaceSignalPill";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
@@ -386,9 +389,6 @@ export default function NotificationsPage() {
   useEffect(() => {
     // Account guard hazir olmadan bildirim endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
@@ -636,6 +636,22 @@ export default function NotificationsPage() {
   );
   const isFallbackAccountView = !isCustomerWorkspace && !isCarrierWorkspace;
 
+  if (isCustomerWorkspace || isCarrierWorkspace) {
+    return (
+      <DashboardShell title="Bildirimler" headerVariant="compact" motionPreset="operational" cardMotionLimit={6} unreadNotificationCount={unreadCount}
+        pageHeader={<PageHeader title="Bildirimler" description="Teklif, mesaj ve taşıma hareketlerinden haberdar olun." />}>
+        <NotificationsWorkspace notifications={notifications} visibleNotifications={isCarrierWorkspace ? filteredCarrierNotifications : filteredNotifications} unreadCount={unreadCount}
+          emptyHref={isCarrierWorkspace ? "/dashboard/acik_istekler" : "/dashboard/isteklerim"}
+          query={searchQuery} filter={selectedFilter} hasOtherNotifications={hasOtherNotifications}
+          onQueryChange={setSearchQuery} onFilterChange={setSelectedFilter}
+          onMarkAll={() => void handleMarkAllAsRead()} onMarkAsRead={(id) => void handleMarkAsRead(id)}
+          onOpen={(notification) => void handleOpenNotification(notification)}
+          actingId={actingId} actingAction={actingAction} isMarkingAll={isMarkingAll}
+          isLoading={isLoading} errorMessage={errorMessage} />
+      </DashboardShell>
+    );
+  }
+
   return (
     <DashboardShell
       title="Bildirimler"
@@ -656,31 +672,7 @@ export default function NotificationsPage() {
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage && isCustomerWorkspace ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <CustomerMetricCard
-            label="Listelenen bildirim"
-            value={notifications.length}
-            hint="Son 50 kayit icinden"
-            tone="blue"
-            icon={<i className="pi pi-bell text-lg" />}
-          />
-          <CustomerMetricCard
-            label="Okunmamis"
-            value={listedUnreadCount}
-            hint="Listede yeni kalan akislari gosterir"
-            tone="violet"
-            icon={<i className="pi pi-envelope text-lg" />}
-          />
-          <CustomerMetricCard
-            label="Listede okundu"
-            value={listedReadCount}
-            hint="Goz atilan bildirimler"
-            tone="emerald"
-            icon={<i className="pi pi-check-circle text-lg" />}
-          />
-        </div>
-      ) : null}
+
 
       {!isLoading && !errorMessage && isCarrierWorkspace ? (
         <div
@@ -729,20 +721,7 @@ export default function NotificationsPage() {
         </div>
       ) : null}
 
-      {!isLoading &&
-      !errorMessage &&
-      isCustomerWorkspace &&
-      notifications.length === 0 ? (
-        <div className="mt-6">
-          <EmptyStateCard
-            eyebrow="Bildirim kutusu"
-            title="Henuz bildirim yok"
-            description="Teklif, mesaj ve teslimat hareketleri olustukca bildirimin burada listelenecek."
-            actionHref="/dashboard/isteklerim"
-            actionLabel="Isteklerime git"
-          />
-        </div>
-      ) : null}
+
 
       {!isLoading &&
       !errorMessage &&
@@ -782,103 +761,7 @@ export default function NotificationsPage() {
         />
       ) : null}
 
-      {!isLoading && !errorMessage && isCustomerWorkspace && notifications.length > 0 ? (
-        <div className="mt-6">
-          <CustomerSectionSurface
-            title="Bildirim merkezi"
-            count={filteredNotifications.length}
-            description="Baslik, mesaj ve bildirim tipi uzerinden local arama yaparak son kayitlarini yonet."
-            action={
-              <button
-                type="button"
-                onClick={handleMarkAllAsRead}
-                disabled={isMarkingAll || unreadCount === 0}
-                className="app-button-secondary app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isMarkingAll ? "Guncelleniyor..." : "Tumunu okundu say"}
-              </button>
-            }
-          >
-            <div className="space-y-4">
-              <div className="app-surface-muted rounded-[1.35rem] p-4">
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <label className="relative block w-full lg:max-w-md">
-                      <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-                        <i className="pi pi-search text-sm" />
-                      </span>
-                      <input
-                        type="search"
-                        value={searchQuery}
-                        onChange={(event) => setSearchQuery(event.target.value)}
-                        placeholder="Baslik, mesaj veya bildirim tipi ara"
-                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      />
-                    </label>
 
-                    <div className="flex flex-wrap gap-2">
-                      <CustomerWorkspaceSignalPill
-                        tone="slate"
-                        label="Son 50 kayit"
-                      />
-                      {unreadCount > listedUnreadCount ? (
-                        <CustomerWorkspaceSignalPill
-                          tone="amber"
-                          label={`Hesap genelinde ${unreadCount} okunmamis`}
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {availableFilters.map((filter) => {
-                      const isActive = selectedFilter === filter.id;
-
-                      return (
-                        <button
-                          key={filter.id}
-                          type="button"
-                          onClick={() => setSelectedFilter(filter.id)}
-                          className={`app-pressable inline-flex items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-                            isActive
-                              ? "border-blue-600 bg-blue-600 text-white"
-                              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                          }`}
-                        >
-                          {filter.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {filteredNotifications.length === 0 ? (
-                <EmptyStateCard
-                  eyebrow="Filtre sonucu"
-                  title="Filtreye uyan bildirim bulunamadi"
-                  description="Arama metnini veya secili grubu temizleyerek son kayitlarini tekrar gorebilirsin."
-                />
-              ) : (
-                <div className="grid gap-4">
-                  {filteredNotifications.map((notification) => (
-                    <CustomerNotificationCard
-                      key={notification.id}
-                      notification={notification}
-                      isActing={actingId === notification.id}
-                      actingAction={
-                        actingId === notification.id ? actingAction : null
-                      }
-                      onMarkAsRead={() => void handleMarkAsRead(notification.id)}
-                      onOpen={() => void handleOpenNotification(notification)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </CustomerSectionSurface>
-        </div>
-      ) : null}
 
       {!isLoading && !errorMessage && isCarrierWorkspace && notifications.length > 0 ? (
         <div data-dashboard-primary className="mt-6">

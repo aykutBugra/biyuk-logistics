@@ -75,16 +75,13 @@ export default function CustomerRatingActivityCard({
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
                 {formatRoleContext(item.rolBaglami)}
               </span>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                Nakliye #{item.jobId}
-              </span>
             </div>
 
-            <h3 className="mt-3 text-[1.65rem] font-black tracking-tight text-slate-950">
-              {item.baslangicSehri} {"->"} {item.varisSehri}
+            <h3 className="mt-3 break-words text-[1.65rem] font-black tracking-tight text-slate-950 [overflow-wrap:anywhere]">
+              {item.baslangicSehri} {"→"} {item.varisSehri}
             </h3>
 
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 break-words text-sm text-slate-600 [overflow-wrap:anywhere]">
               {item.counterpartyName}{" "}
               <span className="text-slate-400">@{item.counterpartyUsername}</span>
             </p>

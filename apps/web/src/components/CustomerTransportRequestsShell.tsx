@@ -9,6 +9,7 @@ type CustomerTransportRequestsShellProps = {
   children: ReactNode;
   pageEyebrow?: string;
   headerActions?: ReactNode;
+  pageHeader?: ReactNode;
   headerVariant?: "default" | "compact";
   motionPreset?: "default" | "operational" | "form";
   cardMotionLimit?: number;
@@ -20,6 +21,7 @@ export default function CustomerTransportRequestsShell({
   children,
   pageEyebrow,
   headerActions,
+  pageHeader,
   headerVariant,
   motionPreset,
   cardMotionLimit,
@@ -31,6 +33,7 @@ export default function CustomerTransportRequestsShell({
       pageEyebrow={pageEyebrow}
       workspaceHint="customer"
       headerActions={headerActions}
+      pageHeader={pageHeader}
       headerVariant={headerVariant}
       motionPreset={motionPreset}
       cardMotionLimit={cardMotionLimit}

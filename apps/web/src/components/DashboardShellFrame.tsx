@@ -5,6 +5,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useDashboardRouteTransitionId } from "@/components/DashboardRouteTemplate";
 import DashboardTopbar from "@/components/DashboardTopbar";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import { UiScope } from "@/components/ui";
+import styles from "./control-center.module.css";
 import type { DashboardRenderedNavGroup } from "@/lib/dashboard/navigation";
 import type { StoredAuth, StoredDashboardWorkspaceMode } from "@/lib/auth/auth-storage";
 import { gsap } from "@/lib/motion/gsap-client";
@@ -29,6 +31,9 @@ type DashboardShellFrameProps = {
   children: ReactNode;
   pageEyebrow?: string;
   headerActions?: ReactNode;
+  pageHeader?: ReactNode;
+  visualTheme?: "customer-overview" | "petrol";
+  unreadNotificationCount?: number;
   headerVariant?: "default" | "compact";
   sidebarVariant?: "default" | "icon-rail";
   sidebarBehaviorScope?: "home" | "child" | "other";
@@ -123,6 +128,9 @@ export default function DashboardShellFrame({
   children,
   pageEyebrow,
   headerActions,
+  pageHeader,
+  visualTheme,
+  unreadNotificationCount,
   headerVariant = "default",
   sidebarVariant = "default",
   motionPreset = "default",
@@ -212,11 +220,14 @@ export default function DashboardShellFrame({
   };
 
   return (
-    <div ref={frameRef} className="min-h-screen" style={frameStyle}>
+    <UiScope className={styles.scope}>
+    <div ref={frameRef} className={styles.frame} style={frameStyle} data-dashboard-theme={visualTheme}>
       <DashboardTopbar
         auth={auth}
         workspaceMode={workspaceMode}
         onMenuToggle={() => setSidebarOpen((value) => !value)}
+        menuOpen={sidebarOpen}
+        notificationCount={unreadNotificationCount}
       />
 
       <DashboardSidebar
@@ -232,28 +243,26 @@ export default function DashboardShellFrame({
         variant={sidebarVariant}
         isDesktopExpanded={isDesktopSidebarExpanded}
         onDesktopToggle={isIconRail ? handleDesktopSidebarToggle : undefined}
+        extraPanelContent={<div className={styles.logisticsDecoration} aria-hidden="true"><i className="pi pi-truck" /></div>}
       />
 
       <div className="pt-[var(--topbar-height)] lg:pl-[var(--dashboard-main-offset)]">
-        <main className="min-h-[calc(100vh-var(--topbar-height))] px-4 py-5 md:px-6 md:py-6">
+        <main className={styles.main}>
           <div
             ref={routeSurfaceRef}
             data-dashboard-route-surface
             data-dashboard-pathname={pathname}
-            className="mx-auto max-w-7xl space-y-5"
+            className={styles.content}
           >
-            {headerVariant === "compact" ? (
+            {pageHeader ? (
+              <div ref={headerRef} data-dashboard-header>{pageHeader}</div>
+            ) : headerVariant === "compact" ? (
               <div
                 ref={headerRef}
                 data-dashboard-header
                 className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
               >
                 <div className="space-y-1.5">
-                  {(pageEyebrow ?? panelEyebrow) ? (
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-600">
-                      {pageEyebrow ?? panelEyebrow}
-                    </p>
-                  ) : null}
                   <h1 className="text-2xl font-black tracking-tight text-slate-950 md:text-3xl">
                     {title}
                   </h1>
@@ -301,5 +310,6 @@ export default function DashboardShellFrame({
         </main>
       </div>
     </div>
+    </UiScope>
   );
 }

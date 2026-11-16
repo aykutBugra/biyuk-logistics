@@ -87,12 +87,6 @@ export default function CustomerConversationCard({
                 status={thread.durum}
                 label={getOfferStatusLabel(thread.durum)}
               />
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                Teklif #{thread.offerId}
-              </span>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                Istek #{thread.requestId}
-              </span>
               <CustomerWorkspaceSignalPill
                 tone={thread.isClosed ? "slate" : "emerald"}
                 label={thread.isClosed ? "Kapali" : "Acik pazarlik"}
@@ -105,11 +99,11 @@ export default function CustomerConversationCard({
               ) : null}
             </div>
 
-            <h3 className="mt-3 text-[1.8rem] font-black tracking-tight text-slate-950">
+            <h3 className="mt-3 break-words text-[1.8rem] font-black tracking-tight text-slate-950 [overflow-wrap:anywhere]">
               {routeTitle}
             </h3>
 
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 break-words text-sm text-slate-600 [overflow-wrap:anywhere]">
               {thread.karsiTarafAdSoyad}{" "}
               <span className="text-slate-400">
                 @{thread.karsiTarafKullaniciAdi}

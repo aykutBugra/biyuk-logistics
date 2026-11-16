@@ -1,6 +1,6 @@
 "use client";
 
-import EmptyStateCard from "@/components/EmptyStateCard";
+import { EmptyState } from "@/components/ui";
 
 export type EmptyOpenRequestsStateMode =
   | "no-results"
@@ -16,22 +16,22 @@ const contentMap: Record<
   { eyebrow: string; title: string; description: string }
 > = {
   "no-results": {
-    eyebrow: "Kesif",
-    title: "Acik istek bulunmuyor",
+    eyebrow: "Keşif",
+    title: "Açık istek bulunmuyor",
     description:
-      "Su anda teklif vermeye acik bir tasima talebi gorunmuyor. Biraz sonra tekrar kontrol edebilirsin.",
+      "Şu anda teklif almaya açık bir taşıma talebi bulunmuyor. Daha sonra tekrar kontrol edebilirsiniz.",
   },
   "no-filter-match": {
     eyebrow: "Filtre sonucu",
     title: "Filtrelere uyan istek yok",
     description:
-      "Secili filtreler bu an icin bir sonuc donmuyor. Sehir, hacim veya yuk alanlarini genisletmeyi dene.",
+      "Seçili filtrelere uygun sonuç bulunamadı. Şehir, hacim veya yük filtrelerini genişletmeyi deneyin.",
   },
   "no-route-match": {
     eyebrow: "Rota uyumu",
-    title: "Secili rotaya uygun istek yok",
+    title: "Seçili rotaya uygun istek yok",
     description:
-      "Mevcut rota ve sapma araligiyla eslesen bir tasima talebi bulunmuyor. Sapma sinirini genisletebilir veya farkli rota secebilirsin.",
+      "Mevcut rota ve sapma aralığıyla eşleşen talep bulunamadı. Sapma sınırını genişletebilir veya farklı bir rota seçebilirsiniz.",
   },
 };
 
@@ -41,8 +41,8 @@ export default function EmptyOpenRequestsState({
   const content = contentMap[mode];
 
   return (
-    <EmptyStateCard
-      eyebrow={content.eyebrow}
+    <EmptyState
+      icon="pi pi-box"
       title={content.title}
       description={content.description}
     />

@@ -1,0 +1,124 @@
+.scope { min-width: 0; }
+.frame { --topbar-height: 64px; --sidebar-width: 232px; min-height: 100vh; background: #f5f7fb; }
+.main { min-width: 0; min-height: calc(100vh - 64px); padding: 30px 32px 48px; }
+.content { width: 100%; max-width: 1600px; margin: 0 auto; }
+.content > * + * { margin-top: 26px; }
+.content :global([data-dashboard-header] h1) { color: #15223b; font-size: 30px; line-height: 1.2; font-weight: 700; letter-spacing: -.04em; }
+.topbar { position: fixed; inset: 0 0 auto; z-index: 40; display: flex; align-items: center; height: 64px; border-bottom: 1px solid #e5eaf1; background: #fff; }
+.brandArea { display: flex; align-items: center; gap: 12px; width: 232px; height: 100%; padding: 0 22px; border-right: 1px solid #e5eaf1; }
+.brand { display: flex; align-items: center; gap: 10px; color: #17243d; font-size: 19px; font-weight: 750; line-height: 1.1; letter-spacing: -.04em; text-decoration: none; }
+.brand small { display: block; margin-top: 5px; color: #8994a6; font-size: 8px; font-weight: 650; letter-spacing: .16em; }
+.brandMark { display: grid; width: 33px; height: 33px; flex-shrink: 0; place-content: center; border-radius: 9px; background: #245fe5; color: white; font-size: 22px; position: relative; }
+.brandMark > span { position: absolute; bottom: 5px; right: 5px; font-size: 16px; color: #a8c6ff; }
+.topbarCaption { flex: 1; padding-left: 32px; color: #8a95a6; font-size: 12px; }
+.accountArea { display: flex; align-items: center; gap: 12px; margin-left: auto; padding: 0 24px; }
+.account { display: flex; min-width: 0; align-items: center; gap: 10px; color: #42516a; text-decoration: none; font-size: 12px; font-weight: 550; }
+.account > span { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account > i { color: #9aa4b5; font-size: 10px; }
+.logout, .menuToggle, .mobileClose { display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #7a879b; cursor: pointer; }
+.logout:hover, .menuToggle:hover, .mobileClose:hover { background: #f1f5f9; color: #17243d; }
+.menuToggle, .mobileClose { display: none; }
+.sidebar { position: fixed; top: 64px; bottom: 0; left: 0; z-index: 35; display: flex; flex-direction: column; width: var(--dashboard-sidebar-width-current, 232px); overflow-x: hidden; overflow-y: auto; border-right: 1px solid #e5eaf1; background: #fff; }
+.workspaceBar { display: flex; align-items: center; gap: 8px; padding: 20px 16px 17px; }
+.roleSwitch { display: grid; flex: 1; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border: 1px solid #e6ebf2; border-radius: 9px; background: #f6f8fb; }
+.roleSwitch button { display: flex; min-width: 0; min-height: 34px; align-items: center; justify-content: center; gap: 6px; padding: 6px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #7a879b; font-size: 11px; font-weight: 600; cursor: pointer; }
+.roleSwitch button[aria-pressed="true"] { border-color: #e3e8ef; background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgb(15 23 42 / 4%); }
+.singleWorkspace { display: flex; align-items: center; gap: 10px; color: #56647b; font-size: 12px; font-weight: 600; }
+.navigation { flex: 1; padding: 0 12px 20px; }
+.navGroup + .navGroup { margin-top: 23px; }
+.groupTitle { margin: 0 10px 8px; color: #9aa5b5; font-size: 9px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; }
+.navItem { position: relative; display: flex; min-height: 40px; align-items: center; gap: 12px; margin-top: 3px; border-radius: 8px; padding: 10px 12px; color: #5d6b81; font-size: 12px; font-weight: 550; text-decoration: none; }
+.navItem > i { width: 17px; flex-shrink: 0; color: #8d99ad; text-align: center; font-size: 15px; }
+.navLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.navItem:hover { background: #f7f9fc; color: #1d4ed8; }
+.navActive { background: #edf3ff; color: #2059d5; font-weight: 650; }
+.navActive > i { color: #2563eb; }
+.activeDot { width: 5px; height: 5px; margin-left: auto; border-radius: 50%; background: #2563eb; }
+.collapseControl { display: flex; min-height: 44px; align-items: center; gap: 12px; margin: 10px 16px; padding: 10px; border: 0; border-top: 1px solid #edf0f5; background: transparent; color: #8b96a8; font-size: 11px; cursor: pointer; }
+.extraPanel { padding: 12px 16px; }
+.backdrop { position: fixed; inset: 64px 0 0; z-index: 30; background: rgb(15 23 42 / 30%); }
+.sidebar button:focus-visible, .sidebar a:focus-visible, .topbar button:focus-visible, .topbar a:focus-visible { outline: 3px solid #b6caff; outline-offset: 2px; }
+@media (min-width: 1024px) {
+ .collapsed .navLabel, .collapsed .activeDot { display: none; }
+ .collapsed .workspaceBar { padding: 18px 10px; }
+ .collapsed .roleSwitch { grid-template-columns: 1fr; }
+ .collapsed .navItem { justify-content: center; padding: 12px; }
+ .collapsed .navigation { padding-inline: 8px; }
+ .collapsed .collapseControl { justify-content: center; margin-inline: 8px; }
+ .backdrop { display: none; }
+}
+@media (max-width: 1023px) {
+ .sidebar { width: 264px; max-width: calc(100vw - 40px); transform: translateX(-100%); transition: transform 180ms ease; }
+ .sidebarOpen { transform: translateX(0); }
+ .brandArea { width: auto; border-right: 0; padding: 0 16px; }
+ .menuToggle, .mobileClose { display: grid; }
+ .mobileClose { margin-left: auto; }
+ .collapseControl { display: none; }
+ .topbarCaption { display: none; }
+ .main { padding: 24px; }
+}
+@media (max-width: 639px) {
+ .main { padding: 22px 16px 32px; }
+ .brandArea { gap: 8px; padding-right: 0; }
+ .accountArea { gap: 4px; padding: 0 12px; }
+ .account > span, .account > i { display: none; }
+ .logout, .menuToggle, .mobileClose { width: 40px; height: 40px; }
+ .content > * + * { margin-top: 20px; }
+ .content :global([data-dashboard-header] h1) { font-size: 27px; }
+}
+@media (prefers-reduced-motion: reduce) { .sidebar { transition: none; } }
+
+/* Shared navigation identity; content themes are enabled by the workspace route. */
+.frame[data-dashboard-theme] {
+  --b-accent: #0f766e; --b-accent-hover: #0b5e58; --b-ink: #0f172a;
+  --b-muted: #475569; --b-border: #e5eae8; --b-subtle: #f6f8f7;
+  --b-shadow: 0 3px 12px rgb(15 23 42 / 3%);
+  background: #f6f8f7; color: #0f172a;
+}
+.frame[data-dashboard-theme] .main { padding: 24px 26px 40px; }
+.frame[data-dashboard-theme] .content > * + * { margin-top: 22px; }
+.frame[data-dashboard-theme] .content :global([data-dashboard-header] h1) { font-size: clamp(34px, 3vw, 42px); color: #0f172a; }
+.frame .topbar,
+.frame .brandArea,
+.frame .sidebar { border-color: #e5eae8; }
+.frame .brand { gap: 12px; font-size: 23px; color: #0f172a; }
+.frame .brand small { color: #526b7c; font-size: 8px; letter-spacing: .08em; }
+.frame .brandMark { width: 40px; height: 40px; border-radius: 11px; background: linear-gradient(140deg, #15958c, #0f766e); font-size: 27px; }
+.frame .brandMark > span { color: #ddf3f0; bottom: 6px; right: 5px; }
+.frame .topbarCaption { padding-left: 26px; color: #475569; }
+.frame .account { color: #0f172a; font-size: 13px; font-weight: 600; }
+.frame .workspaceBar { padding: 20px 14px; }
+.frame .roleSwitch { gap: 6px; padding: 0; border: 0; border-radius: 0; background: none; }
+.frame .roleSwitch button { min-height: 38px; border: 1px solid #e0e7e4; border-radius: 9px; color: #475569; font-size: 11px; }
+.frame .roleSwitch button[aria-pressed="true"] { border-color: #0f766e; background: #effaf7; color: #0b5e58; box-shadow: none; }
+.frame .singleWorkspace { color: #0f766e; }
+.frame .navItem { min-height: 43px; gap: 11px; margin-top: 4px; border-radius: 10px; color: #334155; font-size: 13px; }
+.frame .navItem > i { color: #64748b; font-size: 17px; }
+.frame .navItem:hover { background: #f0f7f5; color: #0f766e; }
+.frame .navActive { background: #ddf3f0; color: #0b5e58; }
+.frame .navActive > i { color: #0f766e; }
+.frame .activeDot { background: #0f766e; }
+.frame .groupTitle { color: #64748b; letter-spacing: .04em; font-size: 9px; }
+.frame .collapseControl { border-color: #e5eae8; color: #64748b; }
+.frame .sidebar :focus-visible,
+.frame .topbar :focus-visible { outline-color: #88c9bf; }
+.notificationLink { position: relative; display: grid; width: 40px; height: 40px; margin-right: 8px; place-items: center; border-right: 1px solid #e5eae8; color: #475569; font-size: 18px; }
+.notificationLink:hover { color: #0f766e; }
+.notificationDot { position: absolute; top: 6px; right: 10px; width: 7px; height: 7px; border: 2px solid #fff; box-sizing: content-box; border-radius: 50%; background: #0f766e; }
+.logisticsDecoration { position: relative; display: flex; height: 105px; align-items: flex-end; justify-content: flex-end; isolation: isolate; overflow: hidden; padding: 0 18px 14px; border-radius: 16px; background: linear-gradient(150deg, #fff 10%, #edf8f5 90%); }
+.logisticsDecoration::before { position: absolute; z-index: -1; inset: 40px -25px -40px; border-radius: 50%; background: #ddf3f0; transform: rotate(-12deg); content: ""; }
+.logisticsDecoration > i { color: #54a69b; font-size: 46px; }
+@media (min-width: 1024px) {
+  .frame .collapsed .extraPanel { display: none; }
+}
+@media (max-width: 1023px) {
+  .frame[data-dashboard-theme] .main { padding: 22px; }
+}
+@media (max-width: 639px) {
+  .frame[data-dashboard-theme] .main { padding: 18px 16px 32px; }
+  .frame .brand { gap: 8px; font-size: 19px; }
+  .frame .brandMark { width: 33px; height: 33px; font-size: 22px; border-radius: 9px; }
+  .frame .brand small { font-size: 7px; }
+  .frame[data-dashboard-theme] .content > * + * { margin-top: 16px; }
+  .notificationLink { width: 34px; margin-right: 0; border: 0; font-size: 17px; }
+}
