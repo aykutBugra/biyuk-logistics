@@ -125,5 +125,19 @@ next-env.d.ts
 
 eski_dizin/.git-local-backup/
 
-# local/internal docs
-/docs/
+# Keep local/internal docs excluded; allow only the approved portfolio captures.
+/docs/*
+!/docs/BiYuk-Screenshots/
+/docs/BiYuk-Screenshots/*
+!/docs/BiYuk-Screenshots/01-talep-genel-bakis.png
+!/docs/BiYuk-Screenshots/02-yeni-talep.png
+!/docs/BiYuk-Screenshots/03-ai-hacim-tahmini.png
+!/docs/BiYuk-Screenshots/04-taleplerim.png
+!/docs/BiYuk-Screenshots/05-gelen-teklifler.png
+!/docs/BiYuk-Screenshots/06-teklif-konusmasi.png
+!/docs/BiYuk-Screenshots/07-nakliye-genel-bakis.png
+!/docs/BiYuk-Screenshots/08-acik-talepler-harita.png
+!/docs/BiYuk-Screenshots/08-acik-talepler.png
+!/docs/BiYuk-Screenshots/09-tekliflerim.png
+!/docs/BiYuk-Screenshots/10-rotalarim.png
+!/docs/BiYuk-Screenshots/11-araclarim.png
