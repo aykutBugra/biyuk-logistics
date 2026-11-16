@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 /* eslint-disable @next/next/no-img-element */
 
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
@@ -135,7 +137,7 @@ function ExistingRequestImagesPanel({
   onDelete: (imageId: string) => void;
 }) {
   return (
-    <section className="app-surface-strong rounded-[1.6rem] border border-slate-200/80 p-4 shadow-sm md:p-5">
+    <section data-compact-panel data-photo-management className="app-surface-strong rounded-[1.6rem] border border-slate-200/80 p-4 shadow-sm md:p-5">
       <div className="space-y-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
@@ -154,8 +156,8 @@ function ExistingRequestImagesPanel({
         ) : null}
 
         {images.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            {images.map((image) => {
+          <div data-photo-list className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            {images.map((image, index) => {
               const isDeleting = deletingImageId === image.id;
               const isSettingPrimary = settingPrimaryImageId === image.id;
               const busy = isDeleting || isSettingPrimary;
@@ -170,7 +172,7 @@ function ExistingRequestImagesPanel({
                   <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 p-2">
                     <img
                       src={image.thumbnailUrl}
-                      alt={`Fotograf ${image.id}`}
+                      alt={`Yük fotoğrafı ${index + 1}`}
                       className="h-full w-full rounded-[0.95rem] object-contain"
                     />
                     {image.isPrimary ? (
@@ -511,7 +513,8 @@ export default function EditTransportRequestPage() {
   }
 
   return (
-    <CustomerTransportRequestsShell
+    <CompactDetailLayout>
+<CustomerTransportRequestsShell
       title="Talebi düzenle"
       description={isLoading ? "Mevcut kayit yukleniyor." : routePreview}
       headerVariant="compact"
@@ -543,7 +546,7 @@ export default function EditTransportRequestPage() {
             </div>
           ) : null}
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_360px] xl:items-start">
+          <div data-compact-columns className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_360px] xl:items-start">
             <div className="space-y-4">
               <RequestFormSection
                 eyebrow="Konum"
@@ -729,5 +732,6 @@ export default function EditTransportRequestPage() {
         </form>
       ) : null}
     </CustomerTransportRequestsShell>
+</CompactDetailLayout>
   );
 }

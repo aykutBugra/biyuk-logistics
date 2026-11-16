@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -117,7 +119,7 @@ function CapacityTile({
   tone?: VehicleStatusTone;
 }) {
   return (
-    <article className="app-surface-strong rounded-[1.2rem] border border-slate-200 p-4 shadow-sm">
+    <article data-compact-panel className="app-surface-strong rounded-[1.2rem] border border-slate-200 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase text-slate-400">{label}</p>
@@ -320,7 +322,8 @@ export default function VehicleDetailPage() {
   const usageRatio = vehicle ? Math.min(calculateVehicleUsageRatio(vehicle), 100) : 0;
 
   return (
-    <CarrierVehiclesShell
+    <CompactDetailLayout>
+<CarrierVehiclesShell
       title="Arac detayi"
       description="Aracin kapasite, kasa ve operasyon durumunu tek ekranda takip et."
       headerVariant="compact"
@@ -336,9 +339,9 @@ export default function VehicleDetailPage() {
       ) : null}
 
       {!isLoading && !errorMessage && vehicle && vehicleStatus ? (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div data-compact-columns className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-4">
-            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
+            <section data-compact-panel className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -407,7 +410,7 @@ export default function VehicleDetailPage() {
               </div>
             ) : null}
 
-            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
+            <section data-compact-panel className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
               <div className="flex flex-col gap-1 border-b border-slate-100 pb-4">
                 <h2 className="text-lg font-black text-slate-950">Arac bilgileri</h2>
                 <p className="text-sm leading-6 text-slate-500">
@@ -446,7 +449,7 @@ export default function VehicleDetailPage() {
           </div>
 
           <aside className="space-y-4">
-            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
+            <section data-compact-panel className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
               <h2 className="text-base font-black text-slate-950">Arac fotografi</h2>
               <div className="mt-4 overflow-hidden rounded-[1.2rem] border border-slate-200 bg-slate-50">
                 {vehicle.vehicleImageUrl ? (
@@ -467,7 +470,7 @@ export default function VehicleDetailPage() {
               </div>
             </section>
 
-            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
+            <section data-compact-panel className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-base font-black text-slate-950">Operasyon ozeti</h2>
@@ -549,5 +552,6 @@ export default function VehicleDetailPage() {
         </div>
       ) : null}
     </CarrierVehiclesShell>
+</CompactDetailLayout>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import RoutesWorkspace from "@/features/carrier-workspace/RoutesWorkspace";
 import { LinkButton } from "@/components/ui";
 
@@ -493,7 +495,8 @@ export default function CarrierRoutesPage() {
   };
 
   return (
-    <CarrierVehiclesShell title="Rotalarım" description="Kayıtlı ana hatlarınızı ve yük eşleşmelerini yönetin."
+    <CompactDetailLayout>
+<CarrierVehiclesShell title="Rotalarım" description="Kayıtlı ana hatlarınızı ve yük eşleşmelerini yönetin."
       headerVariant="compact" motionPreset="operational" cardMotionLimit={6}
       headerActions={<div className="flex flex-wrap items-center gap-3"><InlineHelpTrigger helpKey="routes" /><LinkButton href="/dashboard/rotalarim/yeni" variant="primary"><i className="pi pi-plus" aria-hidden="true" />Yeni rota</LinkButton></div>}>
       <RoutesWorkspace items={sortedRoutes} totalCount={totalRoutes} isEnriching={isEnriching}
@@ -506,5 +509,6 @@ export default function CarrierRoutesPage() {
           { label: "Eşleşen açık talep", value: isEnriching || (totalRoutes > 0 && !Object.values(routeMatchesById).some(Array.isArray)) ? "—" : suitableOpenRequestCount, description: isEnriching ? "Yük eşleşmeleri yükleniyor" : "Alınabilen özetlerde benzersiz talep" },
         ]} />
     </CarrierVehiclesShell>
+</CompactDetailLayout>
   );
 }

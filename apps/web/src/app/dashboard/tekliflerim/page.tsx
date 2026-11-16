@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import OffersWorkspace from "@/features/carrier-workspace/OffersWorkspace";
 
 import { useEffect, useState } from "react";
@@ -500,7 +502,8 @@ export default function MyOffersPage() {
   };
 
   return (
-    <CarrierVehiclesShell title="Tekliflerim" description="Tekliflerinizi, müşteri yanıtlarını ve görüşmelerinizi takip edin."
+    <CompactDetailLayout>
+<CarrierVehiclesShell title="Tekliflerim" description="Tekliflerinizi, müşteri yanıtlarını ve görüşmelerinizi takip edin."
       headerVariant="compact" motionPreset="operational" cardMotionLimit={6}
       headerActions={<div className="flex flex-wrap items-center gap-3"><InlineHelpTrigger helpKey="my-offers" /></div>}>
       <OffersWorkspace items={sortedOffers} totalCount={offers.length} isEnriching={isEnriching}
@@ -513,5 +516,6 @@ export default function MyOffersPage() {
           { label: "Reddedilen / iptal", value: rejectedOfferCount, description: "Olumsuz sonuçlanan teklifler" },
         ]} />
     </CarrierVehiclesShell>
+</CompactDetailLayout>
   );
 }

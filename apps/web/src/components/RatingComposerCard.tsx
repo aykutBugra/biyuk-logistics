@@ -51,7 +51,7 @@ export default function RatingComposerCard({
   };
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+    <div data-compact-panel className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
       {eyebrow ? (
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
           {eyebrow}

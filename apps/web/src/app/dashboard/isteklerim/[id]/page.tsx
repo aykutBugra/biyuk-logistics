@@ -1,9 +1,10 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import CustomerMetricCard from "@/components/CustomerMetricCard";
 import CustomerSectionSurface from "@/components/CustomerSectionSurface";
 import CustomerTransportRequestsShell from "@/components/CustomerTransportRequestsShell";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
@@ -119,7 +120,7 @@ function getJobStatusLabel(status: string): string {
 }
 
 function formatRouteTitle(request: TransportRequestDetail): string {
-  return `${request.baslangicSehri} -> ${request.varisSehri}`;
+  return `${request.baslangicSehri} → ${request.varisSehri}`;
 }
 
 function formatRouteMeta(request: TransportRequestDetail): string | null {
@@ -132,7 +133,7 @@ function formatRouteMeta(request: TransportRequestDetail): string | null {
     return null;
   }
 
-  return `${pickupLabel ?? request.baslangicSehri} -> ${dropoffLabel ?? request.varisSehri}`;
+  return `${pickupLabel ?? request.baslangicSehri} → ${dropoffLabel ?? request.varisSehri}`;
 }
 
 function DetailInfoRow({
@@ -503,7 +504,8 @@ export default function TransportRequestDetailPage() {
   const imageCount = request?.images?.length ?? 0;
 
   return (
-    <CustomerTransportRequestsShell
+    <CompactDetailLayout>
+<CustomerTransportRequestsShell
       title="Talep detayı"
       description={
         request
@@ -525,7 +527,7 @@ export default function TransportRequestDetailPage() {
 
       {!isLoading && !errorMessage && request ? (
         <div className="space-y-4">
-          <section
+          <section data-compact-panel
             data-dashboard-primary
             className="app-surface-strong rounded-[1.6rem] border border-slate-200/80 px-4 py-4 shadow-sm md:px-5 md:py-5"
           >
@@ -580,7 +582,7 @@ export default function TransportRequestDetailPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start xl:w-[300px] xl:flex-col">
+              <div data-overview-meta className="flex flex-col gap-2.5 sm:flex-row sm:items-start xl:w-[300px] xl:flex-col">
                 <div className="flex-1 rounded-[1.1rem] border border-slate-200 bg-slate-50/80 px-3.5 py-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                     Kayit tarihi
@@ -590,55 +592,31 @@ export default function TransportRequestDetailPage() {
                   </p>
                 </div>
 
-                {jobStatusCopy ? (
-                  <StatusCallout
-                    tone="emerald"
-                    title={jobStatusCopy.title}
-                    description={jobStatusCopy.description}
-                  />
-                ) : (
-                  <StatusCallout
-                    tone="slate"
-                    title="Talep su anda teklif topluyor"
-                    description="Duzenleme, silme ve gelen teklifleri inceleme aksiyonlari bu kayit acik kaldigi surece kullanilabilir."
-                  />
-                )}
-              </div>
+
+              <div data-overview-actions>{canMutateRequest ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/dashboard/isteklerim/${request.id}/duzenle`}
+                        className="app-button-secondary"
+                      >
+                        Duzenle
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete()}
+                        disabled={isDeleting}
+                        className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isDeleting ? "Siliniyor..." : "Sil"}
+                      </button>
+                    </div>
+                  ) : undefined}</div></div>
             </div>
           </section>
 
-          <div data-dashboard-stats className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <CustomerMetricCard
-              label="Gelen teklif"
-              value={incomingOffers.length}
-              hint="Bu kayit icin ulasan toplam teklif"
-              tone="blue"
-              icon={<i className="pi pi-inbox text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Fotograf"
-              value={imageCount}
-              hint="Yuke eklenen gorsel adedi"
-              tone="amber"
-              icon={<i className="pi pi-images text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Kayit durumu"
-              value={getRequestStatusLabel(request.durum)}
-              hint="Talebin operasyonel asamasi"
-              tone="emerald"
-              icon={<i className="pi pi-flag text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Tasima modeli"
-              value={request.tekTasimaIstiyor ? "Tek" : "Esnek"}
-              hint="Yukun paylasim tercihi"
-              tone="violet"
-              icon={<i className="pi pi-box text-lg" />}
-            />
-          </div>
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
+
+          <div data-compact-columns className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
             <div className="space-y-4">
               {imageCount > 0 ? (
                 <RequestImageGallery
@@ -654,23 +632,11 @@ export default function TransportRequestDetailPage() {
               )}
 
               <CustomerSectionSurface
-                title="Yuk ve konum ozeti"
-                description="Kargo, tasima ve konum bilgileri."
+                title="Konum ve yük notu"
+                description="Alım ve teslim noktaları ile yük açıklaması."
               >
                 <div className="space-y-3">
-                  <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                    <DetailInfoRow label="Yuk tipi" value={getCargoTypeLabel(request.yukTipi)} />
-                    <DetailInfoRow label="Agirlik" value={formatWeightKg(request.agirlikKg)} />
-                    <DetailInfoRow label="Hacim" value={formatVolumeM3(request.hacimM3)} />
-                    <DetailInfoRow
-                      label="Tercih edilen tasima tarihi"
-                      value={formatTransportDate(request.tasimaTarihi)}
-                    />
-                    <DetailInfoRow
-                      label="Tasima tercihi"
-                      value={request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}
-                    />
-                  </div>
+
 
                   <div className="grid gap-3 lg:grid-cols-2">
                     <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 p-4">
@@ -738,31 +704,12 @@ export default function TransportRequestDetailPage() {
 
             <div className="space-y-4">
               <CustomerSectionSurface
-                title="Talep durumu"
-                description="Kaydin guncel durumu ve kullanabilecegin mevcut aksiyonlar."
-                action={
-                  canMutateRequest ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={`/dashboard/isteklerim/${request.id}/duzenle`}
-                        className="app-button-secondary"
-                      >
-                        Duzenle
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete()}
-                        disabled={isDeleting}
-                        className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isDeleting ? "Siliniyor..." : "Sil"}
-                      </button>
-                    </div>
-                  ) : undefined
-                }
+                title="Süreç özeti"
+                description="Talebin durumu ve teklif akışı."
+
               >
                 <dl className="space-y-3">
-                  <DetailInfoRow label="Kayit" value="Talep kaydi" />
+
                   <DetailInfoRow
                     label="Durum"
                     value={getRequestStatusLabel(request.durum)}
@@ -772,7 +719,7 @@ export default function TransportRequestDetailPage() {
                     value={formatTransportDate(request.tasimaTarihi)}
                   />
                   <DetailInfoRow label="Gelen teklif" value={`${incomingOffers.length}`} />
-                  <DetailInfoRow label="Fotograf" value={`${imageCount}`} />
+
                 </dl>
 
                 <div className="mt-4">
@@ -886,5 +833,6 @@ export default function TransportRequestDetailPage() {
         </div>
       ) : null}
     </CustomerTransportRequestsShell>
+</CompactDetailLayout>
   );
 }

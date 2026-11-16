@@ -23,11 +23,12 @@ export default function CustomerSectionSurface({
 }: CustomerSectionSurfaceProps) {
   return (
     <section
+      data-section-surface
       className={`app-surface-strong rounded-[1.6rem] border border-slate-200 shadow-sm ${
         className ?? ""
       }`.trim()}
     >
-      <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 md:px-6">
+      <div data-section-header className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 md:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -49,7 +50,7 @@ export default function CustomerSectionSurface({
         </div>
       </div>
 
-      <div className={contentClassName ?? "p-5 md:p-6"}>{children}</div>
+      <div data-section-body className={contentClassName ?? "p-5 md:p-6"}>{children}</div>
     </section>
   );
 }

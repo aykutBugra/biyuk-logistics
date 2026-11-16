@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -106,7 +108,7 @@ function MetricTile({
   tone?: "blue" | "emerald" | "amber";
 }) {
   return (
-    <article className="app-surface-strong rounded-[1.2rem] border border-slate-200 p-4 shadow-sm">
+    <article data-compact-panel className="app-surface-strong rounded-[1.2rem] border border-slate-200 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">{label}</p>
@@ -307,11 +309,12 @@ export default function CarrierRouteDetailPage() {
 
   const routeStatus = route ? resolveRouteStatus(route) : null;
   const routeTitle = route
-    ? `${formatLocationLabel(route.baslangicKonumMetni, route.baslangicSehri)} -> ${formatLocationLabel(route.varisKonumMetni, route.varisSehri)}`
+    ? `${formatLocationLabel(route.baslangicKonumMetni, route.baslangicSehri)} → ${formatLocationLabel(route.varisKonumMetni, route.varisSehri)}`
     : "";
 
   return (
-    <CarrierVehiclesShell
+    <CompactDetailLayout>
+<CarrierVehiclesShell
       title="Rota detayi"
       description="Kayitli ana hattin operasyonel ozetini, konum bilgilerini ve aksiyonlarini gor."
       headerVariant="compact"
@@ -327,9 +330,9 @@ export default function CarrierRouteDetailPage() {
       ) : null}
 
       {!isLoading && !errorMessage && route && routeStatus ? (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div data-compact-columns className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-4">
-            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
+            <section data-compact-panel className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -380,7 +383,7 @@ export default function CarrierRouteDetailPage() {
               />
             </div>
 
-            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
+            <section data-compact-panel className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm md:p-6">
               <div className="flex flex-col gap-1 border-b border-slate-100 pb-4">
                 <h2 className="text-lg font-black text-slate-950">Guzergah bilgileri</h2>
                 <p className="text-sm leading-6 text-slate-500">
@@ -430,7 +433,7 @@ export default function CarrierRouteDetailPage() {
           </div>
 
           <aside className="space-y-4">
-            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
+            <section data-compact-panel className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-base font-black text-slate-950">Durum</h2>
@@ -509,5 +512,6 @@ export default function CarrierRouteDetailPage() {
         </div>
       ) : null}
     </CarrierVehiclesShell>
+</CompactDetailLayout>
   );
 }

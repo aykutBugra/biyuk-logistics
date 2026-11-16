@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -262,7 +264,8 @@ export default function EditCarrierRoutePage() {
   }
 
   return (
-    <CarrierVehiclesShell
+    <CompactDetailLayout>
+<CarrierVehiclesShell
       title="Rotayi duzenle"
       description="Mevcut rotanin ana guzergah bilgisini güncelle. Sapma limiti artik Açık Talepler ekraninda seçilir."
       headerVariant="compact"
@@ -278,8 +281,8 @@ export default function EditCarrierRoutePage() {
       ) : null}
 
       {!isLoading && !errorMessage ? (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <form
+        <div data-compact-columns className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <form data-compact-panel
             onSubmit={handleSubmit}
             data-dashboard-form-surface
             className="app-form-surface app-surface-strong space-y-5"
@@ -361,7 +364,7 @@ export default function EditCarrierRoutePage() {
           </form>
 
           <aside className="space-y-4">
-            <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
+            <section data-compact-panel className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
               <h2 className="text-base font-black text-slate-950">Mevcut ozet</h2>
               <dl className="mt-4">
                 <SummaryRow label="Baslangic" value={formatSelectedLocation(baslangicKonum)} />
@@ -405,5 +408,6 @@ export default function EditCarrierRoutePage() {
         </div>
       ) : null}
     </CarrierVehiclesShell>
+</CompactDetailLayout>
   );
 }

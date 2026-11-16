@@ -1,6 +1,9 @@
 "use client";
 
-import type { ChangeEvent, FormEvent } from "react";
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+import conversationStyles from "@/components/offer-conversation.module.css";
+
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -310,20 +313,26 @@ function ChatMessageBubble({ message }: { message: OfferThreadMessage }) {
 
 // ─── message feed ─────────────────────────────────────────────────────────────
 
-function MessageFeed({ thread }: { thread: OfferThreadDetail }) {
+function MessageFeed({
+  thread,
+  children,
+}: {
+  thread: OfferThreadDetail;
+  children: ReactNode;
+}) {
   return (
-    <section className="app-surface-strong rounded-[1.25rem] border border-slate-200 shadow-sm">
-      <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
-        <h2 className="text-sm font-bold text-slate-950">Mesaj akisi</h2>
-        <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
-          {thread.messages.length}
-        </span>
-      </div>
-
-      <div className="p-4">
+    <section data-chat-panel className={conversationStyles.panel}>
+      <header className={conversationStyles.header}>
+        <div>
+          <h2>{getRouteTitle(thread)}</h2>
+          <p>{thread.karsiTarafAdSoyad} · Teklif konuşması</p>
+        </div>
+        <span>{thread.messages.length} hareket</span>
+      </header>
+      <div className={conversationStyles.feed} role="log" aria-label="Konuşma geçmişi">
         {thread.messages.length === 0 ? (
           <p className="text-center text-sm text-slate-400">
-            Henuz mesaj yok.
+            Henüz mesaj yok. İlk mesajınızı aşağıdan gönderebilirsiniz.
           </p>
         ) : (
           <div className="space-y-2">
@@ -337,6 +346,7 @@ function MessageFeed({ thread }: { thread: OfferThreadDetail }) {
           </div>
         )}
       </div>
+      <div className={conversationStyles.composer}>{children}</div>
     </section>
   );
 }
@@ -346,6 +356,7 @@ function MessageFeed({ thread }: { thread: OfferThreadDetail }) {
 type ActiveAction = "counterOffer" | "message" | null;
 
 function NegotiationActionsPanel({
+  placement = "summary",
   thread,
   isActingOffer,
   isSendingMessage,
@@ -367,6 +378,7 @@ function NegotiationActionsPanel({
   onSendCounterOffer,
   onToggleAction,
 }: {
+  placement?: "summary" | "conversation";
   thread: OfferThreadDetail;
   isActingOffer: boolean;
   isSendingMessage: boolean;
@@ -394,6 +406,7 @@ function NegotiationActionsPanel({
     thread.canSendCounterOffer ||
     thread.canSendMessage;
 
+  if (isReadOnly && placement === "summary") return null;
   if (isReadOnly) {
     return (
       <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5">
@@ -406,7 +419,7 @@ function NegotiationActionsPanel({
 
   return (
     <div className="space-y-2">
-      {isAwaitingCounterparty ? (
+      {placement === "summary" && isAwaitingCounterparty ? (
         <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2.5">
           <i className="pi pi-clock mt-0.5 text-xs text-amber-600" />
           <p className="text-xs font-medium text-amber-800">
@@ -417,18 +430,18 @@ function NegotiationActionsPanel({
         </div>
       ) : null}
 
-      {thread.canAcceptOffer ? (
+      {placement === "summary" && thread.canAcceptOffer ? (
         <button
           type="button"
           onClick={() => onDecision("accept")}
           disabled={isActingOffer}
           className="app-button-primary app-pressable w-full justify-center py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isActingOffer ? "Isleniyor..." : "Kabul Et"}
+          {isActingOffer ? "Isleniyor..." : "Kabul et"}
         </button>
       ) : null}
 
-      {thread.canRejectOffer ? (
+      {placement === "summary" && thread.canRejectOffer ? (
         <button
           type="button"
           onClick={() => onDecision("reject")}
@@ -439,7 +452,7 @@ function NegotiationActionsPanel({
         </button>
       ) : null}
 
-      {thread.canSendCounterOffer ? (
+      {placement === "summary" && thread.canSendCounterOffer ? (
         <div className="space-y-2">
           <button
             type="button"
@@ -453,7 +466,7 @@ function NegotiationActionsPanel({
             <i
               className={`text-xs ${activeAction === "counterOffer" ? "pi pi-times" : "pi pi-sync"}`}
             />
-            {activeAction === "counterOffer" ? "Iptal" : "Karsi teklif ver"}
+            {activeAction === "counterOffer" ? "Vazgeç" : "Karşı teklif ver"}
           </button>
 
           {activeAction === "counterOffer" ? (
@@ -483,42 +496,26 @@ function NegotiationActionsPanel({
                 }
                 className="app-pressable inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSendingCounterOffer ? "Gonderiliyor..." : "Gonder"}
+                {isSendingCounterOffer ? "Gönderiliyor…" : "Gönder"}
               </button>
             </form>
           ) : null}
         </div>
       ) : null}
 
-      {thread.canSendMessage ? (
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => onToggleAction("message")}
-            className={`app-pressable inline-flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-              activeAction === "message"
-                ? "border-slate-300 bg-slate-100 text-slate-700"
-                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            <i
-              className={`text-xs ${activeAction === "message" ? "pi pi-times" : "pi pi-comment"}`}
-            />
-            {activeAction === "message" ? "Iptal" : "Mesaj yaz"}
-          </button>
-
-          {activeAction === "message" ? (
-            <form onSubmit={onSendMessage} className="space-y-2">
+      {placement === "conversation" && thread.canSendMessage ? (
+        <form onSubmit={onSendMessage} className="space-y-2">
               <textarea
                 value={messageDraft}
                 onChange={(e) => onMessageDraftChange(e.target.value)}
                 rows={3}
                 className="app-input block w-full resize-none text-sm"
-                placeholder="Mesajini yaz..."
+                aria-label="Mesajınız"
+                placeholder="Mesajınızı yazın…"
               />
               <label className="app-pressable inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                 <i className="pi pi-image text-xs" />
-                Fotograf ekle
+                Fotoğraf ekle
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
@@ -556,14 +553,12 @@ function NegotiationActionsPanel({
                 }
                 className="app-button-primary app-pressable w-full justify-center py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSendingMessage ? "Gonderiliyor..." : "Gonder"}
+                {isSendingMessage ? "Gönderiliyor…" : "Gönder"}
               </button>
-            </form>
-          ) : null}
-        </div>
+        </form>
       ) : null}
 
-      {!hasAnyAction && !isAwaitingCounterparty ? (
+      {placement === "summary" && !hasAnyAction && !isAwaitingCounterparty ? (
         <p className="text-xs text-slate-400">Bekleyen aksiyon yok.</p>
       ) : null}
     </div>
@@ -626,7 +621,7 @@ function NegotiationSidePanel({
   const conversationState = thread.isClosed ? "Kapali" : "Aktif gorusme";
 
   return (
-    <aside className="app-surface-strong rounded-[1.25rem] border border-slate-200 p-4 shadow-sm">
+    <aside data-chat-panel data-compact-panel className="app-surface-strong rounded-[1.25rem] border border-slate-200 p-4 shadow-sm">
       <div className="space-y-4">
         {/* Header: counterpart + route */}
         <div className="flex items-start gap-3">
@@ -709,13 +704,15 @@ function NegotiationSidePanel({
           <div className="space-y-2 border-t border-slate-100 pt-3">
             <div className="rounded-xl border border-blue-200 bg-blue-50/70 px-3 py-2.5">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-700">
-                Nakliye durumu
+                Taşıma durumu
               </p>
               <p className="mt-1 text-sm font-bold text-blue-950">
                 {getShipmentStatusLabel(thread.shipment.durum)}
               </p>
             </div>
-            <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+            {formatDateOnly(thread.shipment.planlananAlimTarihi) !== formatDateOnly(thread.planlananAlimTarihi) ||
+            formatDateOnly(thread.shipment.tahminiTeslimTarihi) !== formatDateOnly(thread.tahminiTeslimTarihi) ? (
+              <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
               <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
                 <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                   Planlanan alim tarihi
@@ -732,7 +729,8 @@ function NegotiationSidePanel({
                   {formatDateOnly(thread.shipment.tahminiTeslimTarihi)}
                 </dd>
               </div>
-            </dl>
+              </dl>
+            ) : null}
             {thread.canMarkDelivered ? (
               <button
                 type="button"
@@ -1180,8 +1178,9 @@ export default function OfferThreadDetailPage() {
   );
 
   return (
-    <DashboardShell
-      title="Teklif konusmasi"
+    <CompactDetailLayout>
+<DashboardShell
+      title="Teklif konuşması"
       description={
         isCarrierWorkspace
           ? "Teklif akisini ve fiyat pazarligini buradan yonet."
@@ -1200,12 +1199,37 @@ export default function OfferThreadDetailPage() {
       ) : null}
 
       {!isLoading && !errorMessage && thread ? (
-        <div
-          data-dashboard-primary
-          className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start"
-        >
-          {/* Right panel — appears first on mobile so users see context/actions immediately */}
-          <div className="xl:sticky xl:top-4 xl:col-start-2 xl:row-start-1">
+        <div data-dashboard-primary className={conversationStyles.layout}>
+          <div className={conversationStyles.conversation}>
+            <MessageFeed thread={thread}>
+              <NegotiationActionsPanel
+                placement="conversation"
+                thread={thread}
+                isActingOffer={isActingOffer}
+                isSendingMessage={isSendingMessage}
+                isSendingCounterOffer={isSendingCounterOffer}
+                messageDraft={messageDraft}
+                messageImages={messageImages}
+                counterOfferAmount={counterOfferAmount}
+                counterOfferNote={counterOfferNote}
+                isAwaitingCounterparty={isAwaitingCounterparty}
+                isReadOnly={isReadOnly}
+                activeAction={activeAction}
+                onDecision={(action) => {
+                  void handleOfferDecision(action);
+                }}
+                onMessageDraftChange={setMessageDraft}
+                onMessageImagesChange={handleMessageImagesChange}
+                onRemoveMessageImage={handleRemoveMessageImage}
+                onCounterAmountChange={setCounterOfferAmount}
+                onCounterNoteChange={setCounterOfferNote}
+                onSendMessage={handleSendMessage}
+                onSendCounterOffer={handleSendCounterOffer}
+                onToggleAction={handleToggleAction}
+              />
+            </MessageFeed>
+          </div>
+          <div className={conversationStyles.summary}>
             <NegotiationSidePanel
               thread={thread}
               backHref={getBackHref(thread)}
@@ -1237,13 +1261,9 @@ export default function OfferThreadDetailPage() {
               onToggleAction={handleToggleAction}
             />
           </div>
-
-          {/* Left column — message feed */}
-          <div className="xl:col-start-1 xl:row-start-1">
-            <MessageFeed thread={thread} />
-          </div>
         </div>
       ) : null}
     </DashboardShell>
+</CompactDetailLayout>
   );
 }

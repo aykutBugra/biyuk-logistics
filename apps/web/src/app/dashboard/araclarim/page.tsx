@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import VehiclesWorkspace from "@/features/carrier-workspace/VehiclesWorkspace";
 import { LinkButton } from "@/components/ui";
 
@@ -358,7 +360,8 @@ export default function MyVehiclesPage() {
   );
 
   return (
-    <CarrierVehiclesShell title="Araçlarım" description="Filonuzu, kapasite durumunu ve rezervasyonları takip edin."
+    <CompactDetailLayout>
+<CarrierVehiclesShell title="Araçlarım" description="Filonuzu, kapasite durumunu ve rezervasyonları takip edin."
       headerVariant="compact" motionPreset="operational" cardMotionLimit={6}
       headerActions={<div className="flex flex-wrap items-center gap-3"><LinkButton href="/dashboard/arac_ekle" variant="primary"><i className="pi pi-plus" aria-hidden="true" />Araç ekle</LinkButton></div>}>
       <VehiclesWorkspace vehicles={vehicleCards} deletingVehicleId={deletingVehicleId} onDelete={(id) => void handleDelete(id)}
@@ -371,5 +374,6 @@ export default function MyVehiclesPage() {
           { label: "Aktif rezervasyon", value: totalActiveReservations, description: "Araçlardaki açık rezervasyonlar" },
         ]} />
     </CarrierVehiclesShell>
+</CompactDetailLayout>
   );
 }

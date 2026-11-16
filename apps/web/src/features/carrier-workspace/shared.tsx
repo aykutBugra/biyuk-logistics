@@ -82,7 +82,7 @@ export function CarrierListLayout<F extends string, S extends string>({
 }) {
   if (isLoading || errorMessage) return <CarrierFeedback isLoading={isLoading} errorMessage={errorMessage} label={loadingLabel} />;
   return (
-    <div className={styles.workspace}>
+    <div className={[styles.workspace, styles.compact].join(" ")}>
       <CarrierMetrics items={metrics} />
       {priorityContent}
       <Panel className={styles.listPanel} title={title} icon={/araç/i.test(title) ? "pi pi-truck" : /rota/i.test(title) ? "pi pi-map" : /nakliye/i.test(title) ? "pi pi-truck" : "pi pi-send"} description={description} action={

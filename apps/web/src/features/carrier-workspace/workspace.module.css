@@ -1,4 +1,23 @@
 .workspace { display: grid; gap: 20px; min-width: 0; }
+.compact { gap: 16px; }
+.compact .list { padding-inline: 18px; }
+.compact .row, .compact .vehicleRow { padding-block: 15px; }
+.compact .rowTop { gap: 12px; flex-wrap: wrap; }
+.compact .routeHeading { flex: 1 1 240px; }
+.compact .routeHeading h3 { margin-top: 6px; white-space: normal; overflow-wrap: break-word; line-height: 1.45; }
+.compact .price { padding-top: 0; margin-left: auto; font-size: 20px; }
+.compact .offerContent { margin-top: 10px; gap: 12px; }
+.compact .dates { gap: 8px 18px; }
+.compact .rowFooter { margin-top: 10px; gap: 10px; }
+.compact .note { margin-top: 8px; line-height: 1.65; }
+.compact .shipmentPlanning { padding: 12px; gap: 14px; }
+.compact .routeFacts { padding: 10px 12px; gap: 8px 16px; }
+.compact .vehicleCapacity dl { gap: 12px; }
+.compact .metrics > div > div, .compact .metrics > div:has(> div:nth-child(5)) > div { padding: 13px 16px; }
+.compact .metrics :global([class*="metricHeading"]) { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.compact .metrics :global([class*="metricLabel"]) { min-width: 0; max-width: none; overflow-wrap: anywhere; }
+.compact .metrics :global([class*="metricIcon"]) { position: static; flex: 0 0 32px; width: 32px; height: 32px; font-size: 15px; }
+.compact .metrics :global([class*="metricValue"]) { font-size: 23px; }
 .metrics { min-width: 0; }
 .metrics :global([class*="metricValue"]) { font-size: 25px; }
 .metrics > div > div { padding-inline: 18px; }

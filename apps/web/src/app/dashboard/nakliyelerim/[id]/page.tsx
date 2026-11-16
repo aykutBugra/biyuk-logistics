@@ -1,11 +1,12 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CarrierVehiclesShell from "@/components/CarrierVehiclesShell";
 import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
-import CustomerMetricCard from "@/components/CustomerMetricCard";
 import CustomerSectionSurface from "@/components/CustomerSectionSurface";
 import DashboardPageSkeleton from "@/components/DashboardPageSkeleton";
 import RatingComposerCard from "@/components/RatingComposerCard";
@@ -449,11 +450,12 @@ export default function CarrierJobDetailPage() {
   }
 
   const statusCopy = job ? getJobStatusCopy(job.durum) : null;
-  const routeTitle = job ? `${job.baslangicSehri} -> ${job.varisSehri}` : "";
+  const routeTitle = job ? `${job.baslangicSehri} → ${job.varisSehri}` : "";
 
   return (
-    <CarrierVehiclesShell
-      title="Nakliye detayi"
+    <CompactDetailLayout>
+<CarrierVehiclesShell
+      title="Taşıma detayı"
       description="Operasyon durumunu, taraf bilgilerini ve teslim akisindaki adimlari tek ekranda yonet."
       headerVariant="compact"
       motionPreset="operational"
@@ -470,7 +472,7 @@ export default function CarrierJobDetailPage() {
 
       {!isLoading && !errorMessage && job ? (
         <div className="space-y-6">
-          <section
+          <section data-compact-panel
             data-dashboard-primary
             className="app-surface-strong rounded-[1.85rem] border border-slate-200/80 px-5 py-5 shadow-sm md:px-6 md:py-6"
           >
@@ -516,12 +518,12 @@ export default function CarrierJobDetailPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:w-[340px] xl:grid-cols-1">
+              <div data-overview-meta className="grid gap-3 sm:grid-cols-2 xl:w-[340px] xl:grid-cols-1">
                 <div className="rounded-[1.25rem] border border-emerald-200 bg-emerald-50/80 px-4 py-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
                     Anlasilan fiyat
                   </p>
-                  <p className="mt-2 text-2xl font-black tracking-tight text-emerald-800">
+                  <p data-compact-price className="mt-2 text-2xl font-black tracking-tight text-emerald-800">
                     {formatCurrency(job.anlasilanFiyat)}
                   </p>
                 </div>
@@ -564,38 +566,9 @@ export default function CarrierJobDetailPage() {
             </div>
           </section>
 
-          <div data-dashboard-stats className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <CustomerMetricCard
-              label="Durum"
-              value={getJobStatusLabel(job.durum)}
-              hint="Aktif operasyon asamasi"
-              tone="blue"
-              icon={<i className="pi pi-sync text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Arac"
-              value={job.vehicle.plaka}
-              hint="Operasyona atanan plaka"
-              tone="violet"
-              icon={<i className="pi pi-truck text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Musteri"
-              value={job.customer.username}
-              hint="Operasyonun karsi tarafi"
-              tone="amber"
-              icon={<i className="pi pi-user text-lg" />}
-            />
-            <CustomerMetricCard
-              label="Tasima modeli"
-              value={job.tekTasimaIstiyor ? "Tek" : "Esnek"}
-              hint="Yuk paylasim tercihi"
-              tone="emerald"
-              icon={<i className="pi pi-box text-lg" />}
-            />
-          </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
+
+          <div data-compact-columns className="grid gap-6 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
             <div className="space-y-6">
               <CustomerSectionSurface
                 title="Operasyon zaman cizelgesi"
@@ -820,5 +793,6 @@ export default function CarrierJobDetailPage() {
         </div>
       ) : null}
     </CarrierVehiclesShell>
+</CompactDetailLayout>
   );
 }

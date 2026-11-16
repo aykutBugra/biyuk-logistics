@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import type { ChangeEvent, FormEvent } from "react";
 import {
   Suspense,
@@ -927,8 +929,10 @@ function OpenTransportRequestsPageContent() {
 // Suspense fallback ile searchParams kullanan client icerigi sarilir.
 export default function OpenTransportRequestsPage() {
   return (
-    <Suspense fallback={<OpenTransportRequestsPageFallback />}>
+    <CompactDetailLayout>
+<Suspense fallback={<OpenTransportRequestsPageFallback />}>
       <OpenTransportRequestsPageContent />
     </Suspense>
+</CompactDetailLayout>
   );
 }

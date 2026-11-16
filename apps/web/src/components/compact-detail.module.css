@@ -1,0 +1,69 @@
+.scope { min-width: 0; }
+.scope :global(main) { padding: 24px 28px 36px; }
+.scope :global([data-dashboard-route-surface]) { max-width: 1320px; }
+.scope :global([data-dashboard-route-surface] > * + *) { margin-top: 18px; }
+.scope[data-compact-details] :global(main [data-dashboard-route-surface] [data-dashboard-header] h1) { font-size: 25px; line-height: 1.25; }
+.scope :global([data-dashboard-header] p) { max-width: 76ch; font-size: 12px; line-height: 1.6; }
+.scope :global(section[data-dashboard-primary]) { padding: 16px 18px; border-radius: 14px; border-color: #e5eae8; box-shadow: none; }
+.scope :global(section[data-dashboard-primary] h1), .scope :global(section[data-dashboard-primary] h2) { font-size: 23px; line-height: 1.35; overflow-wrap: anywhere; }
+.scope :global(section[data-dashboard-primary] p) { font-size: 12px; line-height: 1.6; }
+.scope :global([data-section-surface]) { min-width: 0; border-radius: 14px; border-color: #e5eae8; box-shadow: none; }
+.scope :global([data-section-header]) { padding: 12px 16px; gap: 8px; }
+.scope :global([data-section-header] h2) { font-size: 17px; line-height: 1.4; font-weight: 650; }
+.scope :global([data-section-header] p) { margin-top: 3px; font-size: 12px; line-height: 1.5; }
+.scope :global([data-section-body]) { padding: 14px 16px; }
+.scope :global([data-compact-panel]:not([data-chat-panel])) { min-width: 0; padding: 16px; border-radius: 14px; border-color: #e5eae8; box-shadow: none; }
+.scope :global([data-section-body] dl > div) { min-width: 0; border: 0; border-bottom: 1px solid #edf1ef; border-radius: 0; background: transparent; padding: 7px 0; }
+.scope :global(dt) { font-size: 11px; line-height: 1.5; }
+.scope :global(dd) { min-width: 0; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.scope :global([data-compact-metric]) { min-width: 0; padding: 12px 14px; border-radius: 12px; box-shadow: none; }
+.scope :global([data-compact-metric-value]) { font-size: 22px; overflow-wrap: anywhere; }
+.scope :global([data-dashboard-stats]) { gap: 10px; }
+.scope :global(main .space-y-6 > :not([hidden]) ~ :not([hidden])) { margin-top: 16px; }
+.scope :global(main .space-y-4 > :not([hidden]) ~ :not([hidden])) { margin-top: 12px; }
+.scope :global(main .gap-6) { gap: 16px; }
+.scope :global(main .app-button-primary), .scope :global(main button.bg-emerald-600), .scope :global(main button.bg-blue-600), .scope :global(main a.bg-blue-600) { background: #0f766e; border-color: #0f766e; color: #fff; box-shadow: none; }
+.scope :global(main .app-button-primary:hover), .scope :global(main button.bg-emerald-600:hover), .scope :global(main button.bg-blue-600:hover), .scope :global(main a.bg-blue-600:hover) { background: #0b5e58; }
+.scope :global(main .app-button-primary), .scope :global(main .app-button-secondary) { min-height: 38px; padding: 8px 12px; font-size: 12px; }
+.scope :global(main button:focus-visible), .scope :global(main a:focus-visible), .scope :global(main summary:focus-visible) { outline: 3px solid #8bc9c1; outline-offset: 3px; }
+.scope :global(main .app-input) { min-width: 0; max-width: 100%; min-height: 40px; padding: 9px 11px; border-radius: 9px; font-size: 13px; }
+.scope :global(main textarea.app-input) { min-height: 80px; }
+.scope :global([data-dashboard-form-surface]) { min-width: 0; padding: 16px; border-radius: 14px; box-shadow: none; }
+.scope :global(form[data-dashboard-form-surface]:not(.app-form-surface)) { padding: 0; border: 0; background: transparent; }
+.scope :global(section[data-dashboard-form-section]) { padding: 14px 16px; border-radius: 14px; box-shadow: none; }
+.scope :global(section[data-dashboard-form-section] > div:first-child) { margin-bottom: 12px; }
+.scope :global(section[data-dashboard-form-section] h2) { font-size: 17px; line-height: 1.4; }
+.scope :global(section[data-dashboard-form-section] h2 + p) { margin-top: 3px; font-size: 12px; line-height: 1.5; }
+.scope :global([data-photo-list]) { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; }
+.scope :global([data-photo-list] article) { display: flex; min-width: 0; align-items: center; border-radius: 10px; box-shadow: none; }
+.scope :global([data-photo-list] article > div:first-child) { flex: 0 0 82px; height: 76px; padding: 5px; }
+.scope :global([data-photo-list] article > div:first-child > span) { top: 4px; left: 4px; padding: 2px 4px; font-size: 8px; background: #0f766e; }
+.scope :global([data-photo-list] article > div:last-child) { min-width: 0; padding: 8px; gap: 6px; }
+.scope :global([data-photo-list] article button) { min-height: 36px; padding: 7px 8px; font-size: 11px; }
+.scope :global([data-photo-management] h2) { margin-top: 4px; font-size: 17px; }
+.scope :global([data-photo-management] h2 + p) { font-size: 12px; line-height: 1.5; }
+.scope :global([data-compact-columns]) { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; }
+.scope :global([data-compact-columns] > *) { min-width: 0; }
+.scope :global([data-overview-meta]) { min-width: 0; align-items: center; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.scope :global([data-overview-meta] > div:last-child) { grid-column: 1 / -1; }
+.scope :global([data-overview-meta] > div) { padding: 9px 11px; border-radius: 10px; }
+.scope :global([data-overview-meta] > div > p:first-child) { font-size: 10px; letter-spacing: .08em; }
+.scope :global([data-overview-meta] > div > p + p) { margin-top: 4px; }
+.scope :global([data-overview-meta] [data-compact-price]) { font-size: clamp(16px,1.2vw,18px); font-weight: 700; line-height: 1.3; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.scope :global([data-overview-actions]) { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.scope :global([data-compact-capacity]) { padding: 10px 12px; border: 1px solid #e5eae8; border-radius: 10px; background: #f8faf9; }
+.scope :global([data-compact-capacity] summary) { cursor: pointer; color: #0f766e; font-size: 12px; font-weight: 600; }
+.scope :global([data-compact-capacity] summary + div) { margin-top: 10px; }
+.scope :global([data-compact-capacity] dl) { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+@media (min-width: 1100px) {
+  .scope :global([data-compact-columns]) { grid-template-columns: minmax(0,1fr) minmax(300px,360px); }
+}
+@media (max-width: 639px) {
+  .scope :global(main) { padding: 18px 14px 28px; }
+  .scope[data-compact-details] :global(main [data-dashboard-route-surface] [data-dashboard-header] h1) { font-size: 23px; }
+  .scope :global(section[data-dashboard-primary]) { padding: 14px; }
+  .scope :global(section[data-dashboard-primary] h1), .scope :global(section[data-dashboard-primary] h2) { font-size: 21px; }
+  .scope :global([data-section-header]), .scope :global([data-section-body]) { padding: 12px 14px; }
+  .scope :global([data-section-header] > div) { gap: 8px; }
+  .scope :global(main .app-input) { font-size: 16px; min-height: 44px; }
+}

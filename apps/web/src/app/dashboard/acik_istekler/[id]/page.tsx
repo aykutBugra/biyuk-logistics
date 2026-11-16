@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import Link from "next/link";
 import { Suspense, use, useEffect, useState } from "react";
@@ -770,10 +772,10 @@ function OpenTransportRequestDetailPageContent({
   const backHref = request?.hasExistingOffer
     ? "/dashboard/tekliflerim"
     : buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm);
-  const routeTitle = request ? `${request.baslangicSehri} -> ${request.varisSehri}` : "";
+  const routeTitle = request ? `${request.baslangicSehri} → ${request.varisSehri}` : "";
   const routeMeta =
     request &&
-    `${formatLocationLabel(request.baslangicKonumMetni, request.baslangicSehri)} -> ${formatLocationLabel(
+    `${formatLocationLabel(request.baslangicKonumMetni, request.baslangicSehri)} → ${formatLocationLabel(
       request.varisKonumMetni,
       request.varisSehri
     )}`;
@@ -801,7 +803,7 @@ function OpenTransportRequestDetailPageContent({
 
       {!isLoading && !errorMessage && request ? (
         <div className="space-y-4">
-          <section
+          <section data-compact-panel
             data-dashboard-primary
             className="app-surface-strong rounded-[1.6rem] border border-slate-200/80 px-4 py-4 shadow-sm md:px-5 md:py-5"
           >
@@ -841,20 +843,16 @@ function OpenTransportRequestDetailPageContent({
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                     {formatVolumeM3(request.hacimM3)}
                   </span>
-                  {request.tasimaTarihi ? (
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      Tercih: {formatPlannedDate(request.tasimaTarihi)}
-                    </span>
-                  ) : null}
-                  {request.tekTasimaIstiyor ? (
-                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                      Tek tasima
-                    </span>
-                  ) : null}
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    Tercih: {request.tasimaTarihi ? formatPlannedDate(request.tasimaTarihi) : "Belirtilmedi"}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    {request.tekTasimaIstiyor ? "Tek taşıma" : "Paylaşımlı olabilir"}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start xl:w-[300px] xl:flex-col">
+              <div data-overview-meta className="flex flex-col gap-2.5 sm:flex-row sm:items-start xl:w-[300px] xl:flex-col">
                 <div className="flex-1 rounded-[1.1rem] border border-slate-200 bg-slate-50/80 px-3.5 py-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                     Kayit tarihi
@@ -923,7 +921,7 @@ function OpenTransportRequestDetailPageContent({
             />
             </div>
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
+          <div data-compact-columns className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_360px] xl:items-start">
             <div className="space-y-4">
               {request.images && request.images.length > 0 ? (
                 <RequestImageGallery
@@ -939,27 +937,11 @@ function OpenTransportRequestDetailPageContent({
               )}
 
               <CustomerSectionSurface
-                title="Yuk ve konum ozeti"
-                description="Kargo, tasima ve konum bilgileri."
+                title="Konum bilgileri"
+                description="Alım ve teslim noktalarının kayıtlı bilgileri."
               >
                 <div className="space-y-3">
-                  <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                    <DetailInfoRow label="Yuk tipi" value={getCargoTypeLabel(request.yukTipi)} />
-                    <DetailInfoRow label="Agirlik" value={formatWeightKg(request.agirlikKg)} />
-                    <DetailInfoRow label="Hacim" value={formatVolumeM3(request.hacimM3)} />
-                    <DetailInfoRow
-                      label="Tercih edilen tasima tarihi"
-                      value={
-                        request.tasimaTarihi
-                          ? formatPlannedDate(request.tasimaTarihi)
-                          : "Belirtilmedi"
-                      }
-                    />
-                    <DetailInfoRow
-                      label="Tasima modeli"
-                      value={request.tekTasimaIstiyor ? "Tek tasima" : "Paylasimli olabilir"}
-                    />
-          </div>
+
                   <div className="grid gap-3 lg:grid-cols-2">
                     <DetailAddressCard
                       title="Baslangic"
@@ -1079,11 +1061,11 @@ function OpenTransportRequestDetailPageContent({
                         isOpen={Boolean(selectedVehicle && selectedVehicleCapacitySummary)}
                       >
               {selectedVehicle && selectedVehicleCapacitySummary ? (
-                          <div
-                            data-dashboard-form-conditional
-                            className="grid gap-4 rounded-[1.2rem] border border-slate-200 bg-slate-50/80 p-4"
-                          >
-                            <div className="grid gap-3">
+                          <div data-dashboard-form-conditional className="grid gap-3">
+                            <details data-compact-capacity>
+                              <summary>Araç kapasitesi ve yük uyumu</summary>
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="grid gap-3">
                               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                       Arac kapasite ozeti
                     </p>
@@ -1111,9 +1093,8 @@ function OpenTransportRequestDetailPageContent({
                             selectedVehicleCapacitySummary.kalanHacimM3
                           )}
                               />
-                  </div>
-
-                            <div className="grid gap-3">
+                                </div>
+                                <div className="grid gap-3">
                               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                       Bu yuk eklendiginde
                     </p>
@@ -1133,8 +1114,9 @@ function OpenTransportRequestDetailPageContent({
                                 label="Teorik sonrasi hacim"
                                 value={formatVolumeM3(teorikKalanHacimM3)}
                               />
-                  </div>
-
+                                </div>
+                              </div>
+                            </details>
                             <div className="space-y-3">
                     {showsWeightOverflowWarning ? (
                                 <InfoBanner tone="rose">
@@ -1164,8 +1146,8 @@ function OpenTransportRequestDetailPageContent({
                         Bu ozet yalnizca kayitli agirlik ve hacim verilerine dayanir;
                                 fiziksel yerlesim ve istif uygunlugu ayrica kontrol edilmelidir.
                               </InfoBanner>
-                  </div>
-                </div>
+                            </div>
+                          </div>
               ) : null}
                       </MotionCollapse>
 
@@ -1269,8 +1251,10 @@ export default function OpenTransportRequestDetailPage({
   params: Promise<{ id: string }>;
 }) {
   return (
-    <Suspense fallback={<OpenTransportRequestDetailPageFallback />}>
+    <CompactDetailLayout>
+<Suspense fallback={<OpenTransportRequestDetailPageFallback />}>
       <OpenTransportRequestDetailPageContent params={params} />
     </Suspense>
+</CompactDetailLayout>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import type { ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
 import { useState } from "react";
@@ -110,14 +112,15 @@ export default function CreateVehiclePage() {
   }
 
   return (
-    <CarrierVehiclesShell
+    <CompactDetailLayout>
+<CarrierVehiclesShell
       title="Yeni arac ekle"
       description="Arac bilgilerini girerek filonuza yeni bir kayit olusturun."
       headerVariant="compact"
       motionPreset="form"
     >
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <form
+      <div data-compact-columns className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <form data-compact-panel
           onSubmit={handleSubmit}
           data-dashboard-form-surface
           className="app-form-surface app-surface-strong space-y-5"
@@ -153,7 +156,7 @@ export default function CreateVehiclePage() {
         </form>
 
         <aside className="space-y-4">
-          <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
+          <section data-compact-panel className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
             <h2 className="text-base font-black text-slate-950">Kayit ozeti</h2>
             <dl className="mt-4">
               <SummaryRow label="Plaka" value={formatFormValue(form.plaka)} />
@@ -198,5 +201,6 @@ export default function CreateVehiclePage() {
         </aside>
       </div>
     </CarrierVehiclesShell>
+</CompactDetailLayout>
   );
 }

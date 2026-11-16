@@ -16,6 +16,7 @@ export default function SummaryStatCard({
 
   return (
     <div
+      data-compact-metric
       className={`app-surface-strong border-slate-200 transition hover:-translate-y-0.5 ${
         isTight
           ? "rounded-[0.95rem] p-3.5"
@@ -28,6 +29,7 @@ export default function SummaryStatCard({
         {label}
       </p>
       <p
+        data-compact-metric-value
         className={`mt-1.5 font-black tracking-tight text-slate-950 ${
           isTight ? "text-[2rem]" : isCompact ? "text-3xl" : "text-4xl"
         }`}

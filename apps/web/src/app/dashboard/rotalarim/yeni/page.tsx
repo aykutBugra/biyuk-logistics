@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import Link from "next/link";
 import { useState } from "react";
@@ -152,14 +154,15 @@ export default function CreateCarrierRoutePage() {
   }
 
   return (
-    <CarrierVehiclesShell
+    <CompactDetailLayout>
+<CarrierVehiclesShell
       title="Yeni rota tanimla"
       description="Planladigin ana hatti kaydet. Açık Talepler ekraninda bu rotayi secip sapma limitini ayrica belirleyeceksin."
       headerVariant="compact"
       motionPreset="form"
     >
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <form
+      <div data-compact-columns className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <form data-compact-panel
           onSubmit={handleSubmit}
           data-dashboard-form-surface
           className="app-form-surface app-surface-strong space-y-5"
@@ -241,7 +244,7 @@ export default function CreateCarrierRoutePage() {
         </form>
 
         <aside className="space-y-4">
-          <section className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
+          <section data-compact-panel className="app-surface-strong rounded-[1.35rem] border border-slate-200 p-5 shadow-sm">
             <h2 className="text-base font-black text-slate-950">Kayit ozeti</h2>
             <dl className="mt-4">
               <SummaryRow label="Baslangic" value={formatSelectedLocation(baslangicKonum)} />
@@ -275,5 +278,6 @@ export default function CreateCarrierRoutePage() {
         </aside>
       </div>
     </CarrierVehiclesShell>
+</CompactDetailLayout>
   );
 }

@@ -127,6 +127,9 @@
 .mapColumn :global([class~="h-[300px]"]) { height: 400px; }
 .mapColumn h2 { color: #0f172a; font-size: 17px; font-weight: 700; }
 .requestCard { padding: 23px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.requestCard { padding-block: 16px; }
+.requestCard .requestTopline { margin-bottom: 10px; }
+.requestCard .requestFooter { margin-top: 12px; padding-top: 11px; }
 .requestCard + .requestCard { border-top: 1px solid #e5eae8; }
 .requestCard:hover { background: #fafcfb; }
 .requestSelected { background: #f1f9f5; box-shadow: inset 3px 0 #0f766e; padding-inline: 16px; }

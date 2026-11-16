@@ -1,5 +1,7 @@
 "use client";
 
+import CompactDetailLayout from "@/components/CompactDetailLayout";
+
 import ShipmentsWorkspace from "@/features/carrier-workspace/ShipmentsWorkspace";
 
 import { useEffect, useState } from "react";
@@ -584,7 +586,8 @@ export default function MyJobsPage() {
   };
 
   return (
-    <CarrierVehiclesShell title="Taşımalarım" description="Taşıma durumlarını, tarihleri ve teslimat adımlarını yönetin."
+    <CompactDetailLayout>
+<CarrierVehiclesShell title="Taşımalarım" description="Taşıma durumlarını, tarihleri ve teslimat adımlarını yönetin."
       headerVariant="compact" motionPreset="operational" cardMotionLimit={6}
       headerActions={<div className="flex flex-wrap items-center gap-3"><InlineHelpTrigger helpKey="my-shipments" /></div>}>
       <ShipmentsWorkspace items={sortedShipments} totalCount={jobs.length} isEnriching={isEnriching} todayTasks={todayTasks}
@@ -597,5 +600,6 @@ export default function MyJobsPage() {
           { label: "Tamamlanan", value: completedJobCount, description: "Tamamlanan taşımalar" },
         ]} />
     </CarrierVehiclesShell>
+</CompactDetailLayout>
   );
 }

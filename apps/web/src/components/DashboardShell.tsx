@@ -42,7 +42,7 @@ const PREMIUM_WORKSPACE_PATHS = new Set([
   "/dashboard/isteklerim", "/dashboard/gelen_teklifler", "/dashboard/konusmalar",
   "/dashboard/puanlarim", "/dashboard/bildirimler", "/dashboard/profil", "/dashboard/istek_ekle",
   "/dashboard/acik_istekler", "/dashboard/tekliflerim", "/dashboard/nakliyelerim",
-  "/dashboard/rotalarim", "/dashboard/araclarim",
+  "/dashboard/rotalarim", "/dashboard/araclarim", "/dashboard/arac_ekle",
 ]);
 
 function normalizePathname(pathname: string): string {
@@ -193,7 +193,7 @@ export default function DashboardShell({
       pageEyebrow={pageEyebrow}
       headerActions={headerActions}
       pageHeader={pageHeader}
-      visualTheme={visualTheme ?? (PREMIUM_WORKSPACE_PATHS.has(normalizePathname(pathname)) ? "petrol" : undefined)}
+      visualTheme={visualTheme ?? ([...PREMIUM_WORKSPACE_PATHS].some((base) => normalizePathname(pathname) === base || normalizePathname(pathname).startsWith(base + "/")) ? "petrol" : undefined)}
       unreadNotificationCount={unreadNotificationCount}
       headerVariant={headerVariant}
       sidebarVariant={resolvedSidebarVariant}

@@ -35,7 +35,7 @@ export default function VehiclesWorkspace({
     { id: "single-trip", label: "Tek taşıma" }, { id: "missing-data", label: "Eksik bilgi" },
   ];
   return (
-    <div className={styles.workspace}>
+    <div className={[styles.workspace, styles.compact].join(" ")}>
       <CarrierMetrics items={metrics} />
       <Panel className={styles.listPanel} title="Filo kayıtları" description="Araçlarınızın tanımlı kapasitesini ve mevcut rezervasyonlarını takip edin.">
         <FilterBar filters={filters} selected={filter} onSelect={setFilter} query={query} onQueryChange={setQuery} searchLabel="Araçlarda ara" placeholder="Plaka, marka, model veya araç türü ara…" />
