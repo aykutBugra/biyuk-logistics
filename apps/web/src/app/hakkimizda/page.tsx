@@ -20,8 +20,8 @@ export default function AboutPage() {
             </p>
             <p>
               Bu urunun odagi; gereksiz karmasa olmadan ilan, teklif, arac ve
-              anlasilan is akisini tek yerde toplamak. Mevcut fazda istek
-              olusturma, arac yonetimi, teklif verme ve kabul edilen tekliften
+              anlasilan is akisini tek yerde toplamak. Mevcut fazda talep
+              oluşturma, arac yonetimi, teklif verme ve kabul edilen tekliften
               nakliye kaydi acma akisi destekleniyor.
             </p>
             <p>

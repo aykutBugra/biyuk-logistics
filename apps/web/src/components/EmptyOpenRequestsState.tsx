@@ -17,19 +17,19 @@ const contentMap: Record<
 > = {
   "no-results": {
     eyebrow: "Keşif",
-    title: "Açık istek bulunmuyor",
+    title: "Açık talep bulunmuyor",
     description:
       "Şu anda teklif almaya açık bir taşıma talebi bulunmuyor. Daha sonra tekrar kontrol edebilirsiniz.",
   },
   "no-filter-match": {
     eyebrow: "Filtre sonucu",
-    title: "Filtrelere uyan istek yok",
+    title: "Filtrelere uyan talep yok",
     description:
       "Seçili filtrelere uygun sonuç bulunamadı. Şehir, hacim veya yük filtrelerini genişletmeyi deneyin.",
   },
   "no-route-match": {
     eyebrow: "Rota uyumu",
-    title: "Seçili rotaya uygun istek yok",
+    title: "Seçili rotaya uygun talep yok",
     description:
       "Mevcut rota ve sapma aralığıyla eşleşen talep bulunamadı. Sapma sınırını genişletebilir veya farklı bir rota seçebilirsiniz.",
   },

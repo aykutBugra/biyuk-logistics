@@ -103,7 +103,7 @@ export default function CustomerRecentRequestsPanel({
           href="/dashboard/isteklerim"
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
         >
-          Tum istekleri gor
+          Tum talepleri gor
         </Link>
       </div>
 
@@ -113,11 +113,11 @@ export default function CustomerRecentRequestsPanel({
             Henuz tasima talebi olusturmadin.
           </p>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Ilk istegini olusturdugunda burada en guncel taleplerini, durumlarini ve
+            Ilk talebini oluşturdugunda burada en güncel taleplerini, durumlarini ve
             gelen teklifleri goreceksin.
           </p>
           <Link href="/dashboard/istek_ekle" className="app-button-primary mt-5">
-            Yeni istek olustur
+            Yeni talep oluştur
           </Link>
         </div>
       ) : (
@@ -138,7 +138,7 @@ export default function CustomerRecentRequestsPanel({
                       <>
                         <img
                           src={request.primaryImage.thumbnailUrl}
-                          alt="Tasima istegi fotografi"
+                          alt="Taşıma talebi fotoğrafi"
                           className="h-full w-full object-cover"
                         />
                         {request.imageCount && request.imageCount > 1 ? (

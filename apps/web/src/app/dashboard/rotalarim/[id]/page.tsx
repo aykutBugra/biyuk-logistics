@@ -466,7 +466,7 @@ export default function CarrierRouteDetailPage() {
                 >
                   <span className="flex items-center gap-2">
                     <i className="pi pi-search text-xs text-slate-400" />
-                    Acik istekleri kesfet
+                    Açık talepleri kesfet
                   </span>
                   <i className="pi pi-angle-right text-xs text-slate-400" />
                 </Link>
@@ -501,7 +501,7 @@ export default function CarrierRouteDetailPage() {
                 </span>
                 <p className="text-sm leading-6 text-slate-600">
                   Sapma limiti bu detay ekraninda degistirilmez. Rota secimiyle
-                  kesif yapmak icin Acik Istekler ekranini kullan.
+                  kesif yapmak için Açık Talepler ekranini kullan.
                 </p>
               </div>
             </section>

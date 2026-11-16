@@ -3,6 +3,7 @@
 import CustomerWorkspaceSignalPill from "@/components/CustomerWorkspaceSignalPill";
 import type { NotificationListItem } from "@/lib/api/notifications";
 import { useOperationalCardMotion } from "@/lib/motion/useOperationalCardMotion";
+import { getNotificationCopy } from "@/lib/ui/terminology";
 
 type CustomerNotificationCardProps = {
   notification: NotificationListItem;
@@ -32,7 +33,7 @@ function resolveOpenLabel(hedefUrl: string): string {
   }
 
   if (hedefUrl.startsWith("/dashboard/isteklerim/")) {
-    return "Istek detayina git";
+    return "Talep detayına git";
   }
 
   if (hedefUrl.startsWith("/dashboard/nakliyelerim/")) {
@@ -137,6 +138,7 @@ export default function CustomerNotificationCard({
 }: CustomerNotificationCardProps) {
   const { elementRef, motionProps } = useOperationalCardMotion<HTMLElement>();
   const visualModel = resolveVisualModel(notification.tip);
+  const copy = getNotificationCopy(notification);
   const openLabel = notification.hedefUrl
     ? resolveOpenLabel(notification.hedefUrl)
     : null;
@@ -172,11 +174,11 @@ export default function CustomerNotificationCard({
             </div>
 
             <h3 className="mt-3 text-[1.45rem] font-black tracking-tight text-slate-950">
-              {notification.baslik}
+              {copy.title}
             </h3>
 
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
-              {notification.mesaj}
+              {copy.message}
             </p>
           </div>
         </div>

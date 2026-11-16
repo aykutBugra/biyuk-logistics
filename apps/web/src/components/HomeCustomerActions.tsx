@@ -96,7 +96,7 @@ export default function HomeCustomerActions() {
     content = (
       <div className="grid gap-5 lg:grid-cols-2">
         <LaunchpadSurface
-          eyebrow="Musteri girisi"
+          eyebrow="Talep Paneli"
           title="Yuk gondermek istiyorum"
           description="Tasima talebini olustur, teklifleri karsilastir ve anlasilan isi ayni panelden takip et."
           actions={
@@ -107,14 +107,14 @@ export default function HomeCustomerActions() {
           }
         />
         <LaunchpadSurface
-          eyebrow="Nakliyeci girisi"
+          eyebrow="Nakliye Paneli"
           title="Tasima isi bulmak istiyorum"
-          description="Acik istekleri incele, uygun teklifleri ver ve anlasilan nakliyeleri operasyon akisi icinde yurut."
+          description="Açık talepleri incele, uygun teklifleri ver ve anlasilan nakliyeleri operasyon akisi içinde yurut."
           actions={
             <>
               <ActionLink
                 href="/register"
-                label="Nakliyeci olarak kayit ol"
+                label="Talep ve nakliye için kayıt ol"
                 variant="primary"
               />
               <ActionLink href="/login" label="Giris yap" variant="secondary" />
@@ -127,16 +127,16 @@ export default function HomeCustomerActions() {
     content = (
       <div className="grid gap-5 lg:grid-cols-2">
         <LaunchpadSurface
-          eyebrow="Musteri workspace"
-          title="Istek ve teklif tarafina gec"
-          description="Musteri modunda isteklerini, gelen teklifleri ve sonrasindaki karar akislarini one cikarirsin."
-          actions={<ActionLink href="/dashboard" label="Workspace sec" variant="primary" />}
+          eyebrow="Talep Paneli"
+          title="Talep ve teklif tarafina gec"
+          description="Talep Paneli’nde taleplerini, gelen teklifleri ve sonrasindaki karar akislarini one cikarirsin."
+          actions={<ActionLink href="/dashboard" label="Panel seç" variant="primary" />}
         />
         <LaunchpadSurface
-          eyebrow="Nakliyeci workspace"
+          eyebrow="Nakliye Paneli"
           title="Kesif ve operasyon tarafina gec"
-          description="Nakliyeci modunda acik istekler, rotalar, araclar ve aktif operasyon tarafini one cikarirsin."
-          actions={<ActionLink href="/dashboard" label="Workspace sec" variant="secondary" />}
+          description="Nakliye Paneli’nde açık talepler, rotalar, araclar ve aktif operasyon tarafini one cikarirsin."
+          actions={<ActionLink href="/dashboard" label="Panel seç" variant="secondary" />}
         />
       </div>
     );
@@ -146,21 +146,21 @@ export default function HomeCustomerActions() {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">
-              Nakliyeci launchpad
+              Nakliye Paneli
             </p>
             <h2 className="text-2xl font-black tracking-tight text-slate-950">
               Bugun ne yapmak istiyorsun?
             </h2>
             <p className="text-sm leading-6 text-slate-600">
-              Kesif akisindan acik istek bul, tekliflerini takip et ve anlasilan
+              Kesif akisindan açık talep bul, tekliflerini takip et ve anlasilan
               nakliyeleri yonet. Arac ekleme yardimci onboarding aksiyonu olarak kalir.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <ActionLink href="/dashboard/acik_istekler" label="Acik Istekler" variant="primary" />
+            <ActionLink href="/dashboard/acik_istekler" label="Açık Talepler" variant="primary" />
             <ActionLink href="/dashboard/tekliflerim" label="Tekliflerim" variant="secondary" />
-            <ActionLink href="/dashboard/nakliyelerim" label="Nakliyelerim" variant="secondary" />
+            <ActionLink href="/dashboard/nakliyelerim" label="Taşımalarım" variant="secondary" />
             <ActionLink href="/dashboard/araclarim" label="Araclarim" variant="secondary" />
             <ActionLink href="/dashboard/arac_ekle" label="Arac Ekle" variant="secondary" />
           </div>
@@ -173,20 +173,20 @@ export default function HomeCustomerActions() {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-blue-600">
-              Musteri launchpad
+              Talep Paneli
             </p>
             <h2 className="text-2xl font-black tracking-tight text-slate-950">
               Tasima talebini hizli sekilde yonet
             </h2>
             <p className="text-sm leading-6 text-slate-600">
-              Yeni istek olustur, mevcut taleplerini gor ve anlasilan nakliye durumunu
-              talep detayindan takip et.
+              Yeni talep oluştur, mevcut taleplerini gor ve anlasilan nakliye durumunu
+              talep detayından takip et.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <ActionLink href="/dashboard/istek_ekle" label="Istek Ekle" variant="primary" />
-            <ActionLink href="/dashboard/isteklerim" label="Isteklerim" variant="secondary" />
+            <ActionLink href="/dashboard/istek_ekle" label="Talep Ekle" variant="primary" />
+            <ActionLink href="/dashboard/isteklerim" label="Taleplerim" variant="secondary" />
           </div>
         </div>
       </div>

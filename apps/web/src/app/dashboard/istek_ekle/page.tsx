@@ -93,10 +93,10 @@ function CreateRequestSummaryCard({
       </dl>
       <div data-dashboard-form-submit className={styles.submit}>
         <Button type="submit" variant="primary" loading={isSubmitting} className={styles.submitButton}>
-          {isSubmitting ? "İstek oluşturuluyor…" : "İstek oluştur"}
+          {isSubmitting ? "Talep oluşturuluyor…" : "Talep oluştur"}
           {!isSubmitting ? <span className="pi pi-arrow-right" aria-hidden="true" /> : null}
         </Button>
-        <p>Oluşturduğunuz talebi İsteklerim ekranından takip edebilirsiniz.</p>
+        <p>Oluşturduğunuz talebi Taleplerim ekranından takip edebilirsiniz.</p>
       </div>
     </aside>
   );
@@ -195,12 +195,12 @@ export default function CreateTransportRequestPage() {
           await uploadTransportRequestImages(response.id, formData, accessToken);
         } catch (uploadError) {
           uploadFailed = true;
-          console.error("[istek_ekle] Fotograf upload hatasi:", uploadError);
+          console.error("[talep_ekle] Fotoğraf upload hatasi:", uploadError);
         }
 
         if (uploadFailed) {
           setFormErrorMessage(
-            "Istek olusturuldu ancak fotograflar yuklenemedi. Isteklerim > Duzenle ekranindan fotograflari ekleyebilirsin."
+            "Talep oluşturuldu ancak fotoğraflar yüklenemedi. Taleplerim > Düzenle ekranindan fotoğraflari ekleyebilirsin."
           );
           setIsSubmitting(false);
           return;
@@ -217,7 +217,7 @@ export default function CreateTransportRequestPage() {
       }
 
       if (error instanceof ApiClientError && error.status === 403) {
-        window.alert("Bu sayfa yalnizca musteri hesabi icin kullanilabilir.");
+        window.alert("Bu işlem için Talep Paneli erişimi gerekir.");
         router.replace("/");
         return;
       }
@@ -225,7 +225,7 @@ export default function CreateTransportRequestPage() {
       if (error instanceof ApiClientError) {
         setFormErrorMessage(error.message);
       } else {
-        setFormErrorMessage("Istek olusturulurken beklenmeyen bir hata olustu.");
+        setFormErrorMessage("Talep oluşturulurken beklenmeyen bir hata olustu.");
       }
     } finally {
       setIsSubmitting(false);
@@ -242,8 +242,8 @@ export default function CreateTransportRequestPage() {
 
   return (
     <CustomerTransportRequestsShell
-      title="Yeni istek"
-      pageHeader={<PageHeader title="Yeni istek oluştur" description="Taşıma ihtiyacınızı paylaşın, nakliyecilerden teklif alın." />}
+      title="Yeni talep"
+      pageHeader={<PageHeader title="Yeni talep oluştur" description="Taşıma ihtiyacınızı paylaşın, nakliyecilerden teklif alın." />}
       description="Konum, yuk ve tercih bilgilerini tek kayitta toparla."
       headerVariant="compact"
       motionPreset="form"
@@ -255,7 +255,7 @@ export default function CreateTransportRequestPage() {
       >
         {formErrorMessage ? (
           <div data-dashboard-form-error className="app-form-error-banner" role="alert">
-            <p className="text-sm font-semibold">İstek oluşturulamadı</p>
+            <p className="text-sm font-semibold">Talep oluşturulamadı</p>
             <p className="mt-1 text-sm">{formErrorMessage}</p>
           </div>
         ) : null}

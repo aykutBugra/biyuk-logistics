@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { WORKSPACE_LABELS } from "@/lib/ui/terminology";
 import { useEffect, useState } from "react";
 
 import CustomerInitialsAvatar from "@/components/CustomerInitialsAvatar";
@@ -295,12 +296,12 @@ export default function ProfilePage() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     {isCarrier ? (
                       <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                        Nakliyeci
+                        {WORKSPACE_LABELS.carrier}
                       </span>
                     ) : null}
                     {isCustomer ? (
                       <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                        Musteri
+                        {WORKSPACE_LABELS.customer}
                       </span>
                     ) : null}
                     {isAdmin ? (
@@ -318,7 +319,7 @@ export default function ProfilePage() {
                     Aktif gorunum
                   </p>
                   <p className="mt-2 text-sm font-semibold text-slate-900">
-                    Nakliyeci workspace
+                    Nakliye Paneli
                   </p>
                 </div>
 
@@ -346,7 +347,7 @@ export default function ProfilePage() {
               icon={<i className="pi pi-truck text-lg" />}
             />
             <CustomerMetricCard
-              label="Musteri puanim"
+              label="Talep sahibi puanım"
               value={formatMetricRating(ratingSummary.asCustomer.averageRating)}
               hint={`${ratingSummary.asCustomer.ratingCount} degerlendirme`}
               tone="amber"
@@ -403,7 +404,7 @@ export default function ProfilePage() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-[1.15rem] border border-slate-200 bg-slate-50/80 p-4">
                       <p className="text-sm font-semibold text-slate-500">
-                        Musteri puani
+                        Talep sahibi puanı
                       </p>
                       <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">
                         {formatMetricRating(ratingSummary.asCustomer.averageRating)}
@@ -464,12 +465,12 @@ export default function ProfilePage() {
                 <div className="flex flex-wrap gap-2">
                   {isCarrier ? (
                     <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                      Nakliyeci
+                      {WORKSPACE_LABELS.carrier}
                     </span>
                   ) : null}
                   {isCustomer ? (
                     <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                      Musteri
+                      {WORKSPACE_LABELS.customer}
                     </span>
                   ) : null}
                   {isAdmin ? (
@@ -507,7 +508,7 @@ export default function ProfilePage() {
             <div className="p-5 md:p-6">
               <div className="space-y-2 text-sm leading-6 text-slate-700">
                 <p>Bu islem geri alinamaz.</p>
-                <p>Hesabina bagli arac, rota ve istek kayitlari kaldirilabilir.</p>
+                <p>Hesabina bagli arac, rota ve talep kayitlari kaldirilabilir.</p>
                 <p>
                   Aktif operasyonlar veya acik tekliflerin varsa silme
                   engellenebilir.
@@ -587,13 +588,13 @@ export default function ProfilePage() {
             <div className="mt-4 flex flex-wrap gap-2">
               {isCarrier ? (
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                  Nakliyeci
+                  {WORKSPACE_LABELS.carrier}
                 </span>
               ) : null}
 
               {isCustomer ? (
                 <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                  Musteri
+                  {WORKSPACE_LABELS.customer}
                 </span>
               ) : null}
 
@@ -612,19 +613,19 @@ export default function ProfilePage() {
               </p>
 
               <h2 className="mt-3 text-xl font-black tracking-tight text-slate-950">
-                Nakliyeci rolunu ekle
+                Nakliye hizmeti vermeye başla
               </h2>
 
               <p className="mt-3 text-sm leading-7 text-slate-600">
                 Mevcut hesabini ikinci kez kayit olmadan genislet. Ilk aracin
-                basariyla kaydedildiginde nakliyeci workspace'i acilir.
+                başarıyla kaydedildiğinde Nakliye Paneli açılır.
               </p>
 
               <Link
                 href="/dashboard/profil/nakliyeci-rolu-ekle"
                 className="mt-6 inline-flex items-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
               >
-                Nakliyeci rolunu ekle
+                Nakliye hizmeti vermeye başla
               </Link>
             </div>
           ) : null}
@@ -640,7 +641,7 @@ export default function ProfilePage() {
           />
 
           <SummaryStatCard
-            label="Musteri puanim"
+            label="Talep sahibi puanım"
             value={formatAverageRating(summary.asCustomer.averageRating)}
             hint={`${summary.asCustomer.ratingCount} degerlendirme`}
           />
@@ -682,7 +683,7 @@ export default function ProfilePage() {
           <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
             <p>Bu islem geri alinamaz.</p>
 
-            <p>Hesabina bagli arac, rota ve istek kayitlari kaldirilabilir.</p>
+            <p>Hesabina bagli arac, rota ve talep kayitlari kaldirilabilir.</p>
 
             <p>
               Aktif operasyonlar veya acik tekliflerin varsa silme

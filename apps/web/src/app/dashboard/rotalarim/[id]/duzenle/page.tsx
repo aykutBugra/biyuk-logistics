@@ -264,7 +264,7 @@ export default function EditCarrierRoutePage() {
   return (
     <CarrierVehiclesShell
       title="Rotayi duzenle"
-      description="Mevcut rotanin ana guzergah bilgisini guncelle. Sapma limiti artik Acik Istekler ekraninda secilir."
+      description="Mevcut rotanin ana guzergah bilgisini güncelle. Sapma limiti artik Açık Talepler ekraninda seçilir."
       headerVariant="compact"
       motionPreset="form"
     >
@@ -379,7 +379,7 @@ export default function EditCarrierRoutePage() {
                   <i className="pi pi-exclamation-triangle text-sm" />
                 </span>
                 <p className="text-sm leading-6 text-slate-600">
-                  Sapma limiti bu ekranda degistirilmez. Kesif akisi Acik Istekler
+                  Sapma limiti bu ekranda degistirilmez. Kesif akisi Açık Talepler
                   ekraninda mevcut rota uzerinden devam eder.
                 </p>
               </div>

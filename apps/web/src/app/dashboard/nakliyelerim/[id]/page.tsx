@@ -482,7 +482,7 @@ export default function CarrierJobDetailPage() {
                     Nakliye detayi
                   </span>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                    Bagli istek
+                    Bagli talep
                   </span>
                 </div>
 
@@ -811,7 +811,7 @@ export default function CarrierJobDetailPage() {
                     </button>
                   ) : null}
                   <Link href="/dashboard/nakliyelerim" className="app-button-secondary w-full justify-center">
-                    Nakliyelerime don
+                    Taşımalarıme don
                   </Link>
                 </div>
               </CustomerSectionSurface>

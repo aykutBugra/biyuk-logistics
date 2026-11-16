@@ -30,6 +30,7 @@
 .navItem { position: relative; display: flex; min-height: 40px; align-items: center; gap: 12px; margin-top: 3px; border-radius: 8px; padding: 10px 12px; color: #5d6b81; font-size: 12px; font-weight: 550; text-decoration: none; }
 .navItem > i { width: 17px; flex-shrink: 0; color: #8d99ad; text-align: center; font-size: 15px; }
 .navLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roleSwitch .navLabel { white-space: normal; line-height: 1.25; text-align: center; }
 .navItem:hover { background: #f7f9fc; color: #1d4ed8; }
 .navActive { background: #edf3ff; color: #2059d5; font-weight: 650; }
 .navActive > i { color: #2563eb; }

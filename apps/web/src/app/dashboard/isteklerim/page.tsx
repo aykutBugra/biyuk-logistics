@@ -97,7 +97,7 @@ export default function MyTransportRequestsPage() {
         setErrorMessage(
           error instanceof ApiClientError
             ? error.message
-            : "Istekler yuklenirken beklenmeyen bir hata olustu."
+            : "Talepler yüklenirken beklenmeyen bir hata olustu."
         );
       } finally {
         if (!isMounted) {
@@ -122,8 +122,8 @@ export default function MyTransportRequestsPage() {
     }
 
     const isConfirmed = await confirm({
-      title: "Tasima istegini sil",
-      message: "Bu tasima istegini silmek istedigine emin misin?",
+      title: "Taşıma talebini sil",
+      message: "Bu taşıma talebini silmek istedigine emin misin?",
       tone: "danger",
       confirmLabel: "Sil",
       cancelLabel: "Vazgec",
@@ -146,8 +146,8 @@ export default function MyTransportRequestsPage() {
       );
       showToast({
         severity: "success",
-        summary: "Istek silindi",
-        detail: "Tasima istegi listeden kaldirildi.",
+        summary: "Talep silindi",
+        detail: "Taşıma talebi listeden kaldirildi.",
       });
     } catch (error) {
       // Auth/rol hatasinda musteri tekrar uygun sayfaya yonlendirilir.
@@ -185,7 +185,7 @@ export default function MyTransportRequestsPage() {
         );
         showToast({
           severity: "warn",
-          summary: "Istek bulunamadi",
+          summary: "Talep bulunamadi",
           detail: "Kayit listeden kaldirildi.",
           life: 3200,
           closable: true,
@@ -196,7 +196,7 @@ export default function MyTransportRequestsPage() {
       if (error instanceof ApiClientError) {
         showToast({
           severity: "error",
-          summary: "Istek silinemedi",
+          summary: "Talep silinemedi",
           detail: error.message,
           life: 3600,
           closable: true,
@@ -206,8 +206,8 @@ export default function MyTransportRequestsPage() {
 
       showToast({
         severity: "error",
-        summary: "Istek silinemedi",
-        detail: "Istek silinirken beklenmeyen bir hata olustu.",
+        summary: "Talep silinemedi",
+        detail: "Talep silinirken beklenmeyen bir hata olustu.",
         life: 3600,
         closable: true,
       });
@@ -229,19 +229,19 @@ export default function MyTransportRequestsPage() {
   return (
     <UiScope>
       <CustomerTransportRequestsShell
-        title="İsteklerim"
+        title="Taleplerim"
         motionPreset="operational"
         cardMotionLimit={6}
         pageHeader={
           <PageHeader
-            eyebrow="Müşteri çalışma alanı"
-            title="İsteklerim"
+            eyebrow="Talep Paneli"
+            title="Taleplerim"
             description="Taşıma taleplerinizi yönetin, gelen teklifleri ve taşımanızın durumunu takip edin."
             actions={
               <>
                 <InlineHelpTrigger helpKey="my-requests" />
                 <LinkButton href="/dashboard/istek_ekle" variant="primary">
-                  <i className="pi pi-plus" aria-hidden="true" /> Yeni istek
+                  <i className="pi pi-plus" aria-hidden="true" /> Yeni talep
                 </LinkButton>
               </>
             }

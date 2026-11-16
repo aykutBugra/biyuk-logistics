@@ -250,11 +250,11 @@ function OfferSummaryPanel({
     return (
       <CustomerSectionSurface
         title="Teklif ozeti"
-        description="Bu istek icin acik teklifin var; detaylar gec yuklenirse Tekliflerim ekranindan akisa donebilirsin."
+        description="Bu talep için açık teklifin var; detaylar gec yüklenirse Tekliflerim ekranindan akisa donebilirsin."
       >
         <div className="space-y-4">
           <InfoBanner tone="emerald">
-            Bu istek icin acik teklifin var. Guncel fiyat ve durum detaylari yuklenemedi.
+            Bu talep için açık teklifin var. Güncel fiyat ve durum detaylari yüklenemedi.
           </InfoBanner>
           <div className="flex flex-wrap gap-2">
             <Link href="/dashboard/tekliflerim" className="app-button-primary">
@@ -276,7 +276,7 @@ function OfferSummaryPanel({
   return (
     <CustomerSectionSurface
       title="Teklif ozeti"
-      description="Bu istek icin acik teklifin ve ilgili konusma akisin."
+      description="Bu talep için açık teklifin ve ilgili konuşma akisin."
       action={
         <div className="flex flex-wrap gap-2">
           {thread?.hasUnread ? (
@@ -390,7 +390,7 @@ function OpenTransportRequestDetailPageContent({
   const [isDataLoading, setIsLoading] = useState(true);
   const hasValidId = Boolean(requestId.trim());
   const isLoading = hasValidId && isDataLoading;
-  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz istek numarasi.";
+  const errorMessage = hasValidId ? loadErrorMessage : "Geçersiz talep numarası.";
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -546,7 +546,7 @@ function OpenTransportRequestDetailPageContent({
           selectedCarrierRouteId !== null
         ) {
           if (hasValidatedSelectedRoute) {
-            window.alert("Bu istek secili rota filtresine uymuyor.");
+            window.alert("Bu talep seçili rota filtresine uymuyor.");
             router.replace(
               buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm)
             );
@@ -568,14 +568,14 @@ function OpenTransportRequestDetailPageContent({
         }
 
         if (error instanceof ApiClientError && error.status === 404) {
-          setErrorMessage("Bu istek teklif vermeye uygun degil veya bulunamadi.");
+          setErrorMessage("Bu talep teklif vermeye uygun degil veya bulunamadi.");
           return;
         }
 
         setErrorMessage(
           error instanceof ApiClientError
             ? error.message
-            : "Istek detayi yuklenirken beklenmeyen bir hata olustu."
+            : "Talep detayı yüklenirken beklenmeyen bir hata olustu."
         );
       } finally {
         if (!isMounted) {
@@ -681,7 +681,7 @@ function OpenTransportRequestDetailPageContent({
       }
 
       if (error instanceof ApiClientError && error.status === 404) {
-        window.alert("Bu istek artik teklif vermeye uygun degil.");
+        window.alert("Bu talep artik teklif vermeye uygun degil.");
         router.replace(buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm));
         return;
       }
@@ -691,12 +691,12 @@ function OpenTransportRequestDetailPageContent({
           error.message ===
           "You have already created an open offer for this transport request."
         ) {
-          setSubmitErrorMessage("Bu istege zaten acik bir teklif verdin.");
+          setSubmitErrorMessage("Bu talebe zaten açık bir teklif verdin.");
           return;
         }
 
         if (error.message === "This transport request is no longer open for offers.") {
-          window.alert("Bu istek artik teklif kabul etmiyor.");
+          window.alert("Bu talep artik teklif kabul etmiyor.");
           router.replace(buildOpenRequestsListPath(selectedCarrierRouteId, selectedMaxSapmaKm));
           return;
         }
@@ -779,10 +779,10 @@ function OpenTransportRequestDetailPageContent({
     )}`;
   return (
     <CarrierVehiclesShell
-      title={request?.hasExistingOffer ? "Teklif detayi" : "Istek detayi ve teklif"}
+      title={request?.hasExistingOffer ? "Teklif detayi" : "Talep detayı ve teklif"}
       description={
         request?.hasExistingOffer
-          ? "Verdigin teklifin durumunu ve ilgili istek baglamini tek ekranda takip et."
+          ? "Verdigin teklifin durumunu ve ilgili talep baglamini tek ekranda takip et."
           : "Yuk baglamini inceleyip teklifini ayni ekrandan profesyonelce hazirla."
       }
       headerActions={<InlineHelpTrigger helpKey="offer-create" />}
@@ -810,7 +810,7 @@ function OpenTransportRequestDetailPageContent({
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={request.durum} />
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                    Istek detayi
+                    Talep detayı
                   </span>
                   {currentOffer ? (
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
@@ -933,7 +933,7 @@ function OpenTransportRequestDetailPageContent({
               ) : (
                 <EmptyStateCard
                   eyebrow="Fotograf galerisi"
-                  title="Bu istek icin henuz fotograf paylasilmamis"
+                  title="Bu talep için henüz fotoğraf paylasilmamis"
                   description="Teklif karari yalnizca mevcut yuk detaylari ve rota bilgilerine dayanir."
                 />
               )}
@@ -1023,7 +1023,7 @@ function OpenTransportRequestDetailPageContent({
 
             {needsVehicleForSuggestion ? (
                       <InfoBanner tone="amber">
-                Tek tasima isteginde onerilen fiyat icin once arac secmelisin.
+                Tek taşıma talebinde onerilen fiyat için once arac secmelisin.
                       </InfoBanner>
             ) : null}
 

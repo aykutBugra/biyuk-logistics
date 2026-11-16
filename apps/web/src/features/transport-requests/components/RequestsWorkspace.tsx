@@ -102,7 +102,7 @@ export default function RequestsWorkspace({ requests, incomingOffers, isLoading,
             <EmptyState
               title="İlk taşıma talebinizi oluşturun"
               description="Güzergâhınızı ve yük bilgilerinizi ekleyin. Talepleriniz ve gelen teklifler burada takip edilsin."
-              action={<LinkButton href="/dashboard/istek_ekle" variant="primary"><i className="pi pi-plus" aria-hidden="true" /> Yeni istek</LinkButton>}
+              action={<LinkButton href="/dashboard/istek_ekle" variant="primary"><i className="pi pi-plus" aria-hidden="true" /> Yeni talep</LinkButton>}
               icon="pi pi-box"
             />
           </Surface>

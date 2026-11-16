@@ -584,7 +584,7 @@ export default function MyJobsPage() {
   };
 
   return (
-    <CarrierVehiclesShell title="Nakliyelerim" description="Taşıma durumlarını, tarihleri ve teslimat adımlarını yönetin."
+    <CarrierVehiclesShell title="Taşımalarım" description="Taşıma durumlarını, tarihleri ve teslimat adımlarını yönetin."
       headerVariant="compact" motionPreset="operational" cardMotionLimit={6}
       headerActions={<div className="flex flex-wrap items-center gap-3"><InlineHelpTrigger helpKey="my-shipments" /></div>}>
       <ShipmentsWorkspace items={sortedShipments} totalCount={jobs.length} isEnriching={isEnriching} todayTasks={todayTasks}

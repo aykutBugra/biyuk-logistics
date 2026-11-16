@@ -20,7 +20,7 @@ export default function OffersWorkspace({
       loadingLabel="Teklifler yükleniyor…" searchLabel="Tekliflerde ara" placeholder="Güzergâh, müşteri veya yük ara…"
       filters={[{ id: "all", label: "Tümü" }, { id: "open", label: "Bekleyen" }, { id: "accepted", label: "Kabul edilen" }, { id: "rejected", label: "Reddedilen / iptal" }, { id: "negotiation", label: "Görüşülen" }]}
       sortOptions={[{ value: "newest", label: "Mevcut sıra" }, { value: "oldest", label: "Ters sıra" }, { value: "price-desc", label: "Tutar: yüksekten" }, { value: "price-asc", label: "Tutar: düşükten" }]}
-      emptyState={<EmptyState title="Henüz teklif yok" description="Açık istekleri inceleyip ilk teklifinizi verdiğinizde burada listelenecek." action={<LinkButton href="/dashboard/acik_istekler" variant="primary">Açık istekleri incele</LinkButton>} />}
+      emptyState={<EmptyState title="Henüz teklif yok" description="Açık talepleri inceleyip ilk teklifinizi verdiğinizde burada listelenecek." action={<LinkButton href="/dashboard/acik_istekler" variant="primary">Açık talepleri incele</LinkButton>} />}
     >
       {items.map((offer) => {
         const state = offerStatus(offer.durum);

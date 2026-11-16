@@ -60,7 +60,7 @@ export default function CarrierDashboardOverview({ home }: { home: CarrierHomeDa
                 <div className={styles.facts}><span>{getCargoTypeLabel(request.yukTipi)}</span>{request.agirlikKg !== null ? <span>{formatWeightKg(request.agirlikKg)}</span> : null}{request.hacimM3 !== null ? <span>{formatVolumeM3(request.hacimM3)}</span> : null}</div>
                 <p>Tercih edilen tarih: {formatDateOnly(request.tasimaTarihi)}</p>
                 <LinkButton href={"/dashboard/acik_istekler/" + request.id}>Talebi incele</LinkButton>
-              </> : <p>Şu anda öne çıkarılacak açık talep bulunmuyor. Açık istekleri keşfedebilirsiniz.</p>}
+              </> : <p>Şu anda öne çıkarılacak açık talep bulunmuyor. Açık talepleri keşfedebilirsiniz.</p>}
             </div>
           </Panel>
           <Panel title="Rota ve filo" icon="pi pi-map">

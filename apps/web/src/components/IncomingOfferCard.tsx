@@ -75,7 +75,7 @@ export default function IncomingOfferCard({
             Teklif
           </span>
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-            Istek
+            Talep
           </span>
           {offer.aracPlaka ? (
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
@@ -203,7 +203,7 @@ export default function IncomingOfferCard({
               </Link>
 
               <Link href={`/dashboard/isteklerim/${offer.requestId}`} className="app-button-secondary">
-                Istek Detayi
+                Talep Detayı
               </Link>
 
               {canDecide ? (

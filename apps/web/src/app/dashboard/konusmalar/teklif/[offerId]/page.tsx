@@ -175,7 +175,7 @@ function getSystemEventDetail(
     return formatCurrency(teklifFiyati);
   }
   if (code === "THREAD_CLOSED_REQUEST_UNAVAILABLE") {
-    return "Bu istek baska bir teklifle anlasilda.";
+    return "Bu talep baska bir teklifle anlasilda.";
   }
   if (code === "DELIVERY_PENDING_CONFIRMATION") {
     return "Musteri onayi bekleniyor.";

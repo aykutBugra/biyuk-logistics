@@ -1,5 +1,7 @@
 "use client";
 
+import { getNotificationCopy } from "@/lib/ui/terminology";
+
 import NotificationsWorkspace from "@/features/customer-workspace/NotificationsWorkspace";
 import { PageHeader } from "@/components/ui";
 
@@ -119,7 +121,7 @@ function resolveOpenLabel(hedefUrl: string): string {
   }
 
   if (hedefUrl.startsWith("/dashboard/isteklerim/")) {
-    return "Istek detayina git";
+    return "Talep detayına git";
   }
 
   if (hedefUrl.startsWith("/dashboard/nakliyelerim/")) {
@@ -236,9 +238,12 @@ function matchesNotificationSearch(
     return true;
   }
 
+  const copy = getNotificationCopy(notification);
   const searchableText = [
     notification.baslik,
     notification.mesaj,
+    copy.title,
+    copy.message,
     getTypeLabel(notification.tip),
     notification.tip,
   ]
@@ -732,7 +737,7 @@ export default function NotificationsPage() {
             title="Henuz bildirim yok"
             description="Teklif hareketleri, mesajlar ve hatirlatmalar olustukca burada listelenecek."
             actionHref="/dashboard/acik_istekler"
-            actionLabel="Acik istekleri incele"
+            actionLabel="Açık talepleri incele"
           />
         </div>
       ) : null}
@@ -755,8 +760,8 @@ export default function NotificationsPage() {
             !hasBusinessAccess && isAdmin
               ? "Yonetim alanina git"
               : primaryRole === "NAKLIYECI"
-                ? "Acik istekleri gor"
-                : "Isteklerime git"
+                ? "Açık talepleri gor"
+                : "Taleplerime git"
           }
         />
       ) : null}

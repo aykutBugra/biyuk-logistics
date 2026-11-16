@@ -118,7 +118,7 @@ export default function MyOfferCard({ offer }: MyOfferCardProps) {
             Teklif
           </span>
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-            Istek
+            Talep
           </span>
           {offer.aracPlaka ? (
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">

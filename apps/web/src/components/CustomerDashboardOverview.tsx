@@ -74,7 +74,7 @@ export default function CustomerDashboardOverview({ home }: { home: CustomerHome
                     <Link href={`${href}/duzenle`} className={styles.editLink} aria-label={`${route} talebini düzenle`} title="Talebi düzenle"><i className="pi pi-pencil" aria-hidden="true" /></Link>
                   </div>
                 </div>;
-              })}</div> : <EmptyState title="İlk talebinizi oluşturun" description="Güzergâh ve yük bilgilerinizi ekleyerek teklif almaya başlayın." action={<LinkButton href="/dashboard/istek_ekle" variant="primary">Yeni istek</LinkButton>} />}
+              })}</div> : <EmptyState title="İlk talebinizi oluşturun" description="Güzergâh ve yük bilgilerinizi ekleyerek teklif almaya başlayın." action={<LinkButton href="/dashboard/istek_ekle" variant="primary">Yeni talep</LinkButton>} />}
             </section>
           </Surface>
         </div>

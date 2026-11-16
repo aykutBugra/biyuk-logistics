@@ -233,7 +233,7 @@ export default function EditTransportRequestPage() {
   const [isDataLoading, setIsLoading] = useState(true);
   const hasValidId = Boolean(requestId.trim());
   const isLoading = hasValidId && isDataLoading;
-  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz istek numarasi.";
+  const errorMessage = hasValidId ? loadErrorMessage : "Geçersiz talep numarası.";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingImages, setExistingImages] = useState<TransportRequestImage[]>([]);
   const [pendingImages, setPendingImages] = useState<RequestImageDraft[]>([]);
@@ -298,14 +298,14 @@ export default function EditTransportRequestPage() {
         }
 
         if (error instanceof ApiClientError && error.status === 404) {
-          setErrorMessage("Bu istek bulunamadi.");
+          setErrorMessage("Bu talep bulunamadi.");
           return;
         }
 
         setErrorMessage(
           error instanceof ApiClientError
             ? error.message
-            : "Istek bilgileri yuklenirken beklenmeyen bir hata olustu."
+            : "Talep bilgileri yüklenirken beklenmeyen bir hata olustu."
         );
       } finally {
         if (!isMounted) {
@@ -485,7 +485,7 @@ export default function EditTransportRequestPage() {
       if (error instanceof ApiClientError) {
         setSubmitErrorMessage(error.message);
       } else {
-        setSubmitErrorMessage("Istek guncellenirken beklenmeyen bir hata olustu.");
+        setSubmitErrorMessage("Talep güncellenirken beklenmeyen bir hata olustu.");
       }
     } finally {
       setIsSubmitting(false);
@@ -512,14 +512,14 @@ export default function EditTransportRequestPage() {
 
   return (
     <CustomerTransportRequestsShell
-      title="Istek duzenle"
+      title="Talebi düzenle"
       description={isLoading ? "Mevcut kayit yukleniyor." : routePreview}
       headerVariant="compact"
       motionPreset="form"
     >
       {isLoading ? (
         <div className="rounded-2xl border border-gray-100 bg-white p-6 text-gray-600 shadow-sm">
-          Istek bilgileri yukleniyor...
+          Talep bilgileri yükleniyor...
         </div>
       ) : null}
 
@@ -703,7 +703,7 @@ export default function EditTransportRequestPage() {
                   disabled={isSubmitting}
                   className="app-button-primary app-form-submit-button app-pressable justify-center text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 >
-                  {isSubmitting ? "Istek guncelleniyor..." : "Degisiklikleri kaydet"}
+                  {isSubmitting ? "Talep güncelleniyor..." : "Degisiklikleri kaydet"}
                 </button>
               </div>
             </div>

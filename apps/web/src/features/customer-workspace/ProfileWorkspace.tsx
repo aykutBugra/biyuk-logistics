@@ -6,6 +6,7 @@ import type { StoredAuthUser } from "@/lib/auth/auth-storage";
 import type { MyRatingSummary } from "@/lib/api/ratings";
 import { displayText, LoadFeedback, type LoadState, Panel, RatingScore } from "./shared";
 import styles from "./workspace.module.css";
+import { WORKSPACE_LABELS } from "@/lib/ui/terminology";
 
 export default function ProfileWorkspace({
   user, accessToken, isCustomer, isCarrier, isAdmin, summary,
@@ -31,22 +32,22 @@ export default function ProfileWorkspace({
           <dl className={styles.accountFields}>{fields.map((field) => <div key={field.label}><dt>{field.label}</dt><dd>{displayText(field.value, "Belirtilmedi")}</dd></div>)}</dl>
         </Panel>
         <aside className={styles.profileAside}>
-          <Panel title="Hesap rolleri" icon="pi pi-id-card">
+          <Panel title="Panel erişimleri" icon="pi pi-id-card">
             <div className={styles.asideContent}>
               <div className={styles.roleBadges}>
-                {isCustomer ? <Badge tone="blue">Müşteri</Badge> : null}
-                {isCarrier ? <Badge tone="neutral">Nakliyeci</Badge> : null}
+                {isCustomer ? <Badge tone="blue">{WORKSPACE_LABELS.customer}</Badge> : null}
+                {isCarrier ? <Badge tone="neutral">{WORKSPACE_LABELS.carrier}</Badge> : null}
                 {isAdmin ? <Badge tone="neutral">Yönetici</Badge> : null}
               </div>
               {isCustomer && !isCarrier ? <>
-                <p>İlk aracınızı kaydederek mevcut hesabınıza nakliyeci rolünü de ekleyebilirsiniz.</p>
-                <LinkButton href="/dashboard/profil/nakliyeci-rolu-ekle">Nakliyeci rolü ekle <i className="pi pi-arrow-up-right" aria-hidden="true" /></LinkButton>
-              </> : <p>Müşteri ve nakliyeci alanları arasında sol menüdeki rol seçicisiyle geçiş yapabilirsiniz.</p>}
+                <p>İlk aracınızı kaydederek aynı hesapla nakliye hizmeti de verebilirsiniz.</p>
+                <LinkButton href="/dashboard/profil/nakliyeci-rolu-ekle">Nakliye hizmeti vermeye başla <i className="pi pi-arrow-up-right" aria-hidden="true" /></LinkButton>
+              </> : isCustomer && isCarrier ? <p>Talep Paneli ve Nakliye Paneli arasında sol menüdeki panel seçimiyle geçiş yapabilirsiniz.</p> : isCarrier ? <p>Nakliye Paneli erişiminiz etkin.</p> : null}
             </div>
           </Panel>
           {summary ? <Panel title="Değerlendirme özeti" icon="pi pi-star" action={<LinkButton href="/dashboard/puanlarim" variant="ghost">Tümünü gör <i className="pi pi-arrow-up-right" aria-hidden="true" /></LinkButton>}>
             <div className={styles.asideContent}>
-              <div className={styles.profileRating}><div><strong>Müşteri olarak</strong><span>{summary.asCustomer.ratingCount} değerlendirme</span></div><RatingScore value={summary.asCustomer.averageRating} /></div>
+              <div className={styles.profileRating}><div><strong>Talep sahibi olarak</strong><span>{summary.asCustomer.ratingCount} değerlendirme</span></div><RatingScore value={summary.asCustomer.averageRating} /></div>
               {isCarrier ? <div className={styles.profileRating}><div><strong>Nakliyeci olarak</strong><span>{summary.asCarrier.ratingCount} değerlendirme</span></div><RatingScore value={summary.asCarrier.averageRating} /></div> : null}
               {!summary.asCustomer.ratingCount && (!isCarrier || !summary.asCarrier.ratingCount) ? <p>Taşımalar tamamlanıp puan geldikçe profil özetiniz burada oluşacak.</p> : null}
             </div>
@@ -61,7 +62,7 @@ export default function ProfileWorkspace({
           ) : (
             <div className={styles.deleteConfirmation} role="region" aria-labelledby="delete-account-confirm-title">
               <h3 id="delete-account-confirm-title">Hesabınızı kalıcı olarak silmek istediğinize emin misiniz?</h3>
-              <p>Bu işlem geri alınamaz. Hesabınıza bağlı araç, rota ve istek kayıtları kaldırılabilir. Silme sonrasında oturumunuz kapanır. Aktif nakliye, anlaşma veya açık teklif varsa işlem engellenebilir.</p>
+              <p>Bu işlem geri alınamaz. Hesabınıza bağlı araç, rota ve talep kayıtları kaldırılabilir. Silme sonrasında oturumunuz kapanır. Aktif nakliye, anlaşma veya açık teklif varsa işlem engellenebilir.</p>
               {deleteErrorMessage ? <InlineNotice tone="red" title="Hesap silinemedi">{displayText(deleteErrorMessage).replace("Hesap silinirken beklenmeyen bir hata olustu.", "Hesap silinirken beklenmeyen bir hata oluştu.")}</InlineNotice> : null}
               <div className={styles.confirmActions}>
                 <Button onClick={onCancelDelete} disabled={isDeletingAccount} autoFocus>Vazgeç</Button>

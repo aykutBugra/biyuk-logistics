@@ -168,7 +168,7 @@ export default function DashboardLandingPage() {
           className="app-button-primary inline-flex items-center gap-2"
         >
           <i className="pi pi-plus text-xs" />
-          Yeni istek
+          Yeni talep
         </Link>
       </div>
     ) : carrierHome ? (

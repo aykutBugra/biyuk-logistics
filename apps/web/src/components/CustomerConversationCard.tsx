@@ -144,7 +144,7 @@ export default function CustomerConversationCard({
           <div className="flex flex-wrap items-center gap-2 xl:justify-end">
             {requestHref ? (
               <Link href={requestHref} className="app-button-secondary">
-                Istek detayi
+                Talep detayı
               </Link>
             ) : null}
             <Link href={conversationHref} className="app-button-primary">

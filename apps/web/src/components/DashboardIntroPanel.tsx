@@ -21,28 +21,28 @@ const INTRO_CONTENT: Record<
   }
 > = {
   carrier: {
-    eyebrow: "Nakliyeci rehberi",
-    title: "Nakliyeci tarafina hos geldin",
+    eyebrow: "Nakliye Paneli rehberi",
+    title: "Nakliye Paneli’ne hoş geldiniz",
     description:
       "Bu rehber yalnizca bu role ilk giriste gorunur. Kapatildiktan sonra ayni ekran dogrudan genel bakis olarak acilir.",
     bullets: [
-      "Acik Istekler ekraninda rotana ve kapasiten uygun talepleri kesfedersin.",
+      "Açık Talepler ekraninda rotana ve kapasiten uygun talepleri kesfedersin.",
       "Tekliflerim, verdigin teklifleri ve anlasmalarini birlikte takip eder.",
       "Rotalar ve araclar tamamlandikca gorunurlugun ve teklif kaliten artar.",
     ],
-    shortcutLabel: "Acik istekleri ac",
+    shortcutLabel: "Açık talepleri ac",
   },
   customer: {
-    eyebrow: "Musteri rehberi",
-    title: "Musteri tarafina hos geldin",
+    eyebrow: "Talep Paneli rehberi",
+    title: "Talep Paneli’ne hoş geldiniz",
     description:
       "Bu rehber yalnizca bu role ilk giriste gorunur. Kapatildiktan sonra ayni ekran dogrudan genel bakis olarak acilir.",
     bullets: [
-      "Isteklerim ekraninda taleplerini ve guncel durumlarini izlersin.",
+      "Taleplerim ekraninda taleplerini ve güncel durumlarini izlersin.",
       "Gelen Teklifler ekraninda fiyatlari ve konusmalari birlikte degerlendirirsin.",
       "Anlasilmis is gostergesi, teklif operasyona gectiginde otomatik guncellenir.",
     ],
-    shortcutLabel: "Isteklerime git",
+    shortcutLabel: "Taleplerime git",
   },
 };
 

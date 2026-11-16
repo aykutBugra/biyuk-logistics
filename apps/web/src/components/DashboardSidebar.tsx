@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { DashboardRenderedNavGroup } from "@/lib/dashboard/navigation";
 import type { StoredDashboardWorkspaceMode } from "@/lib/auth/auth-storage";
 import styles from "./control-center.module.css";
+import { WORKSPACE_LABELS } from "@/lib/ui/terminology";
 
 type DashboardSidebarProps = {
   panelEyebrow?: string; panelTitle: string; panelDescription?: string;
@@ -52,17 +53,17 @@ export default function DashboardSidebar({
         className={[styles.sidebar, collapsed ? styles.collapsed : "", isOpen ? styles.sidebarOpen : ""].join(" ")}>
         <div className={styles.workspaceBar}>
           {dualBusinessRoles ? (
-            <div className={styles.roleSwitch} role="group" aria-label="İş alanı seçimi">
+            <div className={styles.roleSwitch} role="group" aria-label="Panel seçimi">
               {(["customer", "carrier"] as const).map((mode) => (
                 <button key={mode} type="button" onClick={() => onWorkspaceChange(mode)}
-                  aria-pressed={workspaceMode === mode} aria-label={mode === "customer" ? "Müşteri alanı" : "Nakliyeci alanı"}
-                  title={mode === "customer" ? "Müşteri alanı" : "Nakliyeci alanı"}>
+                  aria-pressed={workspaceMode === mode} aria-label={WORKSPACE_LABELS[mode]}
+                  title={WORKSPACE_LABELS[mode]}>
                   <i className={"pi " + (mode === "customer" ? "pi-user" : "pi-truck")} aria-hidden="true" />
-                  <span className={styles.navLabel}>{mode === "customer" ? "Müşteri" : "Nakliyeci"}</span>
+                  <span className={styles.navLabel}>{WORKSPACE_LABELS[mode]}</span>
                 </button>
               ))}
             </div>
-          ) : <p className={styles.singleWorkspace}><i className="pi pi-briefcase" aria-hidden="true" /><span className={styles.navLabel}>{workspaceMode === "carrier" ? "Nakliyeci" : workspaceMode === "customer" ? "Müşteri" : panelTitle}</span></p>}
+          ) : <p className={styles.singleWorkspace}><i className="pi pi-briefcase" aria-hidden="true" /><span className={styles.navLabel}>{workspaceMode ? WORKSPACE_LABELS[workspaceMode] : panelTitle}</span></p>}
           <button type="button" onClick={onClose} className={styles.mobileClose} aria-label="Menüyü kapat"><i className="pi pi-times" aria-hidden="true" /></button>
         </div>
         <nav className={styles.navigation} aria-label="Ana menü">

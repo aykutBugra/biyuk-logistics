@@ -518,7 +518,7 @@ function OpenTransportRequestsPageContent() {
         setErrorMessage(
           error instanceof ApiClientError
             ? error.message
-            : "Acik istekler yuklenirken beklenmeyen bir hata olustu."
+            : "Açık talepler yüklenirken beklenmeyen bir hata olustu."
         );
       } finally {
         if (!isMounted) {
@@ -671,8 +671,8 @@ function OpenTransportRequestsPageContent() {
   }
 
   if (isRequestsLoading && !hasLoadedRequestsOnce) {
-    return <CarrierVehiclesShell title="Açık istekler" description="Rotanıza uygun yükleri keşfedin." headerVariant="compact">
-      <CarrierFeedback isLoading errorMessage={null} label="Açık istekler yükleniyor…" />
+    return <CarrierVehiclesShell title="Açık talepler" description="Rotanıza uygun yükleri keşfedin." headerVariant="compact">
+      <CarrierFeedback isLoading errorMessage={null} label="Açık talepler yükleniyor…" />
     </CarrierVehiclesShell>;
   }
 
@@ -791,7 +791,7 @@ function OpenTransportRequestsPageContent() {
 
   return (
     <CarrierVehiclesShell
-      title="Açık istekler"
+      title="Açık talepler"
       description="Rotanıza uygun yükleri keşfedin, yeni taşıma fırsatlarını değerlendirin."
       headerActions={headerActions}
       headerVariant="compact"
@@ -876,7 +876,7 @@ function OpenTransportRequestsPageContent() {
                     Keşif hatası
                   </p>
                   <h2 className="mt-2 text-lg font-black tracking-tight text-rose-900">
-                    Açık istekler şu anda güncellenemiyor
+                    Açık talepler şu anda güncellenemiyor
                   </h2>
                   <p className="mt-2 leading-6">{errorMessage}</p>
                 </section>

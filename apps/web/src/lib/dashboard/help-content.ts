@@ -29,7 +29,7 @@ export const DASHBOARD_HELP_CONTENT: Record<
       "Bu ekran günlük operasyonuna hızlı başlamak için hazırlandı.",
     bullets: [
       "Ortak alanlar her iki rolde de sabit kalır.",
-      "Müşteri ve nakliyeci tarafı arasında üstteki seçimle geçiş yapabilirsin.",
+      "İki yetkiniz de varsa Talep Paneli ve Nakliye Paneli arasında sol menüden geçiş yapabilirsiniz.",
       "Kartlar seni ilgili iş akışına doğrudan götürür.",
     ],
   },
@@ -38,7 +38,7 @@ export const DASHBOARD_HELP_CONTENT: Record<
     description:
       "Bu bölümde taşıma talebi açar, gelen teklifleri değerlendirir ve anlaşılmış işleri izlersin.",
     bullets: [
-      "İsteklerim aktif taleplerini toplar.",
+      "Taleplerim aktif taleplerini toplar.",
       "Gelen Teklifler karar vermen gereken fiyatları gösterir.",
     ],
   },
@@ -47,7 +47,7 @@ export const DASHBOARD_HELP_CONTENT: Record<
     description:
       "Bu bölümde uygun işleri bulur, tekliflerini takip eder ve aktif taşımaları yönetirsin.",
     bullets: [
-      "Açık İstekler yeni iş keşfi için kullanılır.",
+      "Açık Talepler yeni iş keşfi için kullanılır.",
       "Rota ve araç hazırlığı görünürlüğünü güçlendirir.",
     ],
   },
@@ -57,7 +57,7 @@ export const DASHBOARD_HELP_CONTENT: Record<
       "Konuşmalar, bildirimler, profil ve puanlar her rolde aynı yerden açılır.",
   },
   "open-requests": {
-    title: "Açık İstekler",
+    title: "Açık Talepler",
     description:
       "Bu sayfa nakliyeci tarafında teklif verebileceğin taşıma taleplerini listeler.",
     bullets: [
@@ -69,18 +69,18 @@ export const DASHBOARD_HELP_CONTENT: Record<
   "incoming-offers": {
     title: "Gelen Teklifler",
     description:
-      "Bu sayfa müşteri tarafında gelen teklifleri karşılaştırıp karar vermek için kullanılır.",
+      "Bu sayfa Talep Paneli’nde gelen teklifleri karşılaştırıp karar vermek için kullanılır.",
     bullets: [
       "Kabul ettiğinde teklif nakliyeye dönüşür.",
       "Konuşmaya git ile fiyat veya detay pazarlığını sürdürebilirsin.",
     ],
   },
   "my-requests": {
-    title: "İsteklerim",
+    title: "Taleplerim",
     description:
-      "İsteklerim, açtığın taşıma taleplerini ve her birinin güncel durumunu toplu olarak gösterir.",
+      "Taleplerim, açtığın taşıma taleplerini ve her birinin güncel durumunu toplu olarak gösterir.",
     bullets: [
-      "Açık istekler henüz teklif beklediğini gösterir.",
+      "Açık talepler henüz teklif beklediğini gösterir.",
       "Anlaşılmış işlerde teklif kabul edilmiş ve operasyon başlamıştır.",
       "Detay sayfasından tekliflere ve konuşmalara geçebilirsin.",
     ],
@@ -96,9 +96,9 @@ export const DASHBOARD_HELP_CONTENT: Record<
     ],
   },
   "my-shipments": {
-    title: "Nakliyelerim",
+    title: "Taşımalarım",
     description:
-      "Nakliyelerim, anlaşmaya dönüşmüş aktif ve tamamlanan taşıma işlerini gösterir.",
+      "Taşımalarım, anlaşmaya dönüşmüş aktif ve tamamlanan taşıma işlerini gösterir.",
     bullets: [
       "Aktif nakliyeler süren operasyonları listeler.",
       "Tamamlanan işlerde puan verebilir veya süreci gözden geçirebilirsin.",
@@ -110,8 +110,8 @@ export const DASHBOARD_HELP_CONTENT: Record<
     description:
       "Rotaların kayıtlı taşıma hatlarını tutar ve sana uygun işleri daha görünür hale getirir.",
     bullets: [
-      "Rota once ana guzergah olarak tanimlanir, sonra Acik Istekler ekraninda secilerek kullanilir.",
-      "Sapma limiti rota kaydina degil, Acik Istekler kesif ekranindaki aktif filtreye baglidir.",
+      "Rota once ana guzergah olarak tanimlanir, sonra Açık Talepler ekraninda secilerek kullanilir.",
+      "Sapma limiti rota kaydina degil, Açık Talepler kesif ekranindaki aktif filtreye baglidir.",
     ],
   },
   "offer-create": {
@@ -124,12 +124,12 @@ export const DASHBOARD_HELP_CONTENT: Record<
     ],
   },
   "add-carrier-role": {
-    title: "Nakliyeci rolü ekle",
+    title: "Nakliye Panelini etkinleştir",
     description:
-      "Bu akış mevcut müşteri hesabını genişletir, ikinci bir hesap açmaz.",
+      "Bu akış Talep Paneli erişimi olan mevcut hesabınıza nakliye yetkisi ekler, ikinci bir hesap açmaz.",
     bullets: [
-      "İlk araç başarıyla oluşturulmadan nakliyeci rolü aktifleşmez.",
-      "İşlem tamamlanınca nakliyeci rehberi bir kez gösterilir, sonra normal ana ekran açılır.",
+      "İlk araç başarıyla kaydedilmeden Nakliye Paneli etkinleşmez.",
+      "İşlem tamamlanınca Nakliye Paneli rehberi bir kez gösterilir, sonra Genel Bakış açılır.",
     ],
   },
 };

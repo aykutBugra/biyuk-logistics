@@ -23,7 +23,7 @@ export default function DashboardTopbar({ auth, onMenuToggle, menuOpen = false, 
         </button>
         <Link href="/dashboard" className={styles.brand}>
           <span className={styles.brandMark}>B<span aria-hidden="true">.</span></span>
-          <span>Bi&apos;yuk<small>CONTROL CENTER</small></span>
+          <span>Bi&apos;yuk<small>KONTROL PANELİ</small></span>
         </Link>
       </div>
       <p className={styles.topbarCaption}>Lojistik operasyonları</p>

@@ -31,7 +31,7 @@ export function carrierText(value: string | null | undefined, fallback = "") {
     "Teslimat basariyla tamamlandi ve kayit kapanisa hazir.": "Taşıma tamamlandı.",
     "Teklif kabul edildi. Cikis ve operasyon hazirligi devam ediyor.": "Teklif kabul edildi. Çıkış ve operasyon hazırlığı devam ediyor.",
   };
-  return labels[text] ?? text.replace(/^Arac:/, "Araç:").replace(/ uygun acik istek$/, " uygun açık istek");
+  return labels[text] ?? text.replace(/^Arac:/, "Araç:").replace(/ uygun acik istek$/, " uygun açık talep");
 }
 
 export function carrierTone(value: "emerald" | "blue" | "amber" | "rose" | "slate") {

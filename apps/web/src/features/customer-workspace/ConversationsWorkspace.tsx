@@ -73,7 +73,7 @@ export default function ConversationsWorkspace({
                 </div>
               </div>
               <div className={styles.conversationActions}>
-                {workspace !== "carrier" || (!thread.isClosed && thread.durum.trim().toUpperCase() === "OLUSTURULDU") ? <LinkButton href={(workspace === "carrier" ? "/dashboard/acik_istekler/" : "/dashboard/isteklerim/") + thread.requestId} variant="ghost">İstek detayı</LinkButton> : null}
+                {workspace !== "carrier" || (!thread.isClosed && thread.durum.trim().toUpperCase() === "OLUSTURULDU") ? <LinkButton href={(workspace === "carrier" ? "/dashboard/acik_istekler/" : "/dashboard/isteklerim/") + thread.requestId} variant="ghost">Talep detayı</LinkButton> : null}
                 <LinkButton href={href}>Konuşmayı aç <i className="pi pi-arrow-up-right" aria-hidden="true" /></LinkButton>
               </div>
             </article>

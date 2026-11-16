@@ -15,6 +15,7 @@ import {
   type StoredAuth,
 } from "@/lib/auth/auth-storage";
 import { useStoredAuth } from "@/lib/auth/use-stored-auth";
+import { formatAccountError, getAccountErrorCode, REGISTRATION_OPTIONS } from "@/lib/ui/terminology";
 import {
   initialVehicleFormState,
   toCreateVehicleInput,
@@ -50,11 +51,6 @@ const initialAccountForm: AccountRegisterForm = {
   kullaniciAdi: "",
   mail: "",
   password: "",
-};
-
-const roleDescriptions: Record<RegisterRole, string> = {
-  MUSTERI: "Tasima talebi ac, teklifleri topla ve karar ver.",
-  NAKLIYECI: "Ilk aracinla birlikte teklif ve operasyon akisina gir.",
 };
 
 // Register sayfasi musteri veya nakliyeci rolune gore ilk hesap kaydini baslatir.
@@ -142,34 +138,18 @@ export default function RegisterPage() {
       router.replace("/dashboard");
     } catch (error) {
       if (error instanceof ApiClientError) {
-        if (error.message === "Mail is already in use.") {
+        if (getAccountErrorCode(error) === "AUTH_EMAIL_IN_USE") {
           setErrorState({
             kind: "duplicate-email",
             message:
-              "Bu e-posta ile zaten bir hesabin var. Ikinci kez kayit olmak yerine giris yapip Profilim ekranindan nakliyeci rolunu ekleyebilirsin.",
-          });
-          return;
-        }
-
-        if (error.message === "Username is already in use.") {
-          setErrorState({
-            kind: "generic",
-            message: "Bu kullanici adi zaten kullaniliyor. Lutfen farkli bir kullanici adi sec.",
-          });
-          return;
-        }
-
-        if (error.message === "Vehicle plate is already in use.") {
-          setErrorState({
-            kind: "generic",
-            message: "Bu plaka zaten aktif bir araca ait.",
+              formatAccountError(error),
           });
           return;
         }
 
         setErrorState({
           kind: "generic",
-          message: error.message,
+          message: formatAccountError(error),
         });
       } else if (error instanceof Error) {
         setErrorState({
@@ -179,7 +159,7 @@ export default function RegisterPage() {
       } else {
         setErrorState({
           kind: "generic",
-          message: "Kayit sirasinda beklenmeyen bir hata olustu.",
+          message: "Kayıt sırasında beklenmeyen bir hata oluştu.",
         });
       }
     } finally {
@@ -207,20 +187,20 @@ export default function RegisterPage() {
             Bi&apos;yuk
           </p>
           <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
-            Tek hesapla operasyon akisini kur.
+            Tek hesapla operasyon akışını kur.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-slate-600">
-            Musteri olarak baslayabilir veya ilk aracinla dogrudan nakliyeci
-            akisina girebilirsin. Ileride ayni hesapta iki rolu de yonetirsin.
+            Her hesapla taşıma talebi oluşturabilirsiniz. Nakliye hizmeti de
+            vermek istiyorsanız ilk aracınızı kaydederek iki paneli aynı hesapta kullanabilirsiniz.
           </p>
 
           <div className="mt-8 space-y-3">
             <div className="app-surface-muted rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-600">
-              Musteri hesabinda talep, teklif ve anlasilan is takibi acilir.
+              Talep Paneli’nde taşıma taleplerinizi, gelen teklifleri ve taşımanızı yönetebilirsiniz.
             </div>
             <div className="app-surface-muted rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-600">
-              Nakliyeci kaydi ilk aracinla birlikte rota, teklif ve operasyon
-              akislarini etkinlestirir.
+              Her ikisini seçtiğinizde ilk araç bilgileri kayıt sırasında alınır.
+              Araç kaydı tamamlanınca Nakliye Paneli de etkinleşir.
             </div>
           </div>
         </>
@@ -230,18 +210,18 @@ export default function RegisterPage() {
           <div data-auth-card-step>
             <div className="max-w-3xl">
               <div className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-700">
-                Kayit
+                Kayıt
               </div>
               <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950">
-                Hesabini olustur
+                Hesabını oluştur
               </h2>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                Once giris modunu sec, sonra temel hesap bilgilerini doldur.
+                Nasıl kullanacağınızı seçin, ardından hesap bilgilerinizi doldurun.
               </p>
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 md:grid-cols-2" data-auth-card-step>
+          <div className="mt-6 grid gap-3 md:grid-cols-2" data-auth-card-step role="group" aria-label="Hesap kullanım seçimi">
             {(["MUSTERI", "NAKLIYECI"] as RegisterRole[]).map((option) => {
               const isActive = role === option;
 
@@ -251,6 +231,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={() => handleRoleChange(option)}
                   disabled={isSubmitting}
+                  aria-pressed={isActive}
                   className={`rounded-[1rem] border px-5 py-4 text-left transition ${
                     isActive
                       ? "border-blue-200 bg-blue-50 text-blue-900"
@@ -258,10 +239,10 @@ export default function RegisterPage() {
                   }`}
                 >
                   <p className="text-sm font-bold">
-                    {option === "MUSTERI" ? "Musteri" : "Nakliyeci"}
+                    {REGISTRATION_OPTIONS[option].label}
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-600">
-                    {roleDescriptions[option]}
+                    {REGISTRATION_OPTIONS[option].description}
                   </p>
                 </button>
               );
@@ -281,11 +262,11 @@ export default function RegisterPage() {
                 {errorState.kind === "duplicate-email" ? (
                   <p className="mt-3">
                     <Link href="/login" className="font-semibold text-blue-700 hover:underline">
-                      Giris yap
+                      Giriş yap
                     </Link>{" "}
                     ve sonra{" "}
-                    <span className="font-semibold">Profilim &gt; Nakliyeci rolunu ekle</span>{" "}
-                    akisini kullan.
+                    <span className="font-semibold">Profil &gt; Nakliye hizmeti vermeye başla</span>{" "}
+                    bağlantısını kullanın.
                   </p>
                 ) : null}
               </div>
@@ -315,7 +296,7 @@ export default function RegisterPage() {
             <div className="grid gap-4 md:grid-cols-2" data-auth-card-step>
               <InputField
                 name="telefonNumarasi"
-                label="Telefon numarasi"
+                label="Telefon numarası"
                 type="tel"
                 placeholder="Orn: 555 123 45 67"
                 value={accountForm.telefonNumarasi}
@@ -325,7 +306,7 @@ export default function RegisterPage() {
               />
               <InputField
                 name="kullaniciAdi"
-                label="Kullanici adi"
+                label="Kullanıcı adı"
                 type="text"
                 placeholder="Orn: mehmetakcil73"
                 autoComplete="username"
@@ -348,7 +329,7 @@ export default function RegisterPage() {
               />
               <InputField
                 name="password"
-                label="Sifre"
+                label="Şifre"
                 type="password"
                 placeholder="********"
                 autoComplete="new-password"
@@ -364,8 +345,8 @@ export default function RegisterPage() {
                   values={vehicleForm}
                   onChange={handleVehicleChange}
                   disabled={isSubmitting || role !== "NAKLIYECI"}
-                  sectionTitle="Ilk Arac Kaydi"
-                  sectionHint="Bu arac basariyla kaydedildiginde hesabin musteri + nakliyeci olarak acilir."
+                  sectionTitle="İlk araç kaydı"
+                  sectionHint="Araç kaydı tamamlanınca Talep Paneli ve Nakliye Paneli aynı hesapta etkinleşir. Kayıt yarım kalırsa hesap oluşturulmaz."
                 />
               </div>
             </MotionCollapse>
@@ -376,14 +357,14 @@ export default function RegisterPage() {
                 disabled={isSubmitting}
                 className="app-button-primary app-form-submit-button app-pressable w-full"
               >
-                {isSubmitting ? "Kayit olusturuluyor..." : "Hesap olustur"}
+                {isSubmitting ? "Kayıt oluşturuluyor…" : "Hesap oluştur"}
               </button>
             </div>
 
             <p className="text-sm text-slate-600" data-auth-card-step>
-              Zaten hesabin var mi?{" "}
+              Zaten hesabınız var mı?{" "}
               <Link href="/login" className="font-bold text-blue-700 hover:text-blue-800">
-                Giris Yap
+                Giriş yap
               </Link>
             </p>
           </form>

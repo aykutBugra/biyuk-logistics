@@ -65,6 +65,8 @@ export type DashboardNavigationModel = {
   shellMeta: DashboardShellMeta;
 };
 
+import { WORKSPACE_LABELS } from "@/lib/ui/terminology";
+
 // Sidebar'daki tum menu kayitlari burada tutulur; gorunurluk rol ve workspace'e gore filtrelenir.
 const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
   {
@@ -73,7 +75,7 @@ const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
     label: "Genel Bakış",
     icon: "pi pi-home",
     groupId: "customer-workspace",
-    groupTitle: "Müşteri alanı",
+    groupTitle: WORKSPACE_LABELS.customer,
     order: 10,
     visibility: "customer",
     matchers: [{ type: "exact", value: "/dashboard" }],
@@ -81,10 +83,10 @@ const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
   {
     id: "customer-requests",
     href: "/dashboard/isteklerim",
-    label: "İsteklerim",
+    label: "Taleplerim",
     icon: "pi pi-list",
     groupId: "customer-workspace",
-    groupTitle: "Müşteri alanı",
+    groupTitle: WORKSPACE_LABELS.customer,
     order: 20,
     visibility: "customer",
     matchers: [
@@ -98,7 +100,7 @@ const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
     label: "Gelen Teklifler",
     icon: "pi pi-inbox",
     groupId: "customer-workspace",
-    groupTitle: "Müşteri alanı",
+    groupTitle: WORKSPACE_LABELS.customer,
     order: 30,
     visibility: "customer",
     matchers: [{ type: "prefix", value: "/dashboard/gelen_teklifler" }],
@@ -109,7 +111,7 @@ const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
     label: "Genel Bakış",
     icon: "pi pi-home",
     groupId: "carrier-workspace",
-    groupTitle: "Nakliyeci alanı",
+    groupTitle: WORKSPACE_LABELS.carrier,
     order: 10,
     visibility: "carrier",
     matchers: [{ type: "exact", value: "/dashboard" }],
@@ -117,10 +119,10 @@ const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
   {
     id: "carrier-open-requests",
     href: "/dashboard/acik_istekler",
-    label: "Açık İstekler",
+    label: "Açık Talepler",
     icon: "pi pi-search",
     groupId: "carrier-workspace",
-    groupTitle: "Nakliyeci alanı",
+    groupTitle: WORKSPACE_LABELS.carrier,
     order: 20,
     visibility: "carrier",
     matchers: [
@@ -134,7 +136,7 @@ const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
     label: "Tekliflerim",
     icon: "pi pi-send",
     groupId: "carrier-workspace",
-    groupTitle: "Nakliyeci alanı",
+    groupTitle: WORKSPACE_LABELS.carrier,
     order: 30,
     visibility: "carrier",
     matchers: [{ type: "prefix", value: "/dashboard/tekliflerim" }],
@@ -142,10 +144,10 @@ const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
   {
     id: "carrier-shipments",
     href: "/dashboard/nakliyelerim",
-    label: "Nakliyelerim",
+    label: "Taşımalarım",
     icon: "pi pi-truck",
     groupId: "carrier-workspace",
-    groupTitle: "Nakliyeci alanı",
+    groupTitle: WORKSPACE_LABELS.carrier,
     order: 40,
     visibility: "carrier",
     matchers: [{ type: "prefix", value: "/dashboard/nakliyelerim" }],
@@ -156,7 +158,7 @@ const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
     label: "Rotalarım",
     icon: "pi pi-map",
     groupId: "carrier-workspace",
-    groupTitle: "Nakliyeci alanı",
+    groupTitle: WORKSPACE_LABELS.carrier,
     order: 50,
     visibility: "carrier",
     matchers: [{ type: "prefix", value: "/dashboard/rotalarim" }],
@@ -167,7 +169,7 @@ const DASHBOARD_NAV_ENTRIES: DashboardNavEntry[] = [
     label: "Araçlarım",
     icon: "pi pi-car",
     groupId: "carrier-workspace",
-    groupTitle: "Nakliyeci alanı",
+    groupTitle: WORKSPACE_LABELS.carrier,
     order: 60,
     visibility: "carrier",
     matchers: [
@@ -302,7 +304,7 @@ function buildShellMeta(
   if (context.workspaceMode === "carrier") {
     return {
       panelEyebrow: "Çalışma alanı",
-      panelTitle: "Nakliyeci alanı",
+      panelTitle: WORKSPACE_LABELS.carrier,
       panelDescription:
         "Keşif, teklif ve taşıma akışını buradan yönet.",
     };
@@ -311,7 +313,7 @@ function buildShellMeta(
   if (context.workspaceMode === "customer") {
     return {
       panelEyebrow: "Çalışma alanı",
-      panelTitle: "Müşteri alanı",
+      panelTitle: WORKSPACE_LABELS.customer,
       panelDescription:
         "Taleplerini ve teklif sürecini buradan yönet.",
     };

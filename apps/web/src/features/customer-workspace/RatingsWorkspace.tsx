@@ -25,7 +25,7 @@ export default function RatingsWorkspace({
   return (
     <div className={styles.workspace}>
       <SummaryStrip items={[
-        { label: "Müşteri olarak", value: average(summary.asCustomer.averageRating), description: summary.asCustomer.ratingCount + " değerlendirme", icon: "pi pi-user" },
+        { label: "Talep sahibi olarak", value: average(summary.asCustomer.averageRating), description: summary.asCustomer.ratingCount + " değerlendirme", icon: "pi pi-user" },
         { label: "Nakliyeci olarak", value: average(summary.asCarrier.averageRating), description: summary.asCarrier.ratingCount + " değerlendirme", icon: "pi pi-truck" },
         { label: "Aldığım değerlendirme", value: receivedCount, description: "Hesabınıza gelen tüm puanlar", icon: "pi pi-star" },
         { label: "Verdiğim değerlendirme", value: givenCount, description: "Yaptığınız tüm değerlendirmeler", icon: "pi pi-send" },
@@ -55,13 +55,13 @@ export default function RatingsWorkspace({
               </div>
               <div className={styles.ratingContext}>
                 <Badge tone={direction === "received" ? "green" : "blue"}>{direction === "received" ? "Aldığım" : "Verdiğim"}</Badge>
-                <span>Değerlendirilen rol: {item.rolBaglami.trim().toUpperCase() === "NAKLIYECI" ? "Nakliyeci" : "Müşteri"}</span>
+                <span>Değerlendirilen taraf: {item.rolBaglami.trim().toUpperCase() === "NAKLIYECI" ? "Nakliyeci" : "Talep sahibi"}</span>
                 <span className={styles.routeSmall} title={route}>{route}</span>
               </div>
               <p className={styles.reviewText}>{displayText(item.yorum, "Bu değerlendirmeye yorum eklenmedi.")}</p>
               <footer className={styles.ratingFooter}>
                 <time dateTime={item.tarih}>{formatTimestamp(item.tarih)}</time>
-                <LinkButton href={detail.href} variant="ghost">{detail.label === "Istek detayi" ? "İstek detayı" : detail.label === "Nakliye detayi" ? "Nakliye detayı" : displayText(detail.label)} <i className="pi pi-arrow-up-right" aria-hidden="true" /></LinkButton>
+                <LinkButton href={detail.href} variant="ghost">{detail.label === "Istek detayi" ? "Talep detayı" : detail.label === "Nakliye detayi" ? "Nakliye detayı" : displayText(detail.label)} <i className="pi pi-arrow-up-right" aria-hidden="true" /></LinkButton>
               </footer>
             </article>
           );

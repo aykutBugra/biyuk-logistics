@@ -623,7 +623,7 @@ export default function OpenRequestsMapPanel({
 
             {selectedRequest ? (
               <p className="text-sm font-medium text-slate-600">
-                Secili istek
+                Seçili talep
               </p>
             ) : null}
           </div>
@@ -646,7 +646,7 @@ export default function OpenRequestsMapPanel({
           />
           {!hasRenderableContent ? (
             <div className="pointer-events-none absolute inset-x-3 top-3 rounded-[0.95rem] border border-dashed border-slate-300 bg-white/95 px-4 py-3 text-center text-sm font-medium text-slate-500 shadow-sm">
-              Haritada gosterilecek uygun koordinatli istek bulunmuyor.
+              Haritada gosterilecek uygun koordinatli talep bulunmuyor.
             </div>
           ) : null}
         </div>

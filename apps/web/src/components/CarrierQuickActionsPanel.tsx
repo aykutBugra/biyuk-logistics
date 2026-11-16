@@ -5,7 +5,7 @@ import Link from "next/link";
 const QUICK_ACTIONS = [
   {
     href: "/dashboard/acik_istekler",
-    label: "Acik istekleri kesfet",
+    label: "Açık talepleri kesfet",
     icon: "pi pi-search",
   },
   {

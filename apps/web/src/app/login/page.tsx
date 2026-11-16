@@ -12,10 +12,11 @@ import {
   type StoredAuth,
 } from "@/lib/auth/auth-storage";
 import { useStoredAuth } from "@/lib/auth/use-stored-auth";
+import { formatAccountError } from "@/lib/ui/terminology";
 
 const loginHighlights = [
   "Talep, teklif ve mesaj akislarini tek panelde gor",
-  "Rolune gore dogru dashboard giris noktasina yonlen",
+  "Hesabınızdaki yetkilere göre doğru panele ulaşın",
   "Bildirim ve operasyon takibini ayni hesapta birlestir",
 ];
 
@@ -50,7 +51,7 @@ function LoginPageContent() {
   const isCheckingAuth = auth !== null;
   const successMessage =
     searchParams?.get("accountDeleted") === "1"
-      ? "Hesabin silindi. Istersen yeni bir hesapla tekrar giris yapabilirsin."
+      ? "Hesabınız silindi. İsterseniz yeni bir hesapla tekrar giriş yapabilirsiniz."
       : null;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -96,9 +97,9 @@ function LoginPageContent() {
       router.replace("/dashboard");
     } catch (error) {
       if (error instanceof ApiClientError) {
-        setErrorMessage(error.message);
+        setErrorMessage(formatAccountError(error));
       } else {
-        setErrorMessage("Giris sirasinda beklenmeyen bir hata olustu.");
+        setErrorMessage("Giriş sırasında beklenmeyen bir hata oluştu.");
       }
     } finally {
       setIsSubmitting(false);
@@ -119,11 +120,11 @@ function LoginPageContent() {
             Bi&apos;yuk
           </p>
           <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
-            Operasyon paneline geri don.
+            Operasyon paneline geri dönün.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-slate-600">
-            Giris yaptiginda musteri ve nakliyeci akislarini ayni urun dili icinde
-            yonetmeye devam edersin.
+            Hesabınızdaki yetkilere göre Talep Paneli’ne ve Nakliye Paneli’ne
+            erişebilir, işlemlerinizi tek hesapla yönetebilirsiniz.
           </p>
 
           <div className="mt-8 space-y-3">
@@ -143,13 +144,13 @@ function LoginPageContent() {
           <div data-auth-card-step>
             <div className="max-w-xl">
               <div className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-blue-700">
-                Giris
+                Giriş
               </div>
               <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950">
-                Hesabina giris yap
+                Hesabınıza giriş yapın
               </h2>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                Kullanici adin veya e-posta adresinle oturum acabilirsin.
+                Kullanıcı adınız veya e-posta adresinizle oturum açabilirsiniz.
               </p>
             </div>
           </div>
@@ -169,9 +170,9 @@ function LoginPageContent() {
           <form onSubmit={handleSubmit} className="mt-8 space-y-5" data-auth-card-step>
             <InputField
               name="identifier"
-              label="Kullanici adi veya e-posta"
+              label="Kullanıcı adı veya e-posta"
               type="text"
-              placeholder="Lutfen kullanici adinizi veya e-posta adresinizi girin"
+              placeholder="Kullanıcı adınızı veya e-posta adresinizi girin"
               autoComplete="username"
               value={form.identifier}
               onChange={handleChange}
@@ -179,9 +180,9 @@ function LoginPageContent() {
             />
             <InputField
               name="password"
-              label="Sifre"
+              label="Şifre"
               type="password"
-              placeholder="Lutfen sifrenizi girin"
+              placeholder="Şifrenizi girin"
               autoComplete="current-password"
               value={form.password}
               onChange={handleChange}
@@ -190,7 +191,7 @@ function LoginPageContent() {
 
             <div className="flex justify-end">
               <a href="#" className="text-sm font-semibold text-blue-700 hover:text-blue-800">
-                Sifremi unuttum
+                Şifremi unuttum
               </a>
             </div>
 
@@ -199,14 +200,14 @@ function LoginPageContent() {
               disabled={isSubmitting}
               className="app-button-primary app-form-submit-button app-pressable w-full"
             >
-              {isSubmitting ? "Giris yapiliyor..." : "Giris Yap"}
+              {isSubmitting ? "Giriş yapılıyor…" : "Giriş yap"}
             </button>
           </form>
 
           <p className="mt-6 text-sm text-slate-600" data-auth-card-step>
             Hesabin yok mu?{" "}
             <Link href="/register" className="font-bold text-blue-700 hover:text-blue-800">
-              Hesap olustur
+              Hesap oluştur
             </Link>
           </p>
         </div>

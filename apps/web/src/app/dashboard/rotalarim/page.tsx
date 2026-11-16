@@ -93,7 +93,7 @@ function resolveRouteReadiness(
       label: "Koordinat hazir",
       tone: "emerald",
       description:
-        "Konum eslestirmesi tamam. Kesif ve uygun acik istek taramasi icin en hazir rota.",
+        "Konum eslestirmesi tamam. Kesif ve uygun açık talep taramasi için en hazir rota.",
     };
   }
 
@@ -358,13 +358,13 @@ export default function CarrierRoutesPage() {
     if (matches === undefined) {
       eslesmeBilgisi = "Kesif ozeti hazirlaniyor";
     } else if (matches === null) {
-      durumAciklamasi = `${readiness.description} Acik istek ozeti bu kayit icin simdilik alinamadi.`;
+      durumAciklamasi = `${readiness.description} Açık talep ozeti bu kayit için simdilik alinamadi.`;
     } else if (matches.length > 0) {
-      eslesmeBilgisi = `${matches.length} uygun acik istek`;
-      durumAciklamasi = `${matches.length} acik istek bu rota ile eslesiyor. Detaydan rotayi acip kesif akisina gecis yapabilirsin.`;
+      eslesmeBilgisi = `${matches.length} uygun açık talep`;
+      durumAciklamasi = `${matches.length} açık talep bu rota ile eslesiyor. Detaydan rotayi acip kesif akisina gecis yapabilirsin.`;
     } else {
-      eslesmeBilgisi = "0 uygun acik istek";
-      durumAciklamasi = `${readiness.description} Su anda uygun acik istek gorunmuyor.`;
+      eslesmeBilgisi = "0 uygun açık talep";
+      durumAciklamasi = `${readiness.description} Su anda uygun açık talep gorunmuyor.`;
     }
 
     const searchText = [
@@ -503,7 +503,7 @@ export default function CarrierRoutesPage() {
           { label: "Toplam rota", value: totalRoutes, description: "Kayıtlı ana hatlar" },
           { label: "Mesafe / süre bilgili", value: distanceReadyCount, description: "Mesafe ve süresi bulunan rota" },
           { label: "Koordinatlı", value: coordinateReadyCount, description: "Konum bilgileri bulunan rota" },
-          { label: "Eşleşen açık istek", value: isEnriching || (totalRoutes > 0 && !Object.values(routeMatchesById).some(Array.isArray)) ? "—" : suitableOpenRequestCount, description: isEnriching ? "Yük eşleşmeleri yükleniyor" : "Alınabilen özetlerde benzersiz talep" },
+          { label: "Eşleşen açık talep", value: isEnriching || (totalRoutes > 0 && !Object.values(routeMatchesById).some(Array.isArray)) ? "—" : suitableOpenRequestCount, description: isEnriching ? "Yük eşleşmeleri yükleniyor" : "Alınabilen özetlerde benzersiz talep" },
         ]} />
     </CarrierVehiclesShell>
   );

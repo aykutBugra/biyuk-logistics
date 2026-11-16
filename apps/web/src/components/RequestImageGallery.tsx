@@ -47,7 +47,7 @@ function RequestImageGalleryContent({
   if (!selectedImage) {
     return (
       <section className="app-surface rounded-[1.15rem] border border-slate-200 p-5 text-sm text-slate-500">
-        Bu istek icin henuz fotograf yuklenmemis.
+        Bu talep için henüz fotoğraf yüklenmemis.
       </section>
     );
   }
@@ -72,7 +72,7 @@ function RequestImageGalleryContent({
         <div className="overflow-hidden rounded-[1.35rem] border border-slate-200 bg-slate-100 p-3">
           <img
             src={selectedImage.url}
-            alt={`Istek gorseli ${selectedImage.id}`}
+            alt={`Talep gorseli ${selectedImage.id}`}
             className="h-[18rem] w-full rounded-[1rem] object-contain md:h-[24rem] xl:h-[28rem]"
           />
         </div>
@@ -95,7 +95,7 @@ function RequestImageGalleryContent({
                 >
                   <img
                     src={image.thumbnailUrl}
-                    alt={`Istek kucuk gorsel ${image.id}`}
+                    alt={`Talep kucuk gorsel ${image.id}`}
                     className="aspect-[4/3] h-full w-full bg-slate-100 object-contain p-1.5"
                   />
                   {image.isPrimary ? (

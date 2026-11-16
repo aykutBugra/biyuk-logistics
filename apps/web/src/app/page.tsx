@@ -6,14 +6,14 @@ import PublicRevealGroup from "@/components/PublicRevealGroup";
 export default function Home() {
   const workflowSteps = [
     {
-      title: "Istek olustur",
+      title: "Talep oluştur",
       description:
         "Musteri yuk bilgisi ve rota ile tasima talebini tek formdan yayinlar.",
     },
     {
       title: "Teklifleri degerlendir",
       description:
-        "Nakliyeciler uygun istekleri gorur, teklif verir ve musteri en uygun secimi yapar.",
+        "Nakliyeciler uygun talepleri gorur, teklif verir ve musteri en uygun secimi yapar.",
     },
     {
       title: "Nakliyeyi takip et",
@@ -23,14 +23,14 @@ export default function Home() {
   ];
 
   const platformHighlights = [
-    "Musteri ve nakliyeci icin ayri ama baglantili operasyon ekranlari",
+    "Talep ve nakliye için aynı hesapta bağlantılı paneller",
     "Teklif, mesaj ve bildirim akislarini ayni panelde toparlayan sistem",
     "Rota, arac ve is hazirligini gorunur kilan dashboard yapisi",
   ];
 
   const heroStats = [
     { label: "Akis", value: "3 adimda" },
-    { label: "Taraf", value: "Musteri + Nakliyeci" },
+    { label: "İş akışı", value: "Talep → Teklif → Taşıma" },
     { label: "Odak", value: "Tek panel" },
   ];
 
@@ -50,8 +50,8 @@ export default function Home() {
                 Talep, teklif ve nakliye operasyonunu ayni akis icinde yonet.
               </h1>
               <p className="mt-5 max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
-                Bi&apos;yuk, musterilerin tasima taleplerini olusturup gelen teklifleri
-                degerlendirdigi; nakliyecilerin ise acik istekleri kesfedip
+                Bi&apos;yük, musterilerin taşıma taleplerini oluşturup gelen teklifleri
+                degerlendirdigi; nakliyecilerin ise açık talepleri kesfedip
                 anlasilan nakliyeleri yonettigi daha okunakli bir operasyon merkezi
                 olarak kurgulandi.
               </p>
@@ -105,8 +105,8 @@ export default function Home() {
                   Mevcut urun halkasi
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Istek olustur, teklif ver, teklifi kabul et ve resmi nakliye
-                  kaydini ayni urun dili icinde takip et.
+                  Talep oluştur, teklif ver, teklifi kabul et ve resmi nakliye
+                  kaydini ayni urun dili içinde takip et.
                 </p>
               </div>
             </div>

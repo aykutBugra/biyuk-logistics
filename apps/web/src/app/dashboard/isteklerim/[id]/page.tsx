@@ -73,7 +73,7 @@ function getJobStatusCopy(status: string): { title: string; description: string 
   switch (status) {
     case "OLUSTURULDU":
       return {
-        title: "Bu istek icin anlasma saglandi",
+        title: "Bu talep için anlasma saglandi",
         description:
           "Teklif kabul edildi ve resmi nakliye kaydi olusturuldu. Nakliyeci isi baslatinca durum guncellenecek.",
       };
@@ -97,7 +97,7 @@ function getJobStatusCopy(status: string): { title: string; description: string 
       };
     default:
       return {
-        title: "Bu istek icin anlasma saglandi",
+        title: "Bu talep için anlasma saglandi",
         description: "Nakliye kaydi olustu ve durum bilgisi bu ekrandan takip edilebilir.",
       };
   }
@@ -187,7 +187,7 @@ export default function TransportRequestDetailPage() {
   const [isDataLoading, setIsLoading] = useState(true);
   const hasValidId = Boolean(requestId.trim());
   const isLoading = hasValidId && isDataLoading;
-  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz istek numarasi.";
+  const errorMessage = hasValidId ? loadErrorMessage : "Geçersiz talep numarası.";
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
@@ -261,14 +261,14 @@ export default function TransportRequestDetailPage() {
         }
 
         if (error instanceof ApiClientError && error.status === 404) {
-          setErrorMessage("Bu istek bulunamadi.");
+          setErrorMessage("Bu talep bulunamadi.");
           return;
         }
 
         setErrorMessage(
           error instanceof ApiClientError
             ? error.message
-            : "Istek detayi yuklenirken beklenmeyen bir hata olustu."
+            : "Talep detayı yüklenirken beklenmeyen bir hata olustu."
         );
       } finally {
         if (!isMounted) {
@@ -292,8 +292,8 @@ export default function TransportRequestDetailPage() {
     }
 
     const isConfirmed = await confirm({
-      title: "Tasima istegini sil",
-      message: "Bu tasima istegini silmek istedigine emin misin?",
+      title: "Taşıma talebini sil",
+      message: "Bu taşıma talebini silmek istedigine emin misin?",
       tone: "danger",
       confirmLabel: "Sil",
       cancelLabel: "Vazgec",
@@ -310,8 +310,8 @@ export default function TransportRequestDetailPage() {
       await deleteTransportRequest(request.id, accessToken);
       showToast({
         severity: "success",
-        summary: "Istek silindi",
-        detail: "Tasima istegi listeden kaldirildi.",
+        summary: "Talep silindi",
+        detail: "Taşıma talebi listeden kaldirildi.",
       });
       router.replace("/dashboard/isteklerim");
     } catch (error) {
@@ -343,7 +343,7 @@ export default function TransportRequestDetailPage() {
       if (error instanceof ApiClientError && error.status === 404) {
         showToast({
           severity: "warn",
-          summary: "Istek bulunamadi",
+          summary: "Talep bulunamadi",
           detail: "Listeye yonlendiriliyorsun.",
           life: 3200,
           closable: true,
@@ -354,11 +354,11 @@ export default function TransportRequestDetailPage() {
 
       showToast({
         severity: "error",
-        summary: "Istek silinemedi",
+        summary: "Talep silinemedi",
         detail:
           error instanceof ApiClientError
             ? error.message
-            : "Istek silinirken beklenmeyen bir hata olustu.",
+            : "Talep silinirken beklenmeyen bir hata olustu.",
         life: 3600,
         closable: true,
       });
@@ -504,7 +504,7 @@ export default function TransportRequestDetailPage() {
 
   return (
     <CustomerTransportRequestsShell
-      title="Istek detayi"
+      title="Talep detayı"
       description={
         request
           ? "Talep ozeti, yuk fotograflari ve gelen teklifleri tek ekranda yonet."
@@ -537,7 +537,7 @@ export default function TransportRequestDetailPage() {
                     label={getRequestStatusLabel(request.durum)}
                   />
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                    Istek detayi
+                    Talep detayı
                   </span>
                   {request.nakliye ? (
                     <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
@@ -649,7 +649,7 @@ export default function TransportRequestDetailPage() {
                 <EmptyStateCard
                   eyebrow="Fotograf galerisi"
                   title="Bu talep icin henuz fotograf yok"
-                  description="Istek acik durumdayken Duzenle ekranindan yuk fotograflari ekleyebilirsin."
+                  description="Talep açık durumdayken Düzenle ekranindan yük fotoğraflari ekleyebilirsin."
                 />
               )}
 
@@ -738,7 +738,7 @@ export default function TransportRequestDetailPage() {
 
             <div className="space-y-4">
               <CustomerSectionSurface
-                title="Istek durumu"
+                title="Talep durumu"
                 description="Kaydin guncel durumu ve kullanabilecegin mevcut aksiyonlar."
                 action={
                   canMutateRequest ? (
@@ -762,7 +762,7 @@ export default function TransportRequestDetailPage() {
                 }
               >
                 <dl className="space-y-3">
-                  <DetailInfoRow label="Kayit" value="Istek kaydi" />
+                  <DetailInfoRow label="Kayit" value="Talep kaydi" />
                   <DetailInfoRow
                     label="Durum"
                     value={getRequestStatusLabel(request.durum)}

@@ -8,13 +8,14 @@ import { ApiClientError } from "@/lib/api/api-client";
 import { getUsers, type UserProfile } from "@/lib/api/users";
 import { clearStoredAuth } from "@/lib/auth/auth-storage";
 import { useDashboardAccess } from "@/lib/auth/use-dashboard-access";
+import { WORKSPACE_LABELS } from "@/lib/ui/terminology";
 
 function roleLabel(role: string): string {
   switch (role) {
     case "MUSTERI":
-      return "Musteri";
+      return WORKSPACE_LABELS.customer;
     case "NAKLIYECI":
-      return "Nakliyeci";
+      return WORKSPACE_LABELS.carrier;
     case "ADMIN":
       return "Admin";
     default:

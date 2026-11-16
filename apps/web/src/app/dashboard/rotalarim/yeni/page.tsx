@@ -154,7 +154,7 @@ export default function CreateCarrierRoutePage() {
   return (
     <CarrierVehiclesShell
       title="Yeni rota tanimla"
-      description="Planladigin ana hatti kaydet. Acik Istekler ekraninda bu rotayi secip sapma limitini ayrica belirleyeceksin."
+      description="Planladigin ana hatti kaydet. Açık Talepler ekraninda bu rotayi secip sapma limitini ayrica belirleyeceksin."
       headerVariant="compact"
       motionPreset="form"
     >
@@ -260,7 +260,7 @@ export default function CreateCarrierRoutePage() {
               </span>
               <p className="text-sm leading-6 text-slate-600">
                 Rota tanimi ve ana mesafe-sure snapshot'i kaydedilir. Sapma limiti
-                Acik Istekler kesfinde rota secildikten sonra belirlenir.
+                Açık Talepler kesfinde rota secildikten sonra belirlenir.
               </p>
             </div>
           </section>

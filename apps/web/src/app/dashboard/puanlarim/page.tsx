@@ -57,7 +57,7 @@ function formatDate(value: string): string {
 function formatRoleContext(value: string): string {
   return value.trim().toUpperCase() === "NAKLIYECI"
     ? "Nakliyeci puani"
-    : "Musteri puani";
+    : "Talep sahibi puanı";
 }
 
 function formatAverageRating(value: number | null): string {
@@ -119,7 +119,7 @@ function resolveRatingDetailModel(
   if (activeRole === "MUSTERI") {
     return {
       href: `/dashboard/isteklerim/${item.requestId}`,
-      label: "Istek detayi",
+      label: "Talep detayı",
     };
   }
 
@@ -320,7 +320,7 @@ function RatingsPageContent({
               title="Henuz profil puani olusmadi"
               description="Tasima ve teklif surecleri tamamlandikca puanlarin burada gorunecek."
               actionHref="/dashboard/nakliyelerim"
-              actionLabel="Nakliyelerime git"
+              actionLabel="Taşımalarıme git"
             />
           </div>
         ) : (
@@ -351,7 +351,7 @@ function RatingsPageContent({
                 icon={<i className="pi pi-truck text-lg" />}
               />
               <CustomerMetricCard
-                label="Musteri ortalamam"
+                label="Talep sahibi ortalamam"
                 value={formatMetricAverage(ratingSummary.asCustomer.averageRating)}
                 hint={`${ratingSummary.asCustomer.ratingCount} degerlendirme`}
                 tone="amber"
@@ -372,7 +372,7 @@ function RatingsPageContent({
                       title="Henuz profil puani olusmadi"
                       description="Tasima ve teklif surecleri tamamlandikca aldigin puanlar burada ortalamaya donusecek."
                       actionHref="/dashboard/nakliyelerim"
-                      actionLabel="Nakliyelerime git"
+                      actionLabel="Taşımalarıme git"
                     />
                   ) : (
                     <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -488,7 +488,7 @@ function RatingsPageContent({
                         ) : null}
                         {isCustomer ? (
                           <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                            Musteri
+                            Talep sahibi
                           </span>
                         ) : null}
                         {isAdmin ? (

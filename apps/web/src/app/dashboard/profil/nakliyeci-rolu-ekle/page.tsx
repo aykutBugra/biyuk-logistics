@@ -7,6 +7,7 @@ import DashboardShell from "@/components/DashboardShell";
 import InlineHelpTrigger from "@/components/InlineHelpTrigger";
 import VehicleFormFields from "@/components/VehicleFormFields";
 import { ApiClientError, apiFetch } from "@/lib/api/api-client";
+import { formatAccountError } from "@/lib/ui/terminology";
 import {
   clearStoredAuth,
   setStoredAuth,
@@ -92,17 +93,11 @@ export default function CarrierRoleOnboardingPage() {
       }
 
       if (error instanceof ApiClientError) {
-        if (error.message === "Vehicle plate is already in use.") {
-          setErrorMessage("Bu plaka zaten aktif bir araca ait.");
-        } else if (error.message === "Carrier onboarding is already complete.") {
-          setErrorMessage("Nakliyeci rolun zaten aktif. Araclarini dashboard uzerinden yonetebilirsin.");
-        } else {
-          setErrorMessage(error.message);
-        }
+        setErrorMessage(formatAccountError(error));
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Nakliyeci rolu eklenirken beklenmeyen bir hata olustu.");
+        setErrorMessage("Nakliye Paneli etkinleştirilirken beklenmeyen bir hata oluştu.");
       }
     } finally {
       setIsSubmitting(false);
@@ -119,8 +114,8 @@ export default function CarrierRoleOnboardingPage() {
 
   return (
     <DashboardShell
-      title="Nakliyeci rolunu ekle"
-      description="Ilk aracini tanimla. Arac basariyla kaydoldugunda hesabin musteri + nakliyeci olarak genisler."
+      title="Nakliye Panelini etkinleştir"
+      description="İlk aracınızı tanımlayın. Araç kaydı tamamlanınca aynı hesapla hem talep oluşturabilir hem nakliye hizmeti verebilirsiniz."
       headerActions={<InlineHelpTrigger helpKey="add-carrier-role" />}
       headerVariant="compact"
       motionPreset="form"
@@ -145,8 +140,8 @@ export default function CarrierRoleOnboardingPage() {
             values={form}
             onChange={handleChange}
             disabled={isSubmitting}
-            sectionTitle="Ilk Arac Bilgisi"
-            sectionHint="Arac basariyla olusmadan nakliyeci rolu verilmez."
+            sectionTitle="İlk araç bilgileri"
+            sectionHint="Araç başarıyla kaydedilmeden Nakliye Paneli etkinleşmez."
           />
         </div>
 
@@ -155,14 +150,15 @@ export default function CarrierRoleOnboardingPage() {
           className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <p className="text-sm text-slate-500">
-            Bu adim yarim kalirsa hesabin yalnizca musteri olarak kalir.
+            Bu adımı tamamlamazsanız Talep Paneli’ni kullanmaya devam edebilirsiniz.
+            Kuruluma daha sonra Profil ekranından yeniden başlayabilirsiniz.
           </p>
           <button
             type="submit"
             disabled={isSubmitting}
             className="app-button-primary app-form-submit-button app-pressable text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? "Nakliyeci rolu ekleniyor..." : "Nakliyeci rolunu ekle"}
+            {isSubmitting ? "Nakliye Paneli etkinleştiriliyor…" : "Nakliye Panelini etkinleştir"}
           </button>
         </div>
       </form>

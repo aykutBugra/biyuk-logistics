@@ -204,7 +204,7 @@ function matchesConversationSearch(
     thread.karsiTarafKullaniciAdi,
     thread.lastMessageSummary ?? "",
     `teklif ${thread.offerId}`,
-    `istek ${thread.requestId}`,
+    `talep ${thread.requestId}`,
   ]
     .join(" ")
     .toLocaleLowerCase("tr-TR");
@@ -322,7 +322,7 @@ function CarrierConversationCard({
           <div className="flex flex-wrap items-center gap-2 xl:justify-end">
             {requestHref ? (
               <Link href={requestHref} className="app-button-secondary">
-                Istek detayi
+                Talep detayı
               </Link>
             ) : null}
             <Link
@@ -489,7 +489,7 @@ function OfferThreadsPageContent({
               title="Henuz konusma yok"
               description="Teklif verdiginde veya musteriden yanit geldiginde konusmalar burada listelenecek."
               actionHref="/dashboard/acik_istekler"
-              actionLabel="Acik istekleri incele"
+              actionLabel="Açık talepleri incele"
             />
           </div>
         ) : (

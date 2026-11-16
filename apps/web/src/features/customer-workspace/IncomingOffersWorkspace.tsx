@@ -42,7 +42,7 @@ export default function IncomingOffersWorkspace({
       <Panel title="Teklif listesi" icon="pi pi-send" description="Mesaj ve karşı teklif için ilgili konuşmayı açabilirsiniz.">
         <FilterBar filters={filters} selected={filter} onSelect={setFilter} />
         {!offers.length ? <EmptyState title="Henüz teklif yok" description="Nakliyecilerden teklif geldiğinde burada listelenecek."
-          action={<LinkButton href="/dashboard/isteklerim">İsteklerime git</LinkButton>} />
+          action={<LinkButton href="/dashboard/isteklerim">Taleplerime git</LinkButton>} />
         : !visibleOffers.length ? <NoFilterResults onReset={() => setFilter("all")} />
         : <div className={styles.list}>{visibleOffers.map((offer) => {
           const state = offerStatus(offer.durum);
@@ -75,7 +75,7 @@ export default function IncomingOffersWorkspace({
                   <div><dt>Tahmini teslim</dt><dd>{formatDateOnly(offer.tahminiTeslimTarihi)}</dd></div>
                 </dl>
                 <div className={styles.rowActions}>
-                  <LinkButton href={"/dashboard/isteklerim/" + offer.requestId} variant="ghost">İstek detayı</LinkButton>
+                  <LinkButton href={"/dashboard/isteklerim/" + offer.requestId} variant="ghost">Talep detayı</LinkButton>
                   <LinkButton href={"/dashboard/konusmalar/teklif/" + offer.id}>{canDecide ? "Mesaj ve karşı teklif" : "Konuşmayı aç"}</LinkButton>
                   {canDecide ? <>
                     <Button variant="danger" disabled={actingOfferId !== null} onClick={() => onDecision(offer, "reject")}>Reddet</Button>

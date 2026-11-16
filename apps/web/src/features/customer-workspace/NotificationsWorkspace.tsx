@@ -4,6 +4,7 @@ import { Badge, Button, EmptyState, LinkButton } from "@/components/ui";
 import type { NotificationListItem } from "@/lib/api/notifications";
 import { displayText, FilterBar, formatTimestamp, LoadFeedback, type LoadState, NoFilterResults, Panel, SummaryStrip } from "./shared";
 import styles from "./workspace.module.css";
+import { getNotificationCopy } from "@/lib/ui/terminology";
 
 type NotificationFilter = "all" | "offers" | "messages" | "operations" | "ratings" | "other";
 
@@ -25,7 +26,7 @@ function notificationType(value: string) {
 
 function openLabel(url: string) {
   if (url.startsWith("/dashboard/konusmalar/teklif/")) return "Konuşmaya git";
-  if (url.startsWith("/dashboard/isteklerim/")) return "İstek detayı";
+  if (url.startsWith("/dashboard/isteklerim/")) return "Talep detayı";
   if (url.startsWith("/dashboard/nakliyelerim/")) return "Nakliyeyi aç";
   if (url.startsWith("/dashboard/puanlarim")) return "Puanları gör";
   return "Aç";
@@ -67,6 +68,7 @@ export default function NotificationsWorkspace({
         : !visibleNotifications.length ? <NoFilterResults onReset={() => { onQueryChange(""); onFilterChange("all"); }} />
         : <div className={styles.list}>{visibleNotifications.map((notification) => {
           const visual = notificationType(notification.tip);
+          const copy = getNotificationCopy(notification);
           const acting = actingId === notification.id;
           return (
             <article key={notification.id} data-dashboard-card aria-busy={acting || undefined}
@@ -77,8 +79,8 @@ export default function NotificationsWorkspace({
                   {!notification.isRead ? <Badge tone="blue">Okunmamış</Badge> : <span>Okundu</span>}
                   <time dateTime={notification.olusturmaTarihi}>{formatTimestamp(notification.olusturmaTarihi)}</time>
                 </div>
-                <h3>{displayText(notification.baslik, visual.label)}</h3>
-                <p className={styles.messageText}>{displayText(notification.mesaj)}</p>
+                <h3>{displayText(copy.title, visual.label)}</h3>
+                <p className={styles.messageText}>{displayText(copy.message)}</p>
                 <div className={styles.notificationActions}>
                   {!notification.isRead ? <Button variant="ghost" disabled={busy} loading={acting && actingAction === "mark"} onClick={() => onMarkAsRead(notification.id)}>Okundu say</Button> : null}
                   {notification.hedefUrl ? <Button disabled={busy} loading={acting && actingAction === "open"} onClick={() => onOpen(notification)}>{openLabel(notification.hedefUrl)} <i className="pi pi-arrow-up-right" aria-hidden="true" /></Button> : null}

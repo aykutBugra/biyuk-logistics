@@ -102,7 +102,7 @@ export default function CarrierDiscoveryFilters({
   };
 
   return (
-    <section className={styles.filters} aria-label="Açık istek filtreleri">
+    <section className={styles.filters} aria-label="Açık talep filtreleri">
       <div className={styles.filterHeading}><h2><i className="pi pi-sliders-h" aria-hidden="true" />Filtreler ve rota</h2>{mapAction}</div>
       <form onSubmit={onApplyFilters}>
         <div className={styles.locationFilters}>
