@@ -196,8 +196,11 @@ export default function CarrierJobDetailPage() {
   const params = useParams<{ id: string }>();
   const jobId = params.id;
   const [job, setJob] = useState<JobDetail | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loadErrorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDataLoading, setIsLoading] = useState(true);
+  const hasValidId = Boolean(jobId.trim());
+  const isLoading = hasValidId && isDataLoading;
+  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz nakliye numarasi.";
   const [actingAction, setActingAction] = useState<"start" | "complete" | null>(null);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -205,15 +208,10 @@ export default function CarrierJobDetailPage() {
   useEffect(() => {
     // Job id ve nakliyeci token'i hazir olmadan detay endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
     if (!jobId.trim()) {
-      setErrorMessage("Gecersiz nakliye numarasi.");
-      setIsLoading(false);
       return;
     }
 

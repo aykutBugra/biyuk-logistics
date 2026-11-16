@@ -183,8 +183,11 @@ export default function TransportRequestDetailPage() {
   const requestId = params.id;
   const [request, setRequest] = useState<TransportRequestDetail | null>(null);
   const [incomingOffers, setIncomingOffers] = useState<IncomingOfferItem[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loadErrorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDataLoading, setIsLoading] = useState(true);
+  const hasValidId = Boolean(requestId.trim());
+  const isLoading = hasValidId && isDataLoading;
+  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz istek numarasi.";
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
@@ -192,15 +195,10 @@ export default function TransportRequestDetailPage() {
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
     if (!requestId.trim()) {
-      setErrorMessage("Gecersiz istek numarasi.");
-      setIsLoading(false);
       return;
     }
 

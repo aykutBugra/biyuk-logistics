@@ -26,9 +26,6 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     // Admin guard hazir olmadan kullanici verisi cekilmez.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 

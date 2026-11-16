@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthSplitShell from "@/components/AuthSplitShell";
@@ -10,11 +10,11 @@ import MotionCollapse from "@/components/MotionCollapse";
 import VehicleFormFields from "@/components/VehicleFormFields";
 import { ApiClientError, apiFetch } from "@/lib/api/api-client";
 import {
-  getStoredAuth,
   setStoredAuth,
   setStoredDashboardWorkspaceMode,
   type StoredAuth,
 } from "@/lib/auth/auth-storage";
+import { useStoredAuth } from "@/lib/auth/use-stored-auth";
 import {
   initialVehicleFormState,
   toCreateVehicleInput,
@@ -60,22 +60,21 @@ const roleDescriptions: Record<RegisterRole, string> = {
 // Register sayfasi musteri veya nakliyeci rolune gore ilk hesap kaydini baslatir.
 export default function RegisterPage() {
   const router = useRouter();
+  const auth = useStoredAuth();
+  const didRegisterHere = useRef(false);
   const [role, setRole] = useState<RegisterRole>("MUSTERI");
   const [accountForm, setAccountForm] = useState<AccountRegisterForm>(initialAccountForm);
   const [vehicleForm, setVehicleForm] = useState<VehicleFormState>(initialVehicleFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const isCheckingAuth = auth !== null;
   const [errorState, setErrorState] = useState<RegisterErrorState>(null);
 
   useEffect(() => {
     // Oturum zaten varsa tekrar kayit formuna dusmeden dashboard'a yonlendir.
-    if (getStoredAuth()) {
+    if (auth && !didRegisterHere.current) {
       router.replace("/dashboard/profil");
-      return;
     }
-
-    setIsCheckingAuth(false);
-  }, [router]);
+  }, [auth, router]);
 
   // Ortak hesap alanlari tum rol secimlerinde ayni state objesinde tutulur.
   const handleAccountChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -137,6 +136,7 @@ export default function RegisterPage() {
         }),
       });
 
+      didRegisterHere.current = true;
       setStoredDashboardWorkspaceMode(role === "NAKLIYECI" ? "carrier" : "customer");
       setStoredAuth(response);
       router.replace("/dashboard");

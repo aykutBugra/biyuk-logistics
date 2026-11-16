@@ -73,24 +73,22 @@ export default function EditCarrierRoutePage() {
     null
   );
   const [varisKonum, setVarisKonum] = useState<SelectedLocation | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadErrorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
   const [locationValidationActive, setLocationValidationActive] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsLoading] = useState(true);
+  const hasValidId = Boolean(routeId.trim());
+  const isLoading = hasValidId && isDataLoading;
+  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz rota numarasi.";
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // Mevcut rota detaylari cekilip selected location state'lerine geri kurulur.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
     if (!routeId.trim()) {
-      setErrorMessage("Gecersiz rota numarasi.");
-      setIsLoading(false);
       return;
     }
 

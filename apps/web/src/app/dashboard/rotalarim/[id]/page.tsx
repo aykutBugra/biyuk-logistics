@@ -140,22 +140,20 @@ export default function CarrierRouteDetailPage() {
   const params = useParams<{ id: string }>();
   const routeId = params.id;
   const [route, setRoute] = useState<CarrierRouteDetail | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loadErrorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDataLoading, setIsLoading] = useState(true);
+  const hasValidId = Boolean(routeId.trim());
+  const isLoading = hasValidId && isDataLoading;
+  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz rota numarasi.";
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     // Route id ve token dogrulanmadan detay endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
     if (!routeId.trim()) {
-      setErrorMessage("Gecersiz rota numarasi.");
-      setIsLoading(false);
       return;
     }
 

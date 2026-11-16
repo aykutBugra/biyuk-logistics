@@ -227,10 +227,13 @@ export default function EditTransportRequestPage() {
     baslangic: string | null;
     varis: string | null;
   }>({ baslangic: null, varis: null });
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadErrorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
   const [locationValidationActive, setLocationValidationActive] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsLoading] = useState(true);
+  const hasValidId = Boolean(requestId.trim());
+  const isLoading = hasValidId && isDataLoading;
+  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz istek numarasi.";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingImages, setExistingImages] = useState<TransportRequestImage[]>([]);
   const [pendingImages, setPendingImages] = useState<RequestImageDraft[]>([]);
@@ -240,15 +243,10 @@ export default function EditTransportRequestPage() {
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
     if (!requestId.trim()) {
-      setErrorMessage("Gecersiz istek numarasi.");
-      setIsLoading(false);
       return;
     }
 

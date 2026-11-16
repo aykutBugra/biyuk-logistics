@@ -65,23 +65,21 @@ export default function EditVehiclePage() {
 
   const [form, setForm] = useState<VehicleFormState>(emptyForm);
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadErrorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsLoading] = useState(true);
+  const hasValidId = Boolean(vehicleId.trim());
+  const isLoading = hasValidId && isDataLoading;
+  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz arac numarasi.";
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // Duzenleme icin once mevcut arac detayi cekilip form state'e aktarilir.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
     if (!vehicleId.trim()) {
-      setErrorMessage("Gecersiz arac numarasi.");
-      setIsLoading(false);
       return;
     }
 

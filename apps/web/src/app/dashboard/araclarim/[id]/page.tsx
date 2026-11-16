@@ -152,22 +152,20 @@ export default function VehicleDetailPage() {
   const params = useParams<{ id: string }>();
   const vehicleId = params.id;
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loadErrorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDataLoading, setIsLoading] = useState(true);
+  const hasValidId = Boolean(vehicleId.trim());
+  const isLoading = hasValidId && isDataLoading;
+  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz arac numarasi.";
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     // Route parametresi ve token hazir olmadan detay endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
     if (!vehicleId.trim()) {
-      setErrorMessage("Gecersiz arac numarasi.");
-      setIsLoading(false);
       return;
     }
 

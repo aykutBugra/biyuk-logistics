@@ -702,18 +702,6 @@ function NegotiationSidePanel({
               {latestMessageAt ? formatDate(latestMessageAt) : "—"}
             </dd>
           </div>
-          <div className="flex items-center justify-between">
-            <dt className="text-xs text-slate-400">Teklif #</dt>
-            <dd className="text-xs font-semibold text-slate-700">
-              {thread.offerId}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="text-xs text-slate-400">Istek #</dt>
-            <dd className="text-xs font-semibold text-slate-700">
-              {thread.requestId}
-            </dd>
-          </div>
         </dl>
 
         {/* Action section */}
@@ -819,8 +807,11 @@ export default function OfferThreadDetailPage() {
     useDashboardAccess("shared-business");
 
   const [thread, setThread] = useState<OfferThreadDetail | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loadErrorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDataLoading, setIsLoading] = useState(true);
+  const hasValidId = Boolean(offerId.trim());
+  const isLoading = hasValidId && isDataLoading;
+  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz teklif numarasi.";
   const [messageDraft, setMessageDraft] = useState("");
   const [messageImages, setMessageImages] = useState<File[]>([]);
   const [counterOfferAmount, setCounterOfferAmount] = useState("");
@@ -834,15 +825,10 @@ export default function OfferThreadDetailPage() {
 
   useEffect(() => {
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
     if (!offerId.trim()) {
-      setErrorMessage("Gecersiz teklif numarasi.");
-      setIsLoading(false);
       return;
     }
 

@@ -46,6 +46,7 @@ export default function LocationAutocompleteField({
 }: LocationAutocompleteFieldProps) {
   const inputId = useId();
   const [query, setQuery] = useState(value?.konumMetni ?? "");
+  const [previousValue, setPreviousValue] = useState(value);
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -62,9 +63,14 @@ export default function LocationAutocompleteField({
         ? `Mevcut kayit: ${legacyHint}. Guncellemeden once yeni konumu listeden sec.`
         : hint;
 
-  useEffect(() => {
+  // Disaridan degisen secimi ayni render'da uygula; eski onerileri tasima.
+  if (value !== previousValue) {
+    setPreviousValue(value);
     setQuery(value?.konumMetni ?? "");
-  }, [value]);
+    setSuggestions([]);
+    setIsLoading(false);
+    setErrorMessage(null);
+  }
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -87,9 +93,6 @@ export default function LocationAutocompleteField({
     const trimmed = query.trim();
 
     if (trimmed.length < 3 || trimmed === value?.konumMetni) {
-      setSuggestions([]);
-      setIsLoading(false);
-      setErrorMessage(null);
       return;
     }
 
@@ -177,9 +180,14 @@ export default function LocationAutocompleteField({
           onChange={(event) => {
             const nextValue = event.target.value;
             setQuery(nextValue);
+            setSuggestions([]);
+            setIsLoading(false);
+            setErrorMessage(null);
             setIsOpen(true);
 
             if (value && nextValue.trim() !== value.konumMetni) {
+              // Secimi kaldirirken kullanicinin yazdigi yeni metni koru.
+              setPreviousValue(null);
               onSelect(null);
             }
           }}

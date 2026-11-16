@@ -32,9 +32,6 @@ export default function AdminUsersPage() {
   useEffect(() => {
     // Admin yetkisi dogrulanmadan liste endpoint'i cagrilmaz.
     if (status !== "ready" || !accessToken) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 

@@ -1,17 +1,17 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AuthSplitShell from "@/components/AuthSplitShell";
 import InputField from "@/components/InputField";
 import { ApiClientError, apiFetch } from "@/lib/api/api-client";
 import {
-  getStoredAuth,
   setStoredAuth,
   type StoredAuth,
 } from "@/lib/auth/auth-storage";
+import { useStoredAuth } from "@/lib/auth/use-stored-auth";
 
 const loginHighlights = [
   "Talep, teklif ve mesaj akislarini tek panelde gor",
@@ -20,34 +20,46 @@ const loginHighlights = [
 ];
 
 // Login sayfasi kullaniciyi backend auth akisiyle oturuma alir ve dashboard'a yonlendirir.
+function LoginPageFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="app-surface rounded-[1.15rem] px-5 py-4 font-medium text-slate-600">
+        Yonlendiriliyor...
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
+  return (
+    <Suspense fallback={<LoginPageFallback />}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const auth = useStoredAuth();
   const [form, setForm] = useState({
     identifier: "",
     password: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const isCheckingAuth = auth !== null;
+  const successMessage =
+    searchParams?.get("accountDeleted") === "1"
+      ? "Hesabin silindi. Istersen yeni bir hesapla tekrar giris yapabilirsin."
+      : null;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // Zaten oturum varsa login formunu gostermeden dogrudan dashboard'a gecilir.
-    const searchParams = new URLSearchParams(window.location.search);
-
-    setSuccessMessage(
-      searchParams.get("accountDeleted") === "1"
-        ? "Hesabin silindi. Istersen yeni bir hesapla tekrar giris yapabilirsin."
-        : null
-    );
-
-    if (getStoredAuth()) {
+    if (auth) {
       router.replace("/dashboard");
-      return;
     }
-
-    setIsCheckingAuth(false);
-  }, [router]);
+  }, [auth, router]);
 
   // Form alanlari degistikce onceki hata mesaji temizlenir.
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -94,13 +106,7 @@ export default function Page() {
   };
 
   if (isCheckingAuth) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="app-surface rounded-[1.15rem] px-5 py-4 font-medium text-slate-600">
-          Yonlendiriliyor...
-        </div>
-      </div>
-    );
+    return <LoginPageFallback />;
   }
 
   return (

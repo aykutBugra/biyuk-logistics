@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { OpenOfferRequestImage } from "@/lib/api/offers";
 
 type RequestImageGalleryProps = {
@@ -22,11 +22,24 @@ export default function RequestImageGallery({
       null
     );
   }, [images, primaryImageId]);
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(initialImageId);
 
-  useEffect(() => {
-    setSelectedImageId(initialImageId);
-  }, [initialImageId]);
+  return (
+    <RequestImageGalleryContent
+      key={initialImageId ?? "empty"}
+      images={images}
+      initialImageId={initialImageId}
+    />
+  );
+}
+
+function RequestImageGalleryContent({
+  images,
+  initialImageId,
+}: {
+  images: OpenOfferRequestImage[];
+  initialImageId: string | null;
+}) {
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(initialImageId);
 
   const selectedImage =
     images.find((image) => image.id === selectedImageId) ?? images[0] ?? null;

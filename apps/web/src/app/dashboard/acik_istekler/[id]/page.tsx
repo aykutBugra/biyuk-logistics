@@ -383,11 +383,14 @@ function OpenTransportRequestDetailPageContent({
     null
   );
   const [form, setForm] = useState<OfferForm>(initialForm);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadErrorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
   const [vehicleSelectionValidationActive, setVehicleSelectionValidationActive] =
     useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsLoading] = useState(true);
+  const hasValidId = Boolean(requestId.trim());
+  const isLoading = hasValidId && isDataLoading;
+  const errorMessage = hasValidId ? loadErrorMessage : "Gecersiz istek numarasi.";
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -425,15 +428,10 @@ function OpenTransportRequestDetailPageContent({
       selectedCarrierRouteId !== null && selectedMaxSapmaKm === null;
 
     if (status !== "ready" || !accessToken || hasPendingRouteContext) {
-      if (status === "checking") {
-        setIsLoading(true);
-      }
       return;
     }
 
     if (!requestId.trim()) {
-      setErrorMessage("Gecersiz istek numarasi.");
-      setIsLoading(false);
       return;
     }
 
